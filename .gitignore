@@ -53,6 +53,7 @@ data/
 .idea/
 *.iml
 .vscode/settings.json
+.vs/
 .DS_Store
 Thumbs.db
 
