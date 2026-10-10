@@ -16,3 +16,8 @@ spring:
     user:
       name: test
       password: test
+
+worksphere:
+  jwt:
+    secret: worksphere-test-secret-key-at-least-32-chars-long
+    access-token-expiry-seconds: 900

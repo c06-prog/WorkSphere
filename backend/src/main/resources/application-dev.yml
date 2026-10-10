@@ -8,7 +8,13 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
         format_sql: true
+
+worksphere:
+  jwt:
+    # For dev only - use environment variable in production
+    secret: worksphere-dev-secret-key-must-be-at-least-32-characters-long
+    access-token-expiry-seconds: 900
