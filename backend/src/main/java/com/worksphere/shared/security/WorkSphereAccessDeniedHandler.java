@@ -17,9 +17,18 @@ import java.io.IOException;
 @Component
 public class WorkSphereAccessDeniedHandler implements AccessDeniedHandler {
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper;
 
     public WorkSphereAccessDeniedHandler() {
+        this.objectMapper = createDefaultObjectMapper();
+    }
+
+    public WorkSphereAccessDeniedHandler(ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper != null ? objectMapper : createDefaultObjectMapper();
+    }
+
+    private static ObjectMapper createDefaultObjectMapper() {
+        return new ObjectMapper().findAndRegisterModules();
     }
 
     @Override
@@ -30,6 +39,7 @@ public class WorkSphereAccessDeniedHandler implements AccessDeniedHandler {
     ) throws IOException {
         response.setStatus(HttpServletResponse.SC_FORBIDDEN);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        response.setCharacterEncoding("UTF-8");
         objectMapper.writeValue(
                 response.getWriter(),
                 ApiResponse.error("FORBIDDEN", "Bạn không có quyền thực hiện thao tác này")

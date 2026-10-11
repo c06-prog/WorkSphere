@@ -17,9 +17,18 @@ import java.io.IOException;
 @Component
 public class WorkSphereAuthEntryPoint implements AuthenticationEntryPoint {
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper;
 
     public WorkSphereAuthEntryPoint() {
+        this.objectMapper = createDefaultObjectMapper();
+    }
+
+    public WorkSphereAuthEntryPoint(ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper != null ? objectMapper : createDefaultObjectMapper();
+    }
+
+    private static ObjectMapper createDefaultObjectMapper() {
+        return new ObjectMapper().findAndRegisterModules();
     }
 
     @Override
@@ -30,6 +39,7 @@ public class WorkSphereAuthEntryPoint implements AuthenticationEntryPoint {
     ) throws IOException {
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        response.setCharacterEncoding("UTF-8");
         objectMapper.writeValue(
                 response.getWriter(),
                 ApiResponse.error("UNAUTHORIZED", "Yêu cầu xác thực")

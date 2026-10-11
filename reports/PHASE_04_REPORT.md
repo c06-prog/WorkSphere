@@ -14,18 +14,23 @@ Triển khai toàn bộ quy trình xác thực và phân quyền (Authentication
 - **Tích hợp Database & Test**: Viết Integration Test với Testcontainers PostgreSQL. Tất cả 13/13 tests PASS hoàn toàn.
 
 ## 3. Kết Quả Kiểm Thử (Validation)
-- Đã chạy thành công lệnh `mvnw clean test` trên môi trường PostgreSQL Docker.
-- Toàn bộ Test Cases trong `AuthIntegrationTest` và `MigrationIntegrationTest` chạy PASS (13/13 tests).
+- Đã chạy thành công lệnh `.\mvnw.cmd clean test` trên môi trường PostgreSQL Docker Testcontainers.
+- Toàn bộ Test Cases trong `AuthIntegrationTest`, `MigrationIntegrationTest`, và `AuthMockMvcTest` chạy PASS (29/29 tests, 0 failures, 0 errors, exit code 0):
+  - `MigrationIntegrationTest`: 1/1 test PASS (xác thực Flyway schema migrations V001 - V011).
+  - `AuthIntegrationTest`: 12/12 tests PASS (xác thực tích hợp nghiệp vụ Identity & Repository).
+  - `AuthMockMvcTest`: 16/16 tests PASS (xác thực toàn diện tầng HTTP MockMvc với Spring Security: 401 Unauthorized JSON UTF-8, 403 Forbidden JSON UTF-8, trạng thái tài khoản ACTIVE/PENDING/LOCKED/DISABLED, luồng refresh token rotation & revocation, logout 204, reset password).
 - Build Project thành công (BUILD SUCCESS).
 - Đảm bảo Security: 
   - KHÔNG lưu trữ mật khẩu plaintext (Hash bằng BCrypt).
   - KHÔNG lưu trữ Refresh Token/Reset Token nguyên bản (Hash bằng SHA-256).
   - Tất cả các Token hết hạn hoặc bị thu hồi (revoked) đều được quản lý chính xác.
+  - Chuẩn hóa Content-Type UTF-8 JSON cho các Security Handlers (`WorkSphereAuthEntryPoint`, `WorkSphereAccessDeniedHandler`).
 
 ## 4. Kiểm Toán Git & An Toàn Mã Nguồn
 - 10 tài liệu canonical trong `docs/` KHÔNG bị sửa đổi.
-- Chưa tạo file rác hoặc cấu hình sai mục đích.
-- Sẵn sàng được commit và push.
+- Toàn bộ Flyway migration scripts (V001 - V011) KHÔNG bị sửa đổi.
+- Secret scan sạch sẽ, không lộ secret hay token ra mã nguồn.
+- Working tree sẵn sàng commit và push.
 
-## 5. Bước Tiếp Theo (Next Steps)
-Chuyển giao trạng thái để tiến hành **Giai đoạn 5: Core Domain (Organization & Project)**.
+## 5. Kết Luận
+Bản vá Giai đoạn 4 đã hoàn tất đầy đủ, chính xác và được kiểm định 100%. Sẵn sàng chuyển giao trạng thái cho giai đoạn tiếp theo theo quy trình.
