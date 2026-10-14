@@ -80,6 +80,7 @@ A large context window does not guarantee correctness.
 A model must pass shell, Git, file-read, and no-write tests before receiving repository write permission.
 
 Only validated work may be committed and pushed.
+
 ## D-009 Current Model Selection
 
 FCM automatic routing is disabled until at least two authenticated
@@ -92,3 +93,24 @@ Current operating mode:
 - Persistent project memory remains independent of the selected model.
 - Antigravity remains the primary agent for major roadmap phases.
 - Do not enable automatic failover solely from public health pings.
+
+## D-010 Phase 5 Scope
+
+- "Organization Module" is the business module name; there is no `Organization` entity, no `organizations` table, and no `organization_id`.
+- WorkSphere serves a single organization internally (strictly single-tenant).
+- Phase 5 includes Department, Team, Team Member, and User Management.
+- Project entities, milestones, workflows, and tasks belong to Phase 6 and beyond, strictly excluded from Phase 5.
+
+## D-011 Temporary Password Flow
+
+- Admin creates User with status `PENDING` and a secure temporary random password hashed via BCrypt.
+- Plaintext password is never returned in API responses and never logged.
+- Activation email, activation token, and first-time password setup workflow are currently absent from canonical documentation (`TEMPORARY_PASSWORD_FLOW_GAP`).
+- Do not invent custom activation endpoints or token flows without explicit canonical requirement or a dedicated approved task.
+- Phase 6 must not modify this flow outside its Project Module scope.
+
+## D-012 Team API Contract Gap
+
+- Team and Team Member have database schema and domain/application layer implementations.
+- No REST Controllers are created for Team or Team Member because endpoints are not defined in `06_API_CONTRACT.md`.
+- Exposure of Team endpoints is deferred until canonical API extensions are defined.
