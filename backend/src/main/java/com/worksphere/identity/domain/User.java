@@ -71,8 +71,8 @@ public class User {
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
             name = "user_roles",
-            joinColumns = @JoinColumn(name = "user_id"),
-            inverseJoinColumns = @JoinColumn(name = "role_id")
+            joinColumns = @JoinColumn(name = "user_id", insertable = false, updatable = false),
+            inverseJoinColumns = @JoinColumn(name = "role_id", insertable = false, updatable = false)
     )
     private Set<Role> roles = new HashSet<>();
 
@@ -99,7 +99,6 @@ public class User {
         user.deleted = false;
         user.createdAt = Instant.now();
         user.updatedAt = Instant.now();
-        user.version = 0L;
         return user;
     }
 
@@ -138,6 +137,41 @@ public class User {
 
     public void updateAvatarFileId(UUID avatarFileId) {
         this.avatarFileId = avatarFileId;
+        this.updatedAt = Instant.now();
+    }
+
+    public void updateDepartmentId(UUID departmentId) {
+        this.departmentId = departmentId;
+        this.updatedAt = Instant.now();
+    }
+
+    public void adminUpdate(String fullName, String phoneNumber, UUID departmentId) {
+        this.fullName = fullName;
+        this.phoneNumber = phoneNumber;
+        this.departmentId = departmentId;
+        this.updatedAt = Instant.now();
+    }
+
+    public void lock() {
+        if (this.status == UserStatus.DISABLED) {
+            throw new com.worksphere.shared.exception.BusinessRuleException(
+                    "CANNOT_LOCK_DISABLED_USER", "Không thể khóa tài khoản đã bị vô hiệu hóa");
+        }
+        this.status = UserStatus.LOCKED;
+        this.updatedAt = Instant.now();
+    }
+
+    public void unlock() {
+        if (this.status != UserStatus.LOCKED) {
+            throw new com.worksphere.shared.exception.BusinessRuleException(
+                    "USER_NOT_LOCKED", "Chỉ có thể mở khóa tài khoản đang bị khóa");
+        }
+        this.status = UserStatus.ACTIVE;
+        this.updatedAt = Instant.now();
+    }
+
+    public void setRoles(Set<Role> roles) {
+        this.roles = roles != null ? roles : new HashSet<>();
         this.updatedAt = Instant.now();
     }
 

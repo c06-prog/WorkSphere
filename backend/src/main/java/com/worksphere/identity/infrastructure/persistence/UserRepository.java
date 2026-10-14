@@ -25,4 +25,15 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     boolean existsByUsernameAndDeletedFalse(String username);
 
     boolean existsByEmailAndDeletedFalse(String email);
+
+    @Query("SELECT u FROM User u WHERE u.deleted = false " +
+           "AND (CAST(:search AS string) IS NULL OR LOWER(u.username) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')) OR LOWER(u.fullName) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')) OR LOWER(u.email) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))) " +
+           "AND (:departmentId IS NULL OR u.departmentId = :departmentId) " +
+           "AND (:status IS NULL OR u.status = :status)")
+    org.springframework.data.domain.Page<User> searchUsers(
+            @Param("search") String search,
+            @Param("departmentId") UUID departmentId,
+            @Param("status") com.worksphere.identity.domain.UserStatus status,
+            org.springframework.data.domain.Pageable pageable
+    );
 }

@@ -16,4 +16,8 @@ public interface RoleRepository extends JpaRepository<Role, UUID> {
     @Query("SELECT r FROM Role r JOIN r.permissions p WHERE r IN " +
            "(SELECT ur FROM User u JOIN u.roles ur WHERE u.id = :userId) AND r.active = true")
     Set<Role> findActiveRolesByUserId(@Param("userId") UUID userId);
+
+    Set<Role> findByCodeIn(java.util.Collection<String> codes);
+
+    java.util.Optional<Role> findByCode(String code);
 }
