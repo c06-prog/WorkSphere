@@ -1,12 +1,13 @@
-# BÁO CÁO TRIỂN KHAI PHASE 7: TASK MANAGEMENT BACKEND
+# BÁO CÁO TRIỂN KHAI & VÁ LỖI KIỂM TOÁN PHASE 7: TASK MANAGEMENT BACKEND
 
-## 1. Checkpoint khởi tạo
+## 1. Checkpoint khởi tạo & Vá lỗi
 
-- **Base commit**: `c9702acc1e2b74fb04eb3a29f6e527d158dcd6af`
-- **Commit message**: `docs(agent): checkpoint visual prototype`
+- **Base commit triển khai Phase 7**: `c9702acc1e2b74fb04eb3a29f6e527d158dcd6af` (`docs(agent): checkpoint visual prototype`)
+- **Phase 7 Implementation commit**: `abefa44b0d6ec00a28798b74b17b7ecbbb726168` (`feat(task): implement task management module`)
+- **Audit Checkpoint**: `d548dcb30327fb80be91e90643db4695b9f76c21` (`docs(agent): expand tool management policy`)
 - **Branch**: `main`
-- **HEAD equals origin/main**: Xác nhận đúng trước khi triển khai
-- **Working tree**: Clean trước khi triển khai
+- **HEAD equals origin/main**: Xác nhận đúng trước khi thực hiện bản vá
+- **Working tree**: Clean trước khi thực hiện bản vá
 
 ---
 
@@ -44,7 +45,7 @@ Căn cứ theo:
 
 ## 5. Ánh xạ cơ sở dữ liệu (Database Mapping)
 
-Mọi entity JPA ánh xạ chính xác 100% cột trong Flyway migrations `V005` và `V010`:
+Mọi entity JPA ánh xạ chính xác 100% cột trong Flyway migrations `V005`, `V010` và `V012`:
 
 1. **`Task`** (`tasks`):
    - `id`: UUID (PK)
@@ -75,6 +76,7 @@ Mọi entity JPA ánh xạ chính xác 100% cột trong Flyway migrations `V005`
    - `assigned_at`: TIMESTAMP WITH TIME ZONE
    - `unassigned_at`: TIMESTAMP WITH TIME ZONE
    - `is_active`: BOOLEAN
+   - `uk_task_assignments_active`: Partial Unique Index trên `(task_id, assignee_id) WHERE is_active = TRUE`
 
 3. **`TaskStatusHistory`** (`task_status_histories`):
    - `id`: UUID (PK)
@@ -98,15 +100,76 @@ Mọi entity JPA ánh xạ chính xác 100% cột trong Flyway migrations `V005`
 
 ---
 
-## 6. Trạng thái Migration
+## 6. Trạng thái Migration & V012
 
 - **V001 đến V011**: Không sửa đổi bất kỳ byte nào.
-- **V012**: Không tạo mới vì schema hiện tại hoàn toàn đầy đủ và tương thích.
-- **Schema gap**: Không có (`NO_SCHEMA_GAP`).
+- **V012 mới**: `V012__add_active_task_assignment_uniqueness.sql` được tạo mới để bổ sung partial unique index cho PostgreSQL:
+  ```sql
+  CREATE UNIQUE INDEX uk_task_assignments_active
+  ON task_assignments(task_id, assignee_id)
+  WHERE is_active = TRUE;
+  ```
+- **Hỗ trợ tương thích môi trường test**: Bổ sung `TaskFlywayConfiguration` để H2 in-memory context test dừng ở target V011 (do H2 không hỗ trợ mệnh đề `WHERE` trong partial index), trong khi PostgreSQL (Testcontainers, dev, staging, prod) thực thi đầy đủ V012.
+- **Flyway validation**: PASS 100% trên cả Testcontainers PostgreSQL và test runner.
 
 ---
 
-## 7. Triển khai Task Core
+## 7. Các phát hiện kiểm toán & Bản vá kỹ thuật (Audit Findings & Patches)
+
+### 7.1. HIGH: TASK_ASSIGNMENT_CONCURRENCY_RISK (Đã vá)
+- **Vấn đề**: Nghiệp vụ cấm 2 active assignment trùng trên cùng task/assignee, nhưng trước đây chỉ kiểm tra bằng `existsByTaskIdAndAssigneeIdAndActiveTrue` ở service layer, tiềm ẩn rủi ro race condition khi có yêu cầu đồng thời.
+- **Giải pháp**:
+  - Tạo migration `V012__add_active_task_assignment_uniqueness.sql` áp dụng PostgreSQL partial unique index `uk_task_assignments_active`.
+  - Trong `TaskApplicationService.createTask` và `assignUsers`, thực hiện `taskAssignmentRepository.saveAndFlush(assignment)` trong khối `try-catch`.
+  - Chuyển đổi chính xác `DataIntegrityViolationException` vi phạm `uk_task_assignments_active` thành `BusinessRuleException("TASK_ALREADY_ASSIGNED", ...)` (HTTP 422).
+  - Không biến các vi phạm toàn vẹn dữ liệu khác thành duplicate assignment.
+- **Kiểm thử**:
+  - Xác minh index tồn tại trong `pg_indexes`.
+  - Phân công tuần tự trùng bị từ chối với mã `TASK_ALREADY_ASSIGNED`.
+  - Reassign sau khi unassign thành công (bản ghi inactive cũ không chặn bản ghi active mới).
+  - Phân công đồng thời (concurrent) qua `ExecutorService` 4 luồng chỉ có đúng 1 bản ghi active được commit, các luồng còn lại trả về `TASK_ALREADY_ASSIGNED`.
+
+### 7.2. MEDIUM: TASK_HIERARCHY_DEPTH_POLICY_GAP (Đã vá)
+- **Vấn đề**: Code cũ tự ý ném `TASK_PARENT_CYCLE_DETECTED` khi độ sâu cây vượt quá 50 cấp, trong khi canonical docs không quy định giới hạn nghiệp vụ 50 cấp.
+- **Giải pháp**:
+  - Sử dụng cấu trúc `Set<UUID> visited` để phát hiện vòng lặp phân cấp thực sự (`!visited.add(current)`).
+  - Cho phép cây hợp lệ có độ sâu trên 50 cấp kết thúc bình thường khi `current == null`.
+  - Chặn chu trình self-parent, chu trình 2 cấp, chu trình 3 cấp bằng mã `TASK_PARENT_CYCLE_DETECTED`.
+  - Chặn cha bị soft-deleted (`TASK_NOT_FOUND`).
+  - Chặn cha khác dự án (`TASK_PARENT_PROJECT_MISMATCH`).
+- **Kiểm thử**:
+  - Chuỗi phân cấp hợp lệ sâu 52 cấp được tạo và thêm subtask thành công (HTTP 201).
+  - Kiểm thử chu trình tự trỏ, chu trình 2 cấp, chu trình 3 cấp đều bị phát hiện chính xác.
+
+### 7.3. MEDIUM: TASK_COMMENT_AUTHORIZATION_DEVIATION (Đã vá)
+- **Vấn đề**: Code cũ cho phép `PROJECT_MANAGER` tự động sửa/xóa bình luận của thành viên khác, vi phạm quy tắc chuẩn mực (chỉ tác giả bình luận hoặc Quản trị viên hệ thống mới có quyền).
+- **Giải pháp**:
+  - Bỏ quyền can thiệp bình luận của `PROJECT_MANAGER` đối với bình luận của người khác trong `TaskCommentApplicationService`.
+  - Tái sử dụng kiểm tra `hasSystemAdminRole(principal)` theo vai trò `ADMIN` hệ thống chuẩn mực.
+  - Bình luận cha không tồn tại, đã bị soft-deleted hoặc thuộc task khác bị từ chối với mã `COMMENT_NOT_FOUND` (HTTP 404).
+- **Kiểm thử**:
+  - Tác giả sửa/xóa bình luận thành công (200 OK).
+  - Thành viên khác sửa/xóa bị từ chối (422 FORBIDDEN).
+  - `PROJECT_MANAGER` không phải Admin sửa/xóa bình luận của nhân viên bị từ chối (422 FORBIDDEN).
+  - Quản trị viên hệ thống (Admin) sửa/xóa bình luận của nhân viên thành công (200 OK).
+  - Trả lời bình luận khác task hoặc bình luận đã xóa bị từ chối (404 COMMENT_NOT_FOUND).
+
+### 7.4. MEDIUM: TASK_STATUS_HISTORY_ROLLBACK_TEST_GAP (Đã vá)
+- **Vấn đề**: Chưa có integration test chứng minh rollback giao dịch trên cơ sở dữ liệu thật PostgreSQL khi việc ghi lịch sử trạng thái thất bại.
+- **Giải pháp**:
+  - Bổ sung integration test `testStatusHistoryRollbackOnFailure` thực thi trực tiếp trên Testcontainers PostgreSQL.
+  - Truyền comment vượt quá giới hạn lưu trữ của cột (`task_status_histories.comment VARCHAR(1000)`) với 1005 ký tự để kích hoạt lỗi `DataIntegrityViolationException` từ PostgreSQL engine.
+  - Kiểm tra trạng thái dữ liệu sau rollback qua query SQL độc lập: `tasks.status` giữ nguyên `TODO`, `tasks.version` giữ nguyên `0`, và số lượng bản ghi lịch sử của task là `0`.
+- **Kết quả**: Rollback test PASS 100% trên PostgreSQL thực tế.
+
+### 7.5. DEFERRED: TASK_DELETE_RULE_AMBIGUITY_DEFERRED (Ghi nhận hoãn)
+- **Nội dung**: Khái niệm “Business history quan trọng” chưa được các tài liệu canonical định nghĩa đầy đủ. Logic hiện tại chỉ xét lịch sử trạng thái (`TASK_CANNOT_DELETE_HAS_HISTORY`).
+- **Quyết định**: Không tự ý thay đổi hành vi xóa trong bản vá này khi chưa có quyết định chuẩn mực từ tài liệu canonical.
+- **Ràng buộc**: Phase tiếp theo không được âm thầm thay đổi quy tắc này mà phải chờ quyết định thiết kế chính thức.
+
+---
+
+## 8. Triển khai Task Core
 
 - **Domain Model**: Đóng gói các bất biến nghiệp vụ trong `Task.java`:
   - `create(...)`: Khởi tạo mặc định `TODO`, tiến độ `0%`, kiểm tra ngày bắt đầu không sau hạn chót (`TASK_DATE_RANGE_INVALID`), thời gian ước tính không âm, chặn self-parent.
@@ -119,43 +182,34 @@ Mọi entity JPA ánh xạ chính xác 100% cột trong Flyway migrations `V005`
 
 ---
 
-## 8. Triển khai Subtask & Cycle Detection
-
-- **Quan hệ Subtask**: Tạo subtask với cùng `projectId` của công việc cha; kế thừa dự án từ cha.
-- **Kiểm tra tương thích**: Từ chối cha con khác dự án (`TASK_PARENT_PROJECT_MISMATCH`).
-- **Phát hiện chu trình (Cycle Detection)**:
-  - Chặn self-parent trực tiếp (`taskId == parentTaskId`).
-  - Đệ quy kiểm tra cây tổ tiên ngược lên tối đa 50 cấp; nếu gặp lại `taskId` thì từ chối ngay với mã `TASK_PARENT_CYCLE_DETECTED`.
-  - Chặn liên kết tới công việc cha đã bị soft-delete (`TASK_NOT_FOUND`).
-
----
-
-## 9. Triển khai Task Assignment
+## 9. Triển khai Task Assignment & Partial Index
 
 - **Phân công (`assignUsers`)**:
   - Assignee phải là người dùng đang hoạt động (`ACTIVE`, `is_deleted = false`).
   - Assignee phải là thành viên hoạt động (`active = true`) trong dự án của công việc (`TASK_ASSIGNEE_NOT_PROJECT_MEMBER`).
-  - Chặn phân công trùng lặp đang có hiệu lực (`TASK_ALREADY_ASSIGNED`).
+  - Chặn phân công trùng lặp đang có hiệu lực (`TASK_ALREADY_ASSIGNED`) bằng cả kiểm tra fail-fast ở service và chốt chặn partial unique index `uk_task_assignments_active`.
   - Ghi nhận `assignedBy` từ `principal.userId()`, `assignedAt = Instant.now()`.
 - **Gỡ phân công (`unassignUser`)**:
   - Ghi nhận `unassignedAt = Instant.now()`, cập nhật `is_active = false`.
   - Kiểm tra đúng cặp `taskId` và `assignmentId`.
+  - Bản ghi inactive không cản trở việc phân công lại thành viên đó cho công việc trong tương lai.
 
 ---
 
-## 10. Triển khai Status History
+## 10. Triển khai Status History & Rollback An toàn
 
 - **Giao dịch nguyên khối (`@Transactional`)**: Mọi thao tác cập nhật trạng thái công việc đều ghi nhận bản ghi vào `task_status_histories` trong cùng một transaction.
 - **Dữ liệu lịch sử**: `fromStatus`, `toStatus`, `comment`, `changedBy` (từ authenticated principal), `changedAt` (server time).
 - **Quy tắc xóa an toàn**: Không cho phép xóa mềm công việc đã có lịch sử thay đổi trạng thái (`TASK_CANNOT_DELETE_HAS_HISTORY`); yêu cầu chuyển sang `CANCELLED`.
+- **Bảo đảm tính toàn vẹn**: Khi việc ghi lịch sử gặp lỗi, giao dịch cơ sở dữ liệu bị rollback hoàn toàn, không có trạng thái hay phiên bản công việc nào bị commit dở dang.
 
 ---
 
 ## 11. Triển khai Task Comment
 
 - **Tạo bình luận (`createComment`)**: Kiểm tra quyền truy cập dự án, kiểm tra bình luận cha (nếu có phản hồi) phải cùng thuộc công việc và chưa bị xóa.
-- **Sửa bình luận (`updateComment`)**: Chỉ tác giả hoặc Quản trị viên/Quản lý dự án mới có quyền chỉnh sửa (`FORBIDDEN`). Cập nhật cờ `is_edited = true` và `edited_at = now()`.
-- **Xóa bình luận (`deleteComment`)**: Chỉ tác giả hoặc Quản trị viên/Quản lý dự án mới có quyền xóa (`FORBIDDEN`). Thực hiện soft-delete `is_deleted = true`.
+- **Sửa bình luận (`updateComment`)**: Chỉ tác giả hoặc Quản trị viên hệ thống mới có quyền chỉnh sửa (`FORBIDDEN`). Cập nhật cờ `is_edited = true` và `edited_at = now()`.
+- **Xóa bình luận (`deleteComment`)**: Chỉ tác giả hoặc Quản trị viên hệ thống mới có quyền xóa (`FORBIDDEN`). Thực hiện soft-delete `is_deleted = true`.
 - **Ẩn bình luận đã xóa**: Danh sách bình luận chỉ trả về các bình luận `deleted = false`.
 
 ---
@@ -189,6 +243,7 @@ Mọi entity JPA ánh xạ chính xác 100% cột trong Flyway migrations `V005`
 2. **Business Context Rules** (Kiểm tra tại Service layer):
    - Người gọi thao tác phải là thành viên đang hoạt động của dự án chứa công việc (hoặc có vai trò Admin hệ thống).
    - Identity an toàn: Toàn bộ `actorId` được trích xuất từ `principal.userId()`, tuyệt đối không tin cậy dữ liệu do client gửi lên.
+   - Bình luận: Chỉ tác giả hoặc System Administrator mới được sửa/xóa bình luận.
 
 ---
 
@@ -238,36 +293,53 @@ Mọi entity JPA ánh xạ chính xác 100% cột trong Flyway migrations `V005`
   - Chặn tiến độ ngoài khoảng `[0, 100]`.
 
 ### B. Kiểm thử tích hợp (PostgreSQL Testcontainers Integration Tests)
-- `com.worksphere.task.TaskMockMvcTest`: 15 tests **PASS**
-  - Tạo công việc thành công (HTTP 201).
-  - Chặn tạo công việc trên dự án không ACTIVE (`TASK_PROJECT_NOT_ACTIVE`).
-  - Chặn phân công người không thuộc dự án (`TASK_ASSIGNEE_NOT_PROJECT_MEMBER`).
-  - Chặn khoảng thời gian không hợp lệ (`TASK_DATE_RANGE_INVALID`).
-  - Lấy danh sách công việc với bộ lọc và phân trang.
-  - Lấy chi tiết công việc với allowedActions.
-  - Cập nhật công việc và kiểm soát xung đột phiên bản (`OPTIMISTIC_LOCK_CONFLICT`).
-  - Toàn bộ vòng đời workflow và ghi nhận status history.
-  - Assignee không được tự duyệt hoàn thành (`FORBIDDEN`).
-  - Từ chối kiểm tra bắt buộc nhập lý do (`VALIDATION_ERROR`).
-  - Chặn chuyển tắt sang hoàn thành (`TASK_INVALID_STATUS_TRANSITION`).
-  - Phân công thành viên và chặn phân công trùng lặp (`TASK_ALREADY_ASSIGNED`).
-  - Tạo và liệt kê công việc con, kiểm tra phân cấp.
-  - Bình luận: tạo, sửa, phân quyền tác giả, xóa mềm và ẩn bình luận đã xóa.
-  - Ràng buộc xóa công việc: chặn khi có lịch sử (`TASK_CANNOT_DELETE_HAS_HISTORY`), cho phép khi chưa có lịch sử.
-  - Bảo mật: từ chối 401 khi không có token, 403 khi thiếu quyền.
+- `com.worksphere.task.TaskMockMvcTest`: 25 tests **PASS**
+  1. Tạo công việc thành công (HTTP 201).
+  2. Chặn tạo công việc trên dự án không ACTIVE (`TASK_PROJECT_NOT_ACTIVE`).
+  3. Chặn phân công người không thuộc dự án (`TASK_ASSIGNEE_NOT_PROJECT_MEMBER`).
+  4. Chặn khoảng thời gian không hợp lệ (`TASK_DATE_RANGE_INVALID`).
+  5. Lấy danh sách công việc với bộ lọc và phân trang.
+  6. Lấy chi tiết công việc với allowedActions.
+  7. Cập nhật công việc và kiểm soát xung đột phiên bản (`OPTIMISTIC_LOCK_CONFLICT`).
+  8. Toàn bộ vòng đời workflow và ghi nhận status history.
+  9. Assignee không được tự duyệt hoàn thành (`FORBIDDEN`).
+  10. Từ chối kiểm tra bắt buộc nhập lý do (`VALIDATION_ERROR`).
+  11. Chặn chuyển tắt sang hoàn thành (`TASK_INVALID_STATUS_TRANSITION`).
+  12. Phân công thành viên và chặn phân công trùng lặp (`TASK_ALREADY_ASSIGNED`).
+  13. Tạo và liệt kê công việc con, kiểm tra phân cấp.
+  14. Ràng buộc xóa công việc: chặn khi có lịch sử (`TASK_CANNOT_DELETE_HAS_HISTORY`), cho phép khi chưa có lịch sử.
+  15. Bảo mật: từ chối 401 khi không có token, 403 khi thiếu quyền.
+  16. **[MỚI]** Xác minh partial unique index `uk_task_assignments_active` tồn tại trên PostgreSQL.
+  17. **[MỚI]** Từ chối phân công trùng lặp tuần tự bằng `TASK_ALREADY_ASSIGNED`.
+  18. **[MỚI]** Cho phép phân công lại sau khi đã gỡ (bản ghi inactive cũ không gây conflict).
+  19. **[MỚI]** Phân công đồng thời qua đa luồng (`ExecutorService`) chỉ commit đúng 1 bản ghi active trên PostgreSQL.
+  20. **[MỚI]** Phát hiện chu trình phân cấp: self-parent, chu trình 2 cấp và chu trình 3 cấp đều ném `TASK_PARENT_CYCLE_DETECTED`.
+  21. **[MỚI]** Chuỗi phân cấp hợp lệ sâu 52 cấp vượt qua bình thường mà không bị báo lỗi chu trình giả.
+  22. **[MỚI]** Xác thực công việc cha: từ chối cha đã bị soft-deleted và cha thuộc dự án khác.
+  23. **[MỚI]** Phân quyền bình luận: tác giả và Admin sửa/xóa thành công; PM không phải Admin bị từ chối 422 FORBIDDEN.
+  24. **[MỚI]** Xác thực bình luận cha: từ chối bình luận cha thuộc task khác hoặc đã bị xóa mềm.
+  25. **[MỚI]** Rollback giao dịch: lỗi khi insert status history (tràn độ dài comment) rollback hoàn toàn task status, version và history trên PostgreSQL.
 
 ---
 
 ## 16. Tổng hợp kiểm thử toàn bộ hệ thống (Regression Suite)
 
-- **Tổng số tests**: **90/90 PASS**
-  - Tests Phase 0 - 6: 59 tests PASS
-  - Tests Phase 7 mới: 31 tests PASS
+- **Tổng số tests**: **100/100 PASS**
+  - `com.worksphere.BackendApplicationTests`: 1 test PASS
+  - `com.worksphere.MigrationIntegrationTest`: 1 test PASS (chạy Flyway V001-V012 trên PostgreSQL)
+  - `com.worksphere.identity.AuthIntegrationTest`: 11 tests PASS
+  - `com.worksphere.identity.AuthMockMvcTest`: 16 tests PASS
+  - `com.worksphere.identity.AdminUserMockMvcTest`: 7 tests PASS
+  - `com.worksphere.organization.DepartmentMockMvcTest`: 8 tests PASS
+  - `com.worksphere.project.ProjectMockMvcTest`: 15 tests PASS
+  - `com.worksphere.task.TaskMockMvcTest`: 25 tests PASS
+  - `com.worksphere.task.TaskTest`: 6 tests PASS
+  - `com.worksphere.task.TaskWorkflowTest`: 10 tests PASS
 - **Failures**: 0
 - **Errors**: 0
 - **Skipped**: 0
 - **Build Status**: **BUILD SUCCESS**
-- **Maven execution time**: 01:25 min
+- **Maven execution time**: 01:43 min
 
 ---
 
@@ -276,42 +348,22 @@ Mọi entity JPA ánh xạ chính xác 100% cột trong Flyway migrations `V005`
 - **Checkstyle**: 0 violations (`checkstyle:check` exit code 0).
 - **Secret scan**: 0 secret, token, mật khẩu, private key hay file `.env` thật nào bị commit.
 - **Tài liệu chuẩn mực**: `docs/` 100% không bị sửa đổi.
-- **Migrations cơ sở dữ liệu**: `V001` - `V011` 100% không bị sửa đổi.
+- **Migrations cơ sở dữ liệu**: `V001` - `V011` 100% không bị sửa đổi; chỉ thêm migration mới `V012`.
 - **Visual Prototype & Mobile**: 100% không bị sửa đổi.
 
 ---
 
-## 18. Danh sách tệp tạo mới trong Phase 7
+## 18. Danh sách tệp sửa đổi & tạo mới trong bản vá Phase 7
 
-1. `backend/src/main/java/com/worksphere/task/domain/Task.java`
-2. `backend/src/main/java/com/worksphere/task/domain/TaskStatus.java`
-3. `backend/src/main/java/com/worksphere/task/domain/TaskPriority.java`
-4. `backend/src/main/java/com/worksphere/task/domain/TaskAssignment.java`
-5. `backend/src/main/java/com/worksphere/task/domain/TaskStatusHistory.java`
-6. `backend/src/main/java/com/worksphere/task/domain/TaskComment.java`
-7. `backend/src/main/java/com/worksphere/task/infrastructure/persistence/TaskRepository.java`
-8. `backend/src/main/java/com/worksphere/task/infrastructure/persistence/TaskAssignmentRepository.java`
-9. `backend/src/main/java/com/worksphere/task/infrastructure/persistence/TaskStatusHistoryRepository.java`
-10. `backend/src/main/java/com/worksphere/task/infrastructure/persistence/TaskCommentRepository.java`
-11. `backend/src/main/java/com/worksphere/task/api/request/CreateTaskRequest.java`
-12. `backend/src/main/java/com/worksphere/task/api/request/UpdateTaskRequest.java`
-13. `backend/src/main/java/com/worksphere/task/api/request/ChangeTaskStatusRequest.java`
-14. `backend/src/main/java/com/worksphere/task/api/request/UpdateTaskProgressRequest.java`
-15. `backend/src/main/java/com/worksphere/task/api/request/AssignTaskRequest.java`
-16. `backend/src/main/java/com/worksphere/task/api/request/CreateSubtaskRequest.java`
-17. `backend/src/main/java/com/worksphere/task/api/request/CreateTaskCommentRequest.java`
-18. `backend/src/main/java/com/worksphere/task/api/request/UpdateTaskCommentRequest.java`
-19. `backend/src/main/java/com/worksphere/task/api/response/TaskSummaryResponse.java`
-20. `backend/src/main/java/com/worksphere/task/api/response/TaskDetailResponse.java`
-21. `backend/src/main/java/com/worksphere/task/api/response/TaskStatusHistoryResponse.java`
-22. `backend/src/main/java/com/worksphere/task/api/response/TaskCommentResponse.java`
-23. `backend/src/main/java/com/worksphere/task/application/TaskApplicationService.java`
-24. `backend/src/main/java/com/worksphere/task/application/TaskCommentApplicationService.java`
-25. `backend/src/main/java/com/worksphere/task/web/TaskController.java`
-26. `backend/src/test/java/com/worksphere/task/TaskTest.java`
-27. `backend/src/test/java/com/worksphere/task/TaskWorkflowTest.java`
-28. `backend/src/test/java/com/worksphere/task/TaskMockMvcTest.java`
-29. `reports/PHASE_07_REPORT.md`
+### Tệp tạo mới:
+1. `backend/src/main/resources/db/migration/V012__add_active_task_assignment_uniqueness.sql`
+2. `backend/src/main/java/com/worksphere/task/infrastructure/TaskFlywayConfiguration.java`
+
+### Tệp sửa đổi:
+1. `backend/src/main/java/com/worksphere/task/application/TaskApplicationService.java`
+2. `backend/src/main/java/com/worksphere/task/application/TaskCommentApplicationService.java`
+3. `backend/src/test/java/com/worksphere/task/TaskMockMvcTest.java`
+4. `reports/PHASE_07_REPORT.md`
 
 ---
 
@@ -321,9 +373,10 @@ Mọi entity JPA ánh xạ chính xác 100% cột trong Flyway migrations `V005`
 - `TEAM_API_CONTRACT_GAP`: API Team chưa xuất hiện trong Section 12 (deferred).
 - `DASHBOARD_AGGREGATED_API_GAP`: API Dashboard tổng hợp (deferred).
 - `TASK_ATTACHMENT_DEFERRED_UNTIL_PHASE_08`: Đính kèm tệp cho task chờ module File / `stored_files` ở Phase 8.
+- `TASK_DELETE_RULE_AMBIGUITY_DEFERRED`: Định nghĩa “Business history quan trọng” chưa đầy đủ trong canonical docs; giữ logic hiện tại xét status history, cấm thay đổi ngầm trong các phase tiếp theo.
 
 ---
 
 ## 20. Kết luận
 
-**PHASE_07_PASS_PUSHED**
+**PHASE_07_PATCH_PASS_PUSHED**

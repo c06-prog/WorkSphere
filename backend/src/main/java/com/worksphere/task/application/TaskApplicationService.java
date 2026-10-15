@@ -38,6 +38,7 @@ import com.worksphere.task.infrastructure.persistence.TaskStatusHistoryRepositor
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import jakarta.persistence.criteria.Subquery;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -226,14 +227,21 @@ public class TaskApplicationService {
         Task savedTask = taskRepository.save(task);
 
         if (request.assigneeIds() != null) {
-            for (UUID assigneeId : request.assigneeIds()) {
-                TaskAssignment assignment = TaskAssignment.create(
-                        UUID.randomUUID(),
-                        savedTask.getId(),
-                        assigneeId,
-                        principal.userId()
-                );
-                taskAssignmentRepository.save(assignment);
+            try {
+                for (UUID assigneeId : request.assigneeIds()) {
+                    TaskAssignment assignment = TaskAssignment.create(
+                            UUID.randomUUID(),
+                            savedTask.getId(),
+                            assigneeId,
+                            principal.userId()
+                    );
+                    taskAssignmentRepository.saveAndFlush(assignment);
+                }
+            } catch (DataIntegrityViolationException ex) {
+                if (isTaskAssignmentUniqueViolation(ex)) {
+                    throw new BusinessRuleException("TASK_ALREADY_ASSIGNED", "Người dùng đã được phân công công việc này");
+                }
+                throw ex;
             }
         }
 
@@ -439,18 +447,25 @@ public class TaskApplicationService {
 
         validateAssignees(request.assigneeIds(), task.getProjectId());
 
-        for (UUID assigneeId : request.assigneeIds()) {
-            if (taskAssignmentRepository.existsByTaskIdAndAssigneeIdAndActiveTrue(taskId, assigneeId)) {
+        try {
+            for (UUID assigneeId : request.assigneeIds()) {
+                if (taskAssignmentRepository.existsByTaskIdAndAssigneeIdAndActiveTrue(taskId, assigneeId)) {
+                    throw new BusinessRuleException("TASK_ALREADY_ASSIGNED", "Người dùng đã được phân công công việc này");
+                }
+
+                TaskAssignment assignment = TaskAssignment.create(
+                        UUID.randomUUID(),
+                        taskId,
+                        assigneeId,
+                        principal.userId()
+                );
+                taskAssignmentRepository.saveAndFlush(assignment);
+            }
+        } catch (DataIntegrityViolationException ex) {
+            if (isTaskAssignmentUniqueViolation(ex)) {
                 throw new BusinessRuleException("TASK_ALREADY_ASSIGNED", "Người dùng đã được phân công công việc này");
             }
-
-            TaskAssignment assignment = TaskAssignment.create(
-                    UUID.randomUUID(),
-                    taskId,
-                    assigneeId,
-                    principal.userId()
-            );
-            taskAssignmentRepository.save(assignment);
+            throw ex;
         }
 
         return getTaskDetail(taskId, principal);
@@ -519,30 +534,33 @@ public class TaskApplicationService {
         if (taskId != null && taskId.equals(parentTaskId)) {
             throw new BusinessRuleException("TASK_PARENT_CYCLE_DETECTED", "Công việc không thể làm cha của chính nó");
         }
-        Task parent = taskRepository.findByIdAndDeletedFalse(parentTaskId)
-                .orElseThrow(() -> new ResourceNotFoundException("TASK_NOT_FOUND", "Công việc cha không tồn tại"));
 
-        if (!parent.getProjectId().equals(projectId)) {
-            throw new BusinessRuleException("TASK_PARENT_PROJECT_MISMATCH", "Công việc cha và con phải thuộc cùng một dự án");
-        }
-
+        Set<UUID> visited = new HashSet<>();
         if (taskId != null) {
-            UUID current = parent.getParentTaskId();
-            int depth = 0;
-            while (current != null) {
-                if (depth++ > 50) {
-                    throw new BusinessRuleException("TASK_PARENT_CYCLE_DETECTED", "Vượt quá độ sâu phân cấp công việc");
-                }
-                if (current.equals(taskId)) {
-                    throw new BusinessRuleException("TASK_PARENT_CYCLE_DETECTED", "Phát hiện vòng lặp phân cấp công việc");
-                }
-                Task ancestor = taskRepository.findByIdAndDeletedFalse(current).orElse(null);
-                if (ancestor == null) {
-                    break;
-                }
-                current = ancestor.getParentTaskId();
-            }
+            visited.add(taskId);
         }
+
+        UUID current = parentTaskId;
+        while (current != null) {
+            if (!visited.add(current)) {
+                throw new BusinessRuleException("TASK_PARENT_CYCLE_DETECTED", "Phát hiện vòng lặp phân cấp công việc");
+            }
+            Task ancestor = taskRepository.findById(current)
+                    .orElseThrow(() -> new ResourceNotFoundException("TASK_NOT_FOUND", "Công việc cha không tồn tại"));
+            if (ancestor.isDeleted()) {
+                throw new ResourceNotFoundException("TASK_NOT_FOUND", "Công việc cha không tồn tại");
+            }
+            if (!ancestor.getProjectId().equals(projectId)) {
+                throw new BusinessRuleException("TASK_PARENT_PROJECT_MISMATCH", "Công việc cha và con phải thuộc cùng một dự án");
+            }
+            current = ancestor.getParentTaskId();
+        }
+    }
+
+    private boolean isTaskAssignmentUniqueViolation(DataIntegrityViolationException ex) {
+        Throwable cause = ex.getRootCause();
+        String message = cause != null ? cause.getMessage() : ex.getMessage();
+        return message != null && (message.contains("uk_task_assignments_active") || message.contains("task_assignments"));
     }
 
     private void validateAssignees(List<UUID> assigneeIds, UUID projectId) {

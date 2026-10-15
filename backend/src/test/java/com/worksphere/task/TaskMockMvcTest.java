@@ -50,14 +50,31 @@ import org.springframework.web.context.WebApplicationContext;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import com.worksphere.shared.exception.BusinessRuleException;
+import com.worksphere.shared.exception.ResourceNotFoundException;
+import com.worksphere.shared.security.WorkSphereUserPrincipal;
+import com.worksphere.task.application.TaskApplicationService;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.transaction.support.TransactionTemplate;
+import org.hibernate.Hibernate;
 
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
@@ -134,6 +151,12 @@ public class TaskMockMvcTest {
     @Autowired
     private JwtService jwtService;
 
+    @Autowired
+    private TaskApplicationService taskApplicationService;
+
+    @Autowired
+    private TransactionTemplate transactionTemplate;
+
     private UUID adminUserId;
     private UUID pmUserId;
     private UUID employeeUserId;
@@ -144,6 +167,7 @@ public class TaskMockMvcTest {
     private String otherEmployeeToken;
     private UUID projectId;
     private UUID milestoneId;
+    private UUID deptId;
 
     @BeforeEach
     void setUp() {
@@ -174,7 +198,7 @@ public class TaskMockMvcTest {
         jdbcTemplate.update("DELETE FROM departments");
 
         // Department
-        UUID deptId = UUID.randomUUID();
+        deptId = UUID.randomUUID();
         jdbcTemplate.update(
                 "INSERT INTO departments (id, code, name, is_active, is_deleted, created_at, updated_at, version) "
                         + "VALUES (?, 'DEP-IT', 'IT Dept', true, false, now(), now(), 0)",
@@ -780,5 +804,399 @@ public class TaskMockMvcTest {
         mockMvc.perform(delete("/api/v1/tasks/" + task.getId())
                         .header("Authorization", "Bearer " + employeeToken))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("16. Concurrency: uk_task_assignments_active partial unique index exists in PostgreSQL")
+    void testActiveTaskAssignmentDatabaseIndexUniqueness() {
+        List<Map<String, Object>> indexes = jdbcTemplate.queryForList(
+                "SELECT indexname, indexdef FROM pg_indexes "
+                        + "WHERE tablename = 'task_assignments' AND indexname = 'uk_task_assignments_active'"
+        );
+        assertThat(indexes).hasSize(1);
+        String indexdef = ((String) indexes.get(0).get("indexdef")).toLowerCase();
+        assertThat(indexdef).contains("task_id");
+        assertThat(indexdef).contains("assignee_id");
+        assertThat(indexdef).contains("is_active");
+    }
+
+    @Test
+    @DisplayName("17. Concurrency: Sequential duplicate assignment is rejected with TASK_ALREADY_ASSIGNED")
+    void testSequentialDuplicateAssignmentRejected() throws Exception {
+        Task task = Task.create(
+                UUID.randomUUID(), projectId, null, null, "Assign Seq Task",
+                null, TaskPriority.MEDIUM, pmUserId, null, null, null, pmUserId
+        );
+        taskRepository.save(task);
+
+        AssignTaskRequest assignReq = new AssignTaskRequest(List.of(employeeUserId));
+
+        // First assignment succeeds
+        mockMvc.perform(post("/api/v1/tasks/" + task.getId() + "/assignments")
+                        .header("Authorization", "Bearer " + pmToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(assignReq)))
+                .andExpect(status().isOk());
+
+        // Duplicate sequential assignment is rejected
+        mockMvc.perform(post("/api/v1/tasks/" + task.getId() + "/assignments")
+                        .header("Authorization", "Bearer " + pmToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(assignReq)))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code", is("TASK_ALREADY_ASSIGNED")));
+    }
+
+    @Test
+    @DisplayName("18. Concurrency: Reassign after unassign succeeds (inactive row does not block reassign)")
+    void testReassignAfterUnassignSucceeds() throws Exception {
+        Task task = Task.create(
+                UUID.randomUUID(), projectId, null, null, "Reassign Task",
+                null, TaskPriority.MEDIUM, pmUserId, null, null, null, pmUserId
+        );
+        taskRepository.save(task);
+
+        AssignTaskRequest assignReq = new AssignTaskRequest(List.of(employeeUserId));
+
+        // 1. Assign
+        mockMvc.perform(post("/api/v1/tasks/" + task.getId() + "/assignments")
+                        .header("Authorization", "Bearer " + pmToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(assignReq)))
+                .andExpect(status().isOk());
+
+        TaskAssignment assignment = taskAssignmentRepository.findByTaskIdAndActiveTrue(task.getId()).get(0);
+        assertThat(assignment.isActive()).isTrue();
+
+        // 2. Unassign
+        mockMvc.perform(delete("/api/v1/tasks/" + task.getId() + "/assignments/" + assignment.getId())
+                        .header("Authorization", "Bearer " + pmToken))
+                .andExpect(status().isOk());
+
+        TaskAssignment unassigned = taskAssignmentRepository.findById(assignment.getId()).orElseThrow();
+        assertThat(unassigned.isActive()).isFalse();
+
+        // 3. Reassign same user succeeds
+        mockMvc.perform(post("/api/v1/tasks/" + task.getId() + "/assignments")
+                        .header("Authorization", "Bearer " + pmToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(assignReq)))
+                .andExpect(status().isOk());
+
+        Integer activeCount = jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM task_assignments WHERE task_id = ? AND assignee_id = ? AND is_active = true",
+                Integer.class, task.getId(), employeeUserId
+        );
+        assertThat(activeCount).isEqualTo(1);
+
+        Integer totalCount = jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM task_assignments WHERE task_id = ? AND assignee_id = ?",
+                Integer.class, task.getId(), employeeUserId
+        );
+        assertThat(totalCount).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("19. Concurrency: Concurrent duplicate assignments commit exactly one active assignment")
+    void testConcurrentDuplicateAssignmentsOnlyOneCommitted() throws Exception {
+        Task task = Task.create(
+                UUID.randomUUID(), projectId, null, null, "Concurrent Assign Task",
+                null, TaskPriority.HIGH, pmUserId, null, null, null, pmUserId
+        );
+        taskRepository.save(task);
+
+        int threads = 4;
+        ExecutorService executor = Executors.newFixedThreadPool(threads);
+        CountDownLatch startLatch = new CountDownLatch(1);
+        AtomicInteger successCount = new AtomicInteger(0);
+        AtomicInteger alreadyAssignedCount = new AtomicInteger(0);
+
+        List<Future<Void>> futures = new ArrayList<>();
+        AssignTaskRequest assignReq = new AssignTaskRequest(List.of(employeeUserId));
+        String body = objectMapper.writeValueAsString(assignReq);
+
+        for (int i = 0; i < threads; i++) {
+            futures.add(executor.submit(() -> {
+                startLatch.await();
+                try {
+                    mockMvc.perform(post("/api/v1/tasks/" + task.getId() + "/assignments")
+                                    .header("Authorization", "Bearer " + pmToken)
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content(body))
+                            .andDo(result -> {
+                                int s = result.getResponse().getStatus();
+                                String content = result.getResponse().getContentAsString();
+                                if (s == 200) {
+                                    successCount.incrementAndGet();
+                                } else if (content.contains("TASK_ALREADY_ASSIGNED")) {
+                                    alreadyAssignedCount.incrementAndGet();
+                                }
+                            });
+                } catch (Exception e) {
+                    // Ignored
+                }
+                return null;
+            }));
+        }
+
+        startLatch.countDown();
+        for (Future<Void> future : futures) {
+            future.get(10, TimeUnit.SECONDS);
+        }
+        executor.shutdown();
+
+        assertThat(successCount.get()).isEqualTo(1);
+        assertThat(alreadyAssignedCount.get()).isEqualTo(threads - 1);
+
+        Integer activeInDb = jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM task_assignments WHERE task_id = ? AND assignee_id = ? AND is_active = true",
+                Integer.class, task.getId(), employeeUserId
+        );
+        assertThat(activeInDb).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("20. Hierarchy: Cycle detection rejects self-parent, 2-level cycle, and 3-level cycle")
+    void testHierarchyCycleDetectionSelfTwoAndThreeLevel() {
+        // 1. Self cycle
+        Task taskA = Task.create(
+                UUID.randomUUID(), projectId, null, null, "Task A",
+                null, TaskPriority.MEDIUM, pmUserId, null, null, null, pmUserId
+        );
+        taskRepository.save(taskA);
+
+        assertThatThrownBy(() -> taskApplicationService.validateParentHierarchy(taskA.getId(), taskA.getId(), projectId))
+                .isInstanceOf(BusinessRuleException.class)
+                .satisfies(e -> assertThat(((BusinessRuleException) e).getCode()).isEqualTo("TASK_PARENT_CYCLE_DETECTED"));
+
+        // 2. Two-level cycle: A -> B, setting parent of A to B
+        Task taskB = Task.create(
+                UUID.randomUUID(), projectId, taskA.getId(), null, "Task B (child of A)",
+                null, TaskPriority.MEDIUM, pmUserId, null, null, null, pmUserId
+        );
+        taskRepository.save(taskB);
+
+        assertThatThrownBy(() -> taskApplicationService.validateParentHierarchy(taskA.getId(), taskB.getId(), projectId))
+                .isInstanceOf(BusinessRuleException.class)
+                .satisfies(e -> assertThat(((BusinessRuleException) e).getCode()).isEqualTo("TASK_PARENT_CYCLE_DETECTED"));
+
+        // 3. Three-level cycle: A -> B -> C, setting parent of A to C
+        Task taskC = Task.create(
+                UUID.randomUUID(), projectId, taskB.getId(), null, "Task C (child of B)",
+                null, TaskPriority.MEDIUM, pmUserId, null, null, null, pmUserId
+        );
+        taskRepository.save(taskC);
+
+        assertThatThrownBy(() -> taskApplicationService.validateParentHierarchy(taskA.getId(), taskC.getId(), projectId))
+                .isInstanceOf(BusinessRuleException.class)
+                .satisfies(e -> assertThat(((BusinessRuleException) e).getCode()).isEqualTo("TASK_PARENT_CYCLE_DETECTED"));
+    }
+
+    @Test
+    @DisplayName("21. Hierarchy: Valid hierarchy chain of 52 levels passes without cycle error")
+    void testDeepHierarchyOver50LevelsPasses() throws Exception {
+        UUID currentParentId = null;
+        for (int i = 0; i < 52; i++) {
+            Task chainTask = Task.create(
+                    UUID.randomUUID(), projectId, currentParentId, null, "Chain Level " + i,
+                    null, TaskPriority.LOW, pmUserId, null, null, null, pmUserId
+            );
+            taskRepository.save(chainTask);
+            currentParentId = chainTask.getId();
+        }
+
+        // Subtask creation at level 52 under currentParentId should succeed
+        CreateSubtaskRequest subtaskReq = new CreateSubtaskRequest(
+                null, "Subtask at depth 52", null, TaskPriority.MEDIUM, null, null, null, null
+        );
+        mockMvc.perform(post("/api/v1/tasks/" + currentParentId + "/subtasks")
+                        .header("Authorization", "Bearer " + pmToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(subtaskReq)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.title", is("Subtask at depth 52")))
+                .andExpect(jsonPath("$.data.parentTaskId", is(currentParentId.toString())));
+    }
+
+    @Test
+    @DisplayName("22. Hierarchy: Parent validation rejects soft-deleted parent and different project parent")
+    void testParentValidationSoftDeletedOrDifferentProject() {
+        // Soft-deleted parent
+        Task deletedTask = Task.create(
+                UUID.randomUUID(), projectId, null, null, "Deleted Parent",
+                null, TaskPriority.LOW, pmUserId, null, null, null, pmUserId
+        );
+        deletedTask.softDelete(pmUserId);
+        taskRepository.save(deletedTask);
+
+        assertThatThrownBy(() -> taskApplicationService.validateParentHierarchy(null, deletedTask.getId(), projectId))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .satisfies(e -> assertThat(((ResourceNotFoundException) e).getCode()).isEqualTo("TASK_NOT_FOUND"));
+
+        // Different project parent
+        UUID otherProjectId = UUID.randomUUID();
+        Project otherProject = Project.create(
+                otherProjectId,
+                "PRJ-OTHER",
+                "Other Project",
+                "Other description",
+                pmUserId,
+                deptId,
+                ProjectPriority.MEDIUM,
+                LocalDate.now(),
+                LocalDate.now().plusMonths(1),
+                pmUserId
+        );
+        projectRepository.save(otherProject);
+
+        Task otherProjectTask = Task.create(
+                UUID.randomUUID(), otherProjectId, null, null, "Other Proj Task",
+                null, TaskPriority.LOW, pmUserId, null, null, null, pmUserId
+        );
+        taskRepository.save(otherProjectTask);
+
+        assertThatThrownBy(() -> taskApplicationService.validateParentHierarchy(null, otherProjectTask.getId(), projectId))
+                .isInstanceOf(BusinessRuleException.class)
+                .satisfies(e -> assertThat(((BusinessRuleException) e).getCode()).isEqualTo("TASK_PARENT_PROJECT_MISMATCH"));
+    }
+
+    @Test
+    @DisplayName("23. Comments: Author and Admin can edit/delete, but PM (non-Admin) is forbidden from editing/deleting other users' comments")
+    void testCommentAuthorizationAuthorAdminAndPmNonAdminRestrictions() throws Exception {
+        Task task = Task.create(
+                UUID.randomUUID(), projectId, null, null, "Comment Auth Task",
+                null, TaskPriority.MEDIUM, pmUserId, null, null, null, pmUserId
+        );
+        taskRepository.save(task);
+
+        // Employee creates comment
+        CreateTaskCommentRequest createReq = new CreateTaskCommentRequest("Employee comment", null, null);
+        String res = mockMvc.perform(post("/api/v1/tasks/" + task.getId() + "/comments")
+                        .header("Authorization", "Bearer " + employeeToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(createReq)))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        String commentId = objectMapper.readTree(res).path("data").path("id").asText();
+
+        // 1. PM (non-admin) tries to update employee's comment -> 422 FORBIDDEN
+        UpdateTaskCommentRequest pmEditReq = new UpdateTaskCommentRequest("PM override edit");
+        mockMvc.perform(put("/api/v1/tasks/" + task.getId() + "/comments/" + commentId)
+                        .header("Authorization", "Bearer " + pmToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(pmEditReq)))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code", is("FORBIDDEN")));
+
+        // 2. PM (non-admin) tries to delete employee's comment -> 422 FORBIDDEN
+        mockMvc.perform(delete("/api/v1/tasks/" + task.getId() + "/comments/" + commentId)
+                        .header("Authorization", "Bearer " + pmToken))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code", is("FORBIDDEN")));
+
+        // 3. System Admin updates employee's comment -> 200 OK
+        UpdateTaskCommentRequest adminEditReq = new UpdateTaskCommentRequest("Admin curated edit");
+        mockMvc.perform(put("/api/v1/tasks/" + task.getId() + "/comments/" + commentId)
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(adminEditReq)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content", is("Admin curated edit")));
+
+        // 4. System Admin deletes employee's comment -> 200 OK
+        mockMvc.perform(delete("/api/v1/tasks/" + task.getId() + "/comments/" + commentId)
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("24. Comments: Parent comment from different task or soft-deleted parent is rejected")
+    void testCommentParentValidationMismatchedTaskOrDeleted() throws Exception {
+        Task task1 = Task.create(
+                UUID.randomUUID(), projectId, null, null, "Comment Task 1",
+                null, TaskPriority.MEDIUM, pmUserId, null, null, null, pmUserId
+        );
+        taskRepository.save(task1);
+
+        Task task2 = Task.create(
+                UUID.randomUUID(), projectId, null, null, "Comment Task 2",
+                null, TaskPriority.MEDIUM, pmUserId, null, null, null, pmUserId
+        );
+        taskRepository.save(task2);
+
+        // Comment on Task 1
+        CreateTaskCommentRequest req1 = new CreateTaskCommentRequest("Parent on task 1", null, null);
+        String res1 = mockMvc.perform(post("/api/v1/tasks/" + task1.getId() + "/comments")
+                        .header("Authorization", "Bearer " + employeeToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req1)))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        String comment1Id = objectMapper.readTree(res1).path("data").path("id").asText();
+
+        // 1. Reply on Task 2 referencing comment from Task 1 -> rejected with COMMENT_NOT_FOUND (404)
+        CreateTaskCommentRequest replyDiffTask = new CreateTaskCommentRequest(
+                "Reply cross task", UUID.fromString(comment1Id), null
+        );
+        mockMvc.perform(post("/api/v1/tasks/" + task2.getId() + "/comments")
+                        .header("Authorization", "Bearer " + employeeToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(replyDiffTask)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code", is("COMMENT_NOT_FOUND")));
+
+        // 2. Soft-delete comment on Task 1
+        mockMvc.perform(delete("/api/v1/tasks/" + task1.getId() + "/comments/" + comment1Id)
+                        .header("Authorization", "Bearer " + employeeToken))
+                .andExpect(status().isOk());
+
+        // Reply on Task 1 referencing deleted comment -> rejected with COMMENT_NOT_FOUND (404)
+        CreateTaskCommentRequest replyDeleted = new CreateTaskCommentRequest(
+                "Reply to deleted", UUID.fromString(comment1Id), null
+        );
+        mockMvc.perform(post("/api/v1/tasks/" + task1.getId() + "/comments")
+                        .header("Authorization", "Bearer " + employeeToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(replyDeleted)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code", is("COMMENT_NOT_FOUND")));
+    }
+
+    @Test
+    @DisplayName("25. Rollback: Failure during status history insert rolls back task status, version, and history on PostgreSQL")
+    void testStatusHistoryRollbackOnFailure() {
+        Task task = Task.create(
+                UUID.randomUUID(), projectId, null, null, "Rollback Test Task",
+                null, TaskPriority.HIGH, pmUserId, null, null, null, pmUserId
+        );
+        taskRepository.save(task);
+
+        User pmUser = transactionTemplate.execute(status -> {
+            User u = userRepository.findById(pmUserId).orElseThrow();
+            Hibernate.initialize(u.getRoles());
+            return u;
+        });
+        WorkSphereUserPrincipal pmPrincipal = new WorkSphereUserPrincipal(pmUser);
+
+        // Comment > 1000 characters triggers PostgreSQL VARCHAR(1000) constraint violation when saving TaskStatusHistory
+        String overlyLongComment = "R".repeat(1005);
+        ChangeTaskStatusRequest badReq = new ChangeTaskStatusRequest(TaskStatus.IN_PROGRESS, overlyLongComment, 0L);
+
+        // Executing changeStatus will fail when Hibernate flushes history insert to PostgreSQL
+        assertThatThrownBy(() -> taskApplicationService.changeStatus(task.getId(), badReq, pmPrincipal))
+                .isInstanceOf(DataIntegrityViolationException.class);
+
+        // In a fresh query from PostgreSQL:
+        Map<String, Object> taskRow = jdbcTemplate.queryForMap(
+                "SELECT status, version FROM tasks WHERE id = ?", task.getId()
+        );
+        assertThat(taskRow.get("status")).isEqualTo("TODO");
+        assertThat(((Number) taskRow.get("version")).longValue()).isEqualTo(0L);
+
+        Integer historyCount = jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM task_status_histories WHERE task_id = ?",
+                Integer.class, task.getId()
+        );
+        assertThat(historyCount).isEqualTo(0);
     }
 }

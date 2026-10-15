@@ -2,8 +2,6 @@ package com.worksphere.task.application;
 
 import com.worksphere.identity.domain.User;
 import com.worksphere.identity.infrastructure.persistence.UserRepository;
-import com.worksphere.project.domain.ProjectMember;
-import com.worksphere.project.domain.ProjectRole;
 import com.worksphere.project.infrastructure.persistence.ProjectMemberRepository;
 import com.worksphere.shared.exception.BusinessRuleException;
 import com.worksphere.shared.exception.ResourceNotFoundException;
@@ -24,9 +22,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -108,7 +106,7 @@ public class TaskCommentApplicationService {
                 .orElseThrow(() -> new ResourceNotFoundException("COMMENT_NOT_FOUND", "Bình luận không tồn tại"));
 
         boolean isAuthor = comment.getAuthorId().equals(principal.userId());
-        boolean isAdmin = isAdminOrProjectManager(task.getProjectId(), principal);
+        boolean isAdmin = hasSystemAdminRole(principal);
         if (!isAuthor && !isAdmin) {
             throw new BusinessRuleException("FORBIDDEN", "Chỉ tác giả hoặc quản trị viên mới có thể chỉnh sửa bình luận");
         }
@@ -126,7 +124,7 @@ public class TaskCommentApplicationService {
                 .orElseThrow(() -> new ResourceNotFoundException("COMMENT_NOT_FOUND", "Bình luận không tồn tại"));
 
         boolean isAuthor = comment.getAuthorId().equals(principal.userId());
-        boolean isAdmin = isAdminOrProjectManager(task.getProjectId(), principal);
+        boolean isAdmin = hasSystemAdminRole(principal);
         if (!isAuthor && !isAdmin) {
             throw new BusinessRuleException("FORBIDDEN", "Chỉ tác giả hoặc quản trị viên mới có thể xóa bình luận");
         }
@@ -148,14 +146,6 @@ public class TaskCommentApplicationService {
         if (!isMember && !hasSystemAdminRole(principal)) {
             throw new BusinessRuleException("FORBIDDEN", "Người dùng không có quyền truy cập dự án này");
         }
-    }
-
-    private boolean isAdminOrProjectManager(UUID projectId, WorkSphereUserPrincipal principal) {
-        if (hasSystemAdminRole(principal)) {
-            return true;
-        }
-        Optional<ProjectMember> member = projectMemberRepository.findActiveByProjectIdAndUserId(projectId, principal.userId());
-        return member.isPresent() && member.get().getProjectRole() == ProjectRole.PROJECT_MANAGER;
     }
 
     private boolean hasSystemAdminRole(WorkSphereUserPrincipal principal) {
