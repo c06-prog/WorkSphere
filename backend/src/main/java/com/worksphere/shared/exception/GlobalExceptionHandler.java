@@ -57,8 +57,28 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(BusinessRuleException.class)
     public ResponseEntity<ApiResponse<Void>> handleBusinessRule(BusinessRuleException ex) {
-        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+        HttpStatus status = switch (ex.getCode()) {
+            case "FILE_TOO_LARGE" -> HttpStatus.PAYLOAD_TOO_LARGE;
+            case "FILE_TYPE_NOT_ALLOWED" -> HttpStatus.UNSUPPORTED_MEDIA_TYPE;
+            case "FILE_ACCESS_DENIED" -> HttpStatus.FORBIDDEN;
+            case "FILE_EMPTY", "FILE_EXTENSION_NOT_ALLOWED" -> HttpStatus.BAD_REQUEST;
+            case "FILE_NOT_FOUND" -> HttpStatus.NOT_FOUND;
+            default -> HttpStatus.UNPROCESSABLE_ENTITY;
+        };
+        return ResponseEntity.status(status)
                 .body(ApiResponse.error(ex.getCode(), ex.getMessage()));
+    }
+
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMaxUploadSizeExceeded(org.springframework.web.multipart.MaxUploadSizeExceededException ex) {
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
+                .body(ApiResponse.error("FILE_TOO_LARGE", "Dung lượng tệp vượt quá giới hạn cho phép"));
+    }
+
+    @ExceptionHandler(org.springframework.web.HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMediaTypeNotSupported(org.springframework.web.HttpMediaTypeNotSupportedException ex) {
+        return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
+                .body(ApiResponse.error("FILE_TYPE_NOT_ALLOWED", "Loại nội dung không được hỗ trợ"));
     }
 
     @ExceptionHandler(AccessDeniedException.class)

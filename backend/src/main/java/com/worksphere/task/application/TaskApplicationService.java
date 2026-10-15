@@ -32,6 +32,7 @@ import com.worksphere.task.domain.TaskPriority;
 import com.worksphere.task.domain.TaskStatus;
 import com.worksphere.task.domain.TaskStatusHistory;
 import com.worksphere.task.infrastructure.persistence.TaskAssignmentRepository;
+import com.worksphere.task.infrastructure.persistence.TaskAttachmentRepository;
 import com.worksphere.task.infrastructure.persistence.TaskCommentRepository;
 import com.worksphere.task.infrastructure.persistence.TaskRepository;
 import com.worksphere.task.infrastructure.persistence.TaskStatusHistoryRepository;
@@ -82,6 +83,7 @@ public class TaskApplicationService {
     private final ProjectMemberRepository projectMemberRepository;
     private final MilestoneRepository milestoneRepository;
     private final UserRepository userRepository;
+    private final TaskAttachmentRepository taskAttachmentRepository;
 
     public TaskApplicationService(
             TaskRepository taskRepository,
@@ -91,7 +93,8 @@ public class TaskApplicationService {
             ProjectRepository projectRepository,
             ProjectMemberRepository projectMemberRepository,
             MilestoneRepository milestoneRepository,
-            UserRepository userRepository
+            UserRepository userRepository,
+            TaskAttachmentRepository taskAttachmentRepository
     ) {
         this.taskRepository = taskRepository;
         this.taskAssignmentRepository = taskAssignmentRepository;
@@ -101,6 +104,7 @@ public class TaskApplicationService {
         this.projectMemberRepository = projectMemberRepository;
         this.milestoneRepository = milestoneRepository;
         this.userRepository = userRepository;
+        this.taskAttachmentRepository = taskAttachmentRepository;
     }
 
     @Transactional(readOnly = true)
@@ -603,6 +607,9 @@ public class TaskApplicationService {
         Map<UUID, List<TaskAssignment>> assignmentMap = allAssignments.stream()
                 .collect(Collectors.groupingBy(TaskAssignment::getTaskId));
 
+        Map<UUID, Long> attachmentCountMap = taskAttachmentRepository.countByTaskIdIn(taskIds).stream()
+                .collect(Collectors.toMap(row -> (UUID) row[0], row -> (Long) row[1]));
+
         Instant now = Instant.now();
 
         return tasks.stream().map(task -> {
@@ -632,6 +639,7 @@ public class TaskApplicationService {
             long subtaskCount = taskRepository.countByParentTaskIdAndDeletedFalse(task.getId());
             long completedSubtasks = taskRepository.countByParentTaskIdAndStatusAndDeletedFalse(task.getId(), TaskStatus.COMPLETED);
             long commentCount = commentRepository.countByTaskIdAndDeletedFalse(task.getId());
+            long attachmentCount = attachmentCountMap.getOrDefault(task.getId(), 0L);
 
             return new TaskSummaryResponse(
                     task.getId(),
@@ -648,7 +656,7 @@ public class TaskApplicationService {
                     (int) subtaskCount,
                     (int) completedSubtasks,
                     (int) commentCount,
-                    0,
+                    (int) attachmentCount,
                     task.getUpdatedAt()
             );
         }).toList();

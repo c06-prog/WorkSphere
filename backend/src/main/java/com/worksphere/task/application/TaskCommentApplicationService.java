@@ -1,5 +1,8 @@
 package com.worksphere.task.application;
 
+import com.worksphere.file.domain.StoredFile;
+import com.worksphere.file.domain.StoredFileStatus;
+import com.worksphere.file.infrastructure.persistence.StoredFileRepository;
 import com.worksphere.identity.domain.User;
 import com.worksphere.identity.infrastructure.persistence.UserRepository;
 import com.worksphere.project.infrastructure.persistence.ProjectMemberRepository;
@@ -11,7 +14,9 @@ import com.worksphere.task.api.request.CreateTaskCommentRequest;
 import com.worksphere.task.api.request.UpdateTaskCommentRequest;
 import com.worksphere.task.api.response.TaskCommentResponse;
 import com.worksphere.task.domain.Task;
+import com.worksphere.task.domain.TaskAttachment;
 import com.worksphere.task.domain.TaskComment;
+import com.worksphere.task.infrastructure.persistence.TaskAttachmentRepository;
 import com.worksphere.task.infrastructure.persistence.TaskCommentRepository;
 import com.worksphere.task.infrastructure.persistence.TaskRepository;
 import org.springframework.data.domain.Page;
@@ -20,11 +25,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -39,17 +45,23 @@ public class TaskCommentApplicationService {
     private final TaskRepository taskRepository;
     private final ProjectMemberRepository projectMemberRepository;
     private final UserRepository userRepository;
+    private final StoredFileRepository storedFileRepository;
+    private final TaskAttachmentRepository taskAttachmentRepository;
 
     public TaskCommentApplicationService(
             TaskCommentRepository commentRepository,
             TaskRepository taskRepository,
             ProjectMemberRepository projectMemberRepository,
-            UserRepository userRepository
+            UserRepository userRepository,
+            StoredFileRepository storedFileRepository,
+            TaskAttachmentRepository taskAttachmentRepository
     ) {
         this.commentRepository = commentRepository;
         this.taskRepository = taskRepository;
         this.projectMemberRepository = projectMemberRepository;
         this.userRepository = userRepository;
+        this.storedFileRepository = storedFileRepository;
+        this.taskAttachmentRepository = taskAttachmentRepository;
     }
 
     @Transactional(readOnly = true)
@@ -84,6 +96,53 @@ public class TaskCommentApplicationService {
             TaskComment parent = commentRepository.findByIdAndTaskIdAndDeletedFalse(request.parentCommentId(), taskId)
                     .orElseThrow(() -> new ResourceNotFoundException("COMMENT_NOT_FOUND",
                             "Bình luận cha không tồn tại hoặc không thuộc công việc này"));
+        }
+
+        // Validate and link attachments if present
+        if (request.attachmentFileIds() != null && !request.attachmentFileIds().isEmpty()) {
+            List<UUID> fileIds = request.attachmentFileIds();
+            Set<UUID> uniqueFileIds = new HashSet<>(fileIds);
+            if (uniqueFileIds.size() != fileIds.size()) {
+                throw new BusinessRuleException("VALIDATION_ERROR", "Danh sách tệp đính kèm chứa mã tệp trùng lặp");
+            }
+
+            boolean isAdmin = hasSystemAdminRole(principal);
+
+            for (UUID fileId : fileIds) {
+                StoredFile file = storedFileRepository.findById(fileId)
+                        .orElseThrow(() -> new ResourceNotFoundException("FILE_NOT_FOUND", "Tệp đính kèm không tồn tại: " + fileId));
+
+                if (file.getStatus() != StoredFileStatus.ACTIVE) {
+                    throw new BusinessRuleException("FILE_NOT_FOUND", "Tệp đính kèm không còn hoạt động hoặc đã bị xoá");
+                }
+
+                if (!file.getStoragePath().startsWith("TASK_ATTACHMENT/")) {
+                    throw new BusinessRuleException("VALIDATION_ERROR", "Mục đích sử dụng của tệp không phải là TASK_ATTACHMENT");
+                }
+
+                if (!isAdmin && !file.getUploadedBy().equals(principal.userId())) {
+                    throw new BusinessRuleException("FILE_ACCESS_DENIED", "Bạn chỉ có thể đính kèm tệp do chính mình tải lên");
+                }
+
+                if (taskAttachmentRepository.existsByTaskIdAndFileId(taskId, fileId)) {
+                    throw new BusinessRuleException("VALIDATION_ERROR", "Tệp đã được đính kèm vào công việc này");
+                }
+
+                Optional<TaskAttachment> otherTaskAttachment = taskAttachmentRepository.findByFileId(fileId);
+                if (otherTaskAttachment.isPresent()) {
+                    throw new BusinessRuleException("VALIDATION_ERROR", "Tệp đã được đính kèm vào một công việc khác");
+                }
+            }
+
+            for (UUID fileId : fileIds) {
+                TaskAttachment attachment = TaskAttachment.create(
+                        UUID.randomUUID(),
+                        taskId,
+                        fileId,
+                        principal.userId()
+                );
+                taskAttachmentRepository.save(attachment);
+            }
         }
 
         TaskComment comment = TaskComment.create(
