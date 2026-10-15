@@ -135,3 +135,16 @@ Nguyên tắc mạng Android Emulator:
 - 10.0.2.2 là máy Windows host.
 - Không dùng IP emulator làm backend host.
 - Không hard-code backend URL production vào source.
+
+## Tool Discovery, Installation and Evidence Policy
+
+- Agent được phép tìm kiếm công cụ có sẵn bằng các lệnh chỉ đọc (Get-Command, where.exe, winget list/search, docker ps, adb version, java/node/npm version).
+- Agent phải ưu tiên giải pháp chính thức, reusable và có sẵn trước khi tự viết lại mã.
+- Agent được cài công cụ khi nhiệm vụ WorkSphere thực sự cần, có nguồn chính thức, verified publisher, license tương thích, ưu tiên winget.
+- Mọi công cụ và ứng dụng sử dụng trong WorkSphere phải được cập nhật vào reports/ENVIRONMENT_TOOL_REGISTRY.md.
+- Ứng dụng mới cài đặt phải có đầy đủ thông tin: tên, nguồn, publisher, version, license, executable path và data path.
+- Dữ liệu lớn (SDK, images, cache, virtual devices, build artifacts) ưu tiên đặt tại ổ D:.
+- Khi gặp Windows UAC, màn hình đăng nhập tài khoản, thanh toán, điều khoản pháp lý hoặc quyền hệ điều hành nhạy cảm: Agent phải dừng và báo BLOCKED_FOR_USER_ACTION kèm hướng dẫn chi tiết cho người dùng, không được click mù hay tự động chấp nhận.
+- Agent được phép mở, đóng và điều khiển các ứng dụng, CLI, emulator, browser prototype phục vụ cho nhiệm vụ WorkSphere trong phạm vi an toàn.
+- Agent được phép chụp screenshot và video kiểm thử không chứa dữ liệu nhạy cảm; ảnh tạm lưu tại design/prototype/review-output/, ảnh báo cáo lưu tại reports/screenshots/.
+- Tuyệt đối không truy cập, đọc hoặc lưu trữ dữ liệu cá nhân, mật khẩu, token, secret hoặc tài nguyên ngoài phạm vi WorkSphere.

@@ -167,3 +167,18 @@ Current operating mode:
 - Không commit mặc định.
 - Chỉ ảnh được chọn cho báo cáo hoặc release evidence mới được sao chép vào `reports/screenshots/`.
 - Ảnh chứa secret, token hoặc dữ liệu thật bị cấm commit.
+
+## D-019 Tool Discovery and Installation
+
+- Trước khi cài đặt mới hoặc tự code lại, Agent phải kiểm tra và ưu tiên công cụ, framework hoặc package chính thức có sẵn.
+- Chỉ cài đặt công cụ khi nhiệm vụ thực sự cần, có nguồn chính thức, verified publisher, license tương thích, ưu tiên winget.
+- Mọi công cụ, ứng dụng mới hoặc môi trường thực thi phải được ghi nhận đầy đủ vào `reports/ENVIRONMENT_TOOL_REGISTRY.md`.
+- Dữ liệu lớn (SDK, images, cache, virtual devices, build artifacts) ưu tiên cấu hình lưu trữ tại ổ D:.
+- Khi gặp UAC, đăng nhập tài khoản, thanh toán, điều khoản pháp lý hoặc quyền hệ điều hành nhạy cảm: Agent dừng thao tác và báo `BLOCKED_FOR_USER_ACTION`.
+
+## D-020 Automated Application Control and Evidence
+
+- Agent được phép mở, đóng và điều khiển các ứng dụng phục vụ WorkSphere (CLI, Docker, Android Studio, Android Emulator, Browser prototype).
+- Agent được phép sử dụng CLI, ADB, browser automation, chụp screenshot và video ngắn phục vụ kiểm thử và báo cáo.
+- Nghiêm cấm thu thập, ghi log hoặc chụp ảnh chứa thông tin cá nhân, mật khẩu, token, API key hoặc bí mật.
+- Ảnh chụp tạm thời trong `design/prototype/review-output/` không được commit mặc định; chỉ ảnh đã duyệt mới được đưa vào `reports/screenshots/`.
