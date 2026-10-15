@@ -324,12 +324,7 @@ public class FileApplicationService {
             return;
         }
 
-        // 2. Uploader always has access
-        if (file.getUploadedBy().equals(principal.userId())) {
-            return;
-        }
-
-        // 3. Check Task Attachment linkage
+        // 2. Check Task Attachment linkage FIRST to enforce project confidentiality
         Optional<TaskAttachment> taskAttachmentOpt = taskAttachmentRepository.findByFileId(file.getId());
         if (taskAttachmentOpt.isPresent()) {
             TaskAttachment attachment = taskAttachmentOpt.get();
@@ -345,7 +340,7 @@ public class FileApplicationService {
             }
         }
 
-        // 4. Check Service Attachment linkage
+        // 3. Check Service Attachment linkage
         try {
             List<UUID> requestIds = jdbcTemplate.query(
                     "SELECT request_id FROM service_attachments WHERE file_id = ?",
@@ -375,6 +370,11 @@ public class FileApplicationService {
             log.warn("Could not query service request authorization for fileId={}", file.getId(), ex);
         }
 
+        // 4. Unlinked file: original uploader has access
+        if (file.getUploadedBy().equals(principal.userId())) {
+            return;
+        }
+
         // 5. Unlinked file, caller is not uploader and not admin
         throw new BusinessRuleException("FILE_ACCESS_DENIED", "Bạn không có quyền truy cập tệp này");
     }
@@ -394,7 +394,7 @@ public class FileApplicationService {
         try {
             fileStorageService.delete(storagePath);
         } catch (Exception ex) {
-            log.error("Compensating cleanup failed for storagePath={} and fileId={}", storagePath, fileId, ex);
+            log.error("CRITICAL: Compensating cleanup failed for fileId={}. Physical file may be orphaned and requires reconciliation.", fileId, ex);
         }
     }
 

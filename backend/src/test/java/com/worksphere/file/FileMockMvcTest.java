@@ -135,6 +135,12 @@ public class FileMockMvcTest {
                 .build();
 
         // Clean tables
+        jdbcTemplate.update("DELETE FROM service_attachments");
+        jdbcTemplate.update("DELETE FROM service_comments");
+        jdbcTemplate.update("DELETE FROM service_status_histories");
+        jdbcTemplate.update("DELETE FROM service_assignments");
+        jdbcTemplate.update("DELETE FROM service_requests");
+        jdbcTemplate.update("DELETE FROM service_categories");
         jdbcTemplate.update("DELETE FROM task_attachments");
         jdbcTemplate.update("DELETE FROM tasks");
         jdbcTemplate.update("DELETE FROM project_members");
@@ -369,6 +375,146 @@ public class FileMockMvcTest {
                         .header("Authorization", "Bearer " + uploaderToken))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.code", is("FILE_ALREADY_LINKED")));
+    }
+
+    @Test
+    @DisplayName("Deleting file linked to Service Request returns 422 with FILE_ALREADY_LINKED, keeping metadata and physical file intact")
+    void deleteServiceLinkedFileShouldReturn422() throws Exception {
+        UUID fileId = uploadTestFile(uploaderToken, "service_doc.png", "image/png", VALID_PNG, "SERVICE_ATTACHMENT");
+
+        // Seed service_categories, service_requests, and service_attachments
+        UUID catId = UUID.randomUUID();
+        jdbcTemplate.update(
+                "INSERT INTO service_categories (id, code, name, default_priority, is_active, is_deleted, created_at, updated_at, version) "
+                        + "VALUES (?, 'CAT-TEST', 'Test Category', 'MEDIUM', true, false, now(), now(), 0)",
+                catId
+        );
+        UUID reqId = UUID.randomUUID();
+        jdbcTemplate.update(
+                "INSERT INTO service_requests (id, request_number, category_id, requester_id, title, description, priority, status, created_by, is_deleted, created_at, updated_at, version) "
+                        + "VALUES (?, 'SR-99999', ?, ?, 'Help Request', 'Issue details', 'MEDIUM', 'SUBMITTED', ?, false, now(), now(), 0)",
+                reqId, catId, uploaderUserId, uploaderUserId
+        );
+        UUID attachId = UUID.randomUUID();
+        jdbcTemplate.update(
+                "INSERT INTO service_attachments (id, request_id, file_id, uploaded_by, created_at) "
+                        + "VALUES (?, ?, ?, ?, now())",
+                attachId, reqId, fileId, uploaderUserId
+        );
+
+        // Uploader attempts to delete
+        mockMvc.perform(delete("/api/v1/files/{fileId}", fileId)
+                        .header("Authorization", "Bearer " + uploaderToken))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code", is("FILE_ALREADY_LINKED")));
+
+        // Verify metadata status is still ACTIVE and deleted_at is null
+        StoredFile storedFile = storedFileRepository.findById(fileId).orElseThrow();
+        assertThat(storedFile.getStatus()).isEqualTo(com.worksphere.file.domain.StoredFileStatus.ACTIVE);
+        assertThat(storedFile.getDeletedAt()).isNull();
+    }
+
+    @Test
+    @DisplayName("Cross-project download: User B in Project B cannot download Task attachment of Project A (returns 403 FILE_ACCESS_DENIED)")
+    void crossProjectDownloadShouldReturn403() throws Exception {
+        // User A (uploader) uploads file
+        UUID fileId = uploadTestFile(uploaderToken, "projA_spec.png", "image/png", VALID_PNG, "TASK_ATTACHMENT");
+
+        // Seed Project A and Task A
+        UUID deptId = UUID.randomUUID();
+        jdbcTemplate.update(
+                "INSERT INTO departments (id, code, name, is_active, is_deleted, created_at, updated_at, version) "
+                        + "VALUES (?, 'DEP-A', 'Dept A', true, false, now(), now(), 0)",
+                deptId
+        );
+        UUID projAId = UUID.randomUUID();
+        jdbcTemplate.update(
+                "INSERT INTO projects (id, code, name, description, manager_id, department_id, status, priority, start_date, planned_end_date, created_by, is_deleted, created_at, updated_at, version) "
+                        + "VALUES (?, 'PRJ-A', 'Project A', 'Desc', ?, ?, 'ACTIVE', 'MEDIUM', now(), now() + interval '30 days', ?, false, now(), now(), 0)",
+                projAId, uploaderUserId, deptId, uploaderUserId
+        );
+        // User A is active member of Project A
+        jdbcTemplate.update(
+                "INSERT INTO project_members (id, project_id, user_id, project_role, joined_at, is_active, created_by, created_at, updated_at) "
+                        + "VALUES (?, ?, ?, 'MEMBER', now(), true, ?, now(), now())",
+                UUID.randomUUID(), projAId, uploaderUserId, uploaderUserId
+        );
+
+        UUID taskAId = UUID.randomUUID();
+        jdbcTemplate.update(
+                "INSERT INTO tasks (id, project_id, title, status, priority, reporter_id, created_by, is_deleted, created_at, updated_at, version) "
+                        + "VALUES (?, ?, 'Task in A', 'TODO', 'MEDIUM', ?, ?, false, now(), now(), 0)",
+                taskAId, projAId, uploaderUserId, uploaderUserId
+        );
+        taskAttachmentRepository.save(TaskAttachment.create(UUID.randomUUID(), taskAId, fileId, uploaderUserId));
+
+        // Create Project B where otherUser is active member
+        UUID projBId = UUID.randomUUID();
+        jdbcTemplate.update(
+                "INSERT INTO projects (id, code, name, description, manager_id, department_id, status, priority, start_date, planned_end_date, created_by, is_deleted, created_at, updated_at, version) "
+                        + "VALUES (?, 'PRJ-B', 'Project B', 'Desc', ?, ?, 'ACTIVE', 'MEDIUM', now(), now() + interval '30 days', ?, false, now(), now(), 0)",
+                projBId, otherUserId, deptId, otherUserId
+        );
+        jdbcTemplate.update(
+                "INSERT INTO project_members (id, project_id, user_id, project_role, joined_at, is_active, created_by, created_at, updated_at) "
+                        + "VALUES (?, ?, ?, 'MEMBER', now(), true, ?, now(), now())",
+                UUID.randomUUID(), projBId, otherUserId, otherUserId
+        );
+
+        // User B knows fileId but belongs only to Project B -> Must be rejected with 403
+        mockMvc.perform(get("/api/v1/files/{fileId}/download", fileId)
+                        .header("Authorization", "Bearer " + otherToken))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code", is("FILE_ACCESS_DENIED")));
+
+        // Active member User A can download -> 200 OK
+        mockMvc.perform(get("/api/v1/files/{fileId}/download", fileId)
+                        .header("Authorization", "Bearer " + uploaderToken))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Type", containsString("image/png")));
+
+        // Admin can download -> 200 OK
+        mockMvc.perform(get("/api/v1/files/{fileId}/download", fileId)
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("Inactive member download: User whose project membership is inactive cannot download Task attachment (returns 403)")
+    void inactiveMemberDownloadShouldReturn403() throws Exception {
+        UUID fileId = uploadTestFile(uploaderToken, "proj_inactive.png", "image/png", VALID_PNG, "TASK_ATTACHMENT");
+
+        UUID deptId = UUID.randomUUID();
+        jdbcTemplate.update(
+                "INSERT INTO departments (id, code, name, is_active, is_deleted, created_at, updated_at, version) "
+                        + "VALUES (?, 'DEP-INACT', 'Dept Inact', true, false, now(), now(), 0)",
+                deptId
+        );
+        UUID projId = UUID.randomUUID();
+        jdbcTemplate.update(
+                "INSERT INTO projects (id, code, name, description, manager_id, department_id, status, priority, start_date, planned_end_date, created_by, is_deleted, created_at, updated_at, version) "
+                        + "VALUES (?, 'PRJ-INACT', 'Project Inact', 'Desc', ?, ?, 'ACTIVE', 'MEDIUM', now(), now() + interval '30 days', ?, false, now(), now(), 0)",
+                projId, uploaderUserId, deptId, uploaderUserId
+        );
+        UUID taskId = UUID.randomUUID();
+        jdbcTemplate.update(
+                "INSERT INTO tasks (id, project_id, title, status, priority, reporter_id, created_by, is_deleted, created_at, updated_at, version) "
+                        + "VALUES (?, ?, 'Task Inact', 'TODO', 'MEDIUM', ?, ?, false, now(), now(), 0)",
+                taskId, projId, uploaderUserId, uploaderUserId
+        );
+        taskAttachmentRepository.save(TaskAttachment.create(UUID.randomUUID(), taskId, fileId, uploaderUserId));
+
+        // otherUser was added to projId, but is_active = false
+        jdbcTemplate.update(
+                "INSERT INTO project_members (id, project_id, user_id, project_role, joined_at, is_active, created_by, created_at, updated_at) "
+                        + "VALUES (?, ?, ?, 'MEMBER', now(), false, ?, now(), now())",
+                UUID.randomUUID(), projId, otherUserId, uploaderUserId
+        );
+
+        mockMvc.perform(get("/api/v1/files/{fileId}/download", fileId)
+                        .header("Authorization", "Bearer " + otherToken))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code", is("FILE_ACCESS_DENIED")));
     }
 
     private UUID uploadTestFile(String token, String filename, String mimeType, byte[] content, String purpose) throws Exception {

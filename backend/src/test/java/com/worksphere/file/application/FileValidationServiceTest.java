@@ -192,6 +192,149 @@ class FileValidationServiceTest {
                 .hasMessageContaining("Tệp nén chứa đường dẫn nguy hiểm");
     }
 
+    @Test
+    @DisplayName("Rejects Office ZIP exceeding entry count limit (zip bomb defense)")
+    void shouldRejectOfficeZipExceedingEntryCount() throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try (ZipOutputStream zos = new ZipOutputStream(baos)) {
+            ZipEntry ct = new ZipEntry("[Content_Types].xml");
+            zos.putNextEntry(ct);
+            zos.write("<Types/>".getBytes(StandardCharsets.UTF_8));
+            zos.closeEntry();
+
+            ZipEntry wd = new ZipEntry("word/document.xml");
+            zos.putNextEntry(wd);
+            zos.write("<document/>".getBytes(StandardCharsets.UTF_8));
+            zos.closeEntry();
+
+            // Add entries exceeding MAX_ZIP_ENTRIES (200)
+            for (int i = 0; i < 205; i++) {
+                ZipEntry entry = new ZipEntry("word/part" + i + ".xml");
+                zos.putNextEntry(entry);
+                zos.write("part".getBytes(StandardCharsets.UTF_8));
+                zos.closeEntry();
+            }
+        }
+        byte[] zipBytes = baos.toByteArray();
+        byte[] header = new byte[32];
+        System.arraycopy(zipBytes, 0, header, 0, 32);
+
+        assertThatThrownBy(() -> validationService.validate(
+                "bomb.docx",
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                zipBytes.length,
+                header,
+                new ByteArrayInputStream(zipBytes)
+        ))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("Số lượng entry trong tệp nén vượt quá giới hạn an toàn");
+    }
+
+    @Test
+    @DisplayName("Rejects Office ZIP with entry declaring excessive uncompressed size")
+    void shouldRejectOfficeZipWithOversizedEntry() {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        byte[] filename = "word/document.xml".getBytes(StandardCharsets.UTF_8);
+        byte[] header = new byte[]{
+                0x50, 0x4B, 0x03, 0x04, // signature
+                0x14, 0x00,             // version 20
+                0x00, 0x00,             // flags (no data descriptor)
+                0x08, 0x00,             // method DEFLATE
+                0x00, 0x00, 0x00, 0x00, // time
+                0x12, 0x34, 0x56, 0x78, // crc
+                0x64, 0x00, 0x00, 0x00, // compressed size = 100
+                0x00, 0x00, 0x40, 0x03, // uncompressed size = 54,525,952 (~52 MB)
+                (byte) filename.length, 0x00, // filename length
+                0x00, 0x00              // extra length
+        };
+        baos.writeBytes(header);
+        baos.writeBytes(filename);
+        baos.writeBytes(new byte[100]); // dummy compressed payload
+
+        byte[] zipBytes = baos.toByteArray();
+        byte[] first32 = new byte[32];
+        System.arraycopy(zipBytes, 0, first32, 0, 32);
+
+        assertThatThrownBy(() -> validationService.validate(
+                "huge.docx",
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                zipBytes.length,
+                first32,
+                new ByteArrayInputStream(zipBytes)
+        ))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("Kích thước giải nén của entry vượt quá giới hạn an toàn");
+    }
+
+    @Test
+    @DisplayName("Rejects Office ZIP with suspicious compression ratio")
+    void shouldRejectOfficeZipWithSuspiciousCompressionRatio() throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try (ZipOutputStream zos = new ZipOutputStream(baos)) {
+            ZipEntry ct = new ZipEntry("[Content_Types].xml");
+            zos.putNextEntry(ct);
+            zos.write("<Types/>".getBytes(StandardCharsets.UTF_8));
+            zos.closeEntry();
+
+            ZipEntry wd = new ZipEntry("word/ratio.xml");
+            zos.putNextEntry(wd);
+            byte[] zeroes = new byte[65536];
+            for (int i = 0; i < 35; i++) {
+                zos.write(zeroes);
+            }
+            zos.closeEntry();
+        }
+        byte[] zipBytes = baos.toByteArray();
+        byte[] header = new byte[32];
+        System.arraycopy(zipBytes, 0, header, 0, 32);
+
+        assertThatThrownBy(() -> validationService.validate(
+                "ratio.docx",
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                zipBytes.length,
+                header,
+                new ByteArrayInputStream(zipBytes)
+        ))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("Tỷ lệ nén của tệp vượt ngưỡng an toàn");
+    }
+
+    @Test
+    @DisplayName("Rejects corrupt Office ZIP archive")
+    void shouldRejectCorruptOfficeZip() {
+        byte[] corruptZip = new byte[]{0x50, 0x4B, 0x03, 0x04, 0x00, 0x00, 0x08, 0x00, (byte) 0xFF, (byte) 0xFF, 0x12, 0x34};
+        byte[] header = new byte[corruptZip.length];
+        System.arraycopy(corruptZip, 0, header, 0, corruptZip.length);
+
+        assertThatThrownBy(() -> validationService.validate(
+                "corrupt.docx",
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                corruptZip.length,
+                header,
+                new ByteArrayInputStream(corruptZip)
+        ))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("Tệp tài liệu Office");
+    }
+
+    @Test
+    @DisplayName("Rejects DOCX archive that contains XLSX entries (xl/)")
+    void shouldRejectDocxWithXlsxEntries() throws IOException {
+        byte[] mixedZip = createOfficeZip("[Content_Types].xml", "word/document.xml", "xl/workbook.xml");
+        byte[] header = new byte[32];
+        System.arraycopy(mixedZip, 0, header, 0, 32);
+
+        assertThatThrownBy(() -> validationService.validate(
+                "mixed.docx",
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                mixedZip.length,
+                header,
+                new ByteArrayInputStream(mixedZip)
+        ))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("Cấu trúc tệp không khớp định dạng tài liệu được khai báo");
+    }
+
     private byte[] createOfficeZip(String... entries) throws IOException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         try (ZipOutputStream zos = new ZipOutputStream(baos)) {

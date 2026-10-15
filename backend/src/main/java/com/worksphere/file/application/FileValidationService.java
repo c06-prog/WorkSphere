@@ -148,6 +148,11 @@ public class FileValidationService {
         }
     }
 
+    public static final int MAX_ZIP_ENTRIES = 200;
+    public static final long MAX_ENTRY_UNCOMPRESSED_SIZE = 50L * 1024 * 1024; // 50 MB
+    public static final long MAX_TOTAL_UNCOMPRESSED_SIZE = 100L * 1024 * 1024; // 100 MB
+    public static final double MAX_COMPRESSION_RATIO = 100.0;
+
     private void verifyOfficeZipStructure(String canonicalMime, InputStream stream) {
         if (stream == null) {
             return;
@@ -156,30 +161,75 @@ public class FileValidationService {
         boolean hasContentTypes = false;
         boolean hasSpecificFolder = false;
         String requiredPrefix = canonicalMime.equals(MIME_DOCX) ? "word/" : "xl/";
+        String forbiddenPrefix = canonicalMime.equals(MIME_DOCX) ? "xl/" : "word/";
 
-        try (ZipInputStream zis = new ZipInputStream(new BufferedInputStream(stream))) {
+        long totalUncompressedBytes = 0;
+        int entriesCount = 0;
+
+        CountingInputStream countingIn = new CountingInputStream(new BufferedInputStream(stream));
+        try (ZipInputStream zis = new ZipInputStream(countingIn)) {
             ZipEntry entry;
-            int entriesCount = 0;
+            byte[] readBuffer = new byte[8192];
+
             while ((entry = zis.getNextEntry()) != null) {
                 entriesCount++;
-                if (entriesCount > 200) {
-                    // Safety limit to avoid zip bomb
-                    break;
+                if (entriesCount > MAX_ZIP_ENTRIES) {
+                    throw new BusinessRuleException("FILE_TYPE_NOT_ALLOWED", "Số lượng entry trong tệp nén vượt quá giới hạn an toàn");
                 }
+
                 String entryName = entry.getName();
-                if (entryName.contains("..")) {
+                if (entryName == null || entryName.contains("..")) {
                     throw new BusinessRuleException("FILE_TYPE_NOT_ALLOWED", "Tệp nén chứa đường dẫn nguy hiểm");
                 }
+
+                // Check declared size & compression ratio if available in header
+                long declaredSize = entry.getSize();
+                long compSize = entry.getCompressedSize();
+
+                if (declaredSize > MAX_ENTRY_UNCOMPRESSED_SIZE) {
+                    throw new BusinessRuleException("FILE_TYPE_NOT_ALLOWED", "Kích thước giải nén của entry vượt quá giới hạn an toàn (zip bomb)");
+                }
+
+                if (compSize > 0 && declaredSize > 1024 * 1024 && ((double) declaredSize / compSize) > MAX_COMPRESSION_RATIO) {
+                    throw new BusinessRuleException("FILE_TYPE_NOT_ALLOWED", "Tỷ lệ nén của tệp vượt ngưỡng an toàn (zip bomb)");
+                }
+
+                // Read and count actual uncompressed bytes, tracking live compression ratio
+                long startCompressed = countingIn.getCount();
+                long entryBytesRead = 0;
+                int r;
+                while ((r = zis.read(readBuffer)) != -1) {
+                    entryBytesRead += r;
+                    if (entryBytesRead > MAX_ENTRY_UNCOMPRESSED_SIZE) {
+                        throw new BusinessRuleException("FILE_TYPE_NOT_ALLOWED", "Kích thước giải nén của entry vượt quá giới hạn an toàn (zip bomb)");
+                    }
+                    long compressedConsumed = countingIn.getCount() - startCompressed;
+                    if (compressedConsumed > 0 && entryBytesRead > 1024 * 1024) {
+                        double liveRatio = (double) entryBytesRead / compressedConsumed;
+                        if (liveRatio > MAX_COMPRESSION_RATIO) {
+                            throw new BusinessRuleException("FILE_TYPE_NOT_ALLOWED", "Tỷ lệ nén của tệp vượt ngưỡng an toàn (zip bomb)");
+                        }
+                    }
+                }
+
+                totalUncompressedBytes += entryBytesRead;
+                if (totalUncompressedBytes > MAX_TOTAL_UNCOMPRESSED_SIZE) {
+                    throw new BusinessRuleException("FILE_TYPE_NOT_ALLOWED", "Tổng kích thước giải nén của tệp vượt quá giới hạn an toàn (zip bomb)");
+                }
+
                 if ("[Content_Types].xml".equalsIgnoreCase(entryName)) {
                     hasContentTypes = true;
                 }
-                if (entryName.toLowerCase(Locale.ROOT).startsWith(requiredPrefix)) {
+                String lowerName = entryName.toLowerCase(Locale.ROOT);
+                if (lowerName.startsWith(requiredPrefix)) {
                     hasSpecificFolder = true;
                 }
-                if (hasContentTypes && hasSpecificFolder) {
-                    break;
+                if (lowerName.startsWith(forbiddenPrefix)) {
+                    throw new BusinessRuleException("FILE_TYPE_NOT_ALLOWED", "Cấu trúc tệp không khớp định dạng tài liệu được khai báo");
                 }
             }
+        } catch (BusinessRuleException e) {
+            throw e;
         } catch (IOException e) {
             log.warn("Failed to inspect Office ZIP structure: {}", e.getMessage());
             throw new BusinessRuleException("FILE_TYPE_NOT_ALLOWED", "Tệp tài liệu Office bị hỏng hoặc không hợp lệ");
@@ -188,6 +238,36 @@ public class FileValidationService {
         if (!hasContentTypes || !hasSpecificFolder) {
             throw new BusinessRuleException("FILE_TYPE_NOT_ALLOWED",
                     "Tệp tài liệu Office thiếu cấu trúc nội dung bắt buộc của OpenXML");
+        }
+    }
+
+    private static class CountingInputStream extends java.io.FilterInputStream {
+        private long count = 0;
+
+        CountingInputStream(InputStream in) {
+            super(in);
+        }
+
+        @Override
+        public int read() throws IOException {
+            int b = super.read();
+            if (b != -1) {
+                count++;
+            }
+            return b;
+        }
+
+        @Override
+        public int read(byte[] b, int off, int len) throws IOException {
+            int n = super.read(b, off, len);
+            if (n != -1) {
+                count += n;
+            }
+            return n;
+        }
+
+        public long getCount() {
+            return count;
         }
     }
 

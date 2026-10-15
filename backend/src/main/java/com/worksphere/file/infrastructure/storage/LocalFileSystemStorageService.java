@@ -67,6 +67,11 @@ public class LocalFileSystemStorageService implements FileStorageService {
 
         Path destinationFile = resolveAndValidate(storagePath);
 
+        if (Files.exists(destinationFile)) {
+            log.warn("Destination file already exists at {}", destinationFile);
+            throw new BusinessRuleException("FILE_UPLOAD_FAILED", "Tệp đích đã tồn tại trên hệ thống lưu trữ");
+        }
+
         try {
             Files.createDirectories(destinationFile.getParent());
             Files.createDirectories(this.tempLocation);
@@ -76,17 +81,20 @@ public class LocalFileSystemStorageService implements FileStorageService {
             try {
                 Files.copy(content, tempFile, StandardCopyOption.REPLACE_EXISTING);
 
-                // 2. Atomic move to final target destination
+                // 2. Atomic move to final target destination without replacing existing
                 try {
-                    Files.move(tempFile, destinationFile, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+                    Files.move(tempFile, destinationFile, StandardCopyOption.ATOMIC_MOVE);
                 } catch (AtomicMoveNotSupportedException e) {
-                    Files.move(tempFile, destinationFile, StandardCopyOption.REPLACE_EXISTING);
+                    Files.move(tempFile, destinationFile);
                 }
             } finally {
                 Files.deleteIfExists(tempFile);
             }
 
             return storagePath;
+        } catch (java.nio.file.FileAlreadyExistsException e) {
+            log.error("Destination file already exists during move at {}", destinationFile);
+            throw new BusinessRuleException("FILE_UPLOAD_FAILED", "Tệp đích đã tồn tại trên hệ thống lưu trữ");
         } catch (IOException e) {
             log.error("Failed to store file at {}", destinationFile, e);
             throw new BusinessRuleException("FILE_UPLOAD_FAILED", "Không thể lưu tệp vào hệ thống lưu trữ");
@@ -150,6 +158,44 @@ public class LocalFileSystemStorageService implements FileStorageService {
             log.warn("Path traversal attempt detected with subpath: {}", storagePath);
             throw new BusinessRuleException("FILE_ACCESS_DENIED", "Đường dẫn tệp không hợp lệ");
         }
+
+        validateNoSymlinkEscape(resolved);
+
         return resolved;
+    }
+
+    private void validateNoSymlinkEscape(Path path) {
+        Path realRoot;
+        try {
+            realRoot = this.rootLocation.toRealPath();
+        } catch (IOException e) {
+            realRoot = this.rootLocation.toAbsolutePath().normalize();
+        }
+
+        // Walk existing ancestors up to rootLocation
+        Path existingAncestor = path;
+        while (existingAncestor != null && !Files.exists(existingAncestor, java.nio.file.LinkOption.NOFOLLOW_LINKS)) {
+            existingAncestor = existingAncestor.getParent();
+        }
+
+        if (existingAncestor != null) {
+            Path cur = existingAncestor;
+            while (cur != null && !cur.equals(this.rootLocation)) {
+                if (Files.isSymbolicLink(cur)) {
+                    log.warn("Symbolic link detected in storage hierarchy: {}", cur);
+                    throw new BusinessRuleException("FILE_ACCESS_DENIED", "Đường dẫn tệp không hợp lệ: liên kết tượng trưng không được phép");
+                }
+                try {
+                    if (!cur.toRealPath().startsWith(realRoot)) {
+                        log.warn("Symlink escape detected: real path {} does not start with root {}", cur.toRealPath(), realRoot);
+                        throw new BusinessRuleException("FILE_ACCESS_DENIED", "Đường dẫn tệp không hợp lệ");
+                    }
+                } catch (IOException e) {
+                    log.warn("Failed to resolve real path for ancestor {}", cur, e);
+                    throw new BusinessRuleException("FILE_ACCESS_DENIED", "Đường dẫn tệp không hợp lệ");
+                }
+                cur = cur.getParent();
+            }
+        }
     }
 }

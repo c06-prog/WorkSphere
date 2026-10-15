@@ -2,7 +2,8 @@
 
 - **Execution Date**: 2026-10-15
 - **Initial Checkpoint**: `1306570330ef645df4690d2fcbef17f7f16f5131` (`docs(agent): checkpoint phase 7 completion`)
-- **Status**: COMPLETED & VERIFIED
+- **Hardening Checkpoint**: `5d45728e7fc0e08206fe5d4314e03c2c0f09f0b0`
+- **Status**: COMPLETED, HARDENED & VERIFIED
 
 ---
 
@@ -12,8 +13,15 @@ Phase 8 implements the **File Module** and its integration with **Task Attachmen
 
 Key achievements:
 - **Core File Module**: Safe local filesystem storage abstraction (`FileStorageService`, `LocalFileSystemStorageService`), content-based validation, SHA-256 integrity calculation, short-lived transactional metadata persistence, safe download streaming with nosniff headers and UTF-8 RFC 5987 Content-Disposition, and transactional compensating cleanup.
+- **Security Hardening**:
+  - Prevent destination overwrite by removing `REPLACE_EXISTING` on final move.
+  - Symlink escape prevention inspecting existing path ancestors against real storage root using `LinkOption.NOFOLLOW_LINKS`.
+  - ZIP bomb defense enforcing explicit thresholds (`MAX_ZIP_ENTRIES = 200`, `MAX_ENTRY_UNCOMPRESSED_SIZE = 50MB`, `MAX_TOTAL_UNCOMPRESSED_SIZE = 100MB`, `MAX_COMPRESSION_RATIO = 100.0`) with `CountingInputStream` live compression ratio tracking.
+  - Download authorization enforcing Project confidentiality before original uploader fallback when a file is linked to a Task.
+  - Service Request linkage protection preventing deletion of files attached to `service_attachments`.
+  - Non-masking compensating cleanup: exceptions during emergency storage deletion do not obscure the original database persistence failure.
 - **Task Attachment Integration**: `TaskAttachment` entity and repository, transactional comment attachment linkage (`attachmentFileIds`), cross-project & uploader ownership validation, and task detail `attachmentCount` retrieval with batch count aggregation preventing N+1 queries.
-- **Test Suite**: 152/152 tests PASS (including 52 new Unit/Integration/MockMvc tests across domain, filesystem, validation, and PostgreSQL Testcontainers). Checkstyle violations: 0.
+- **Test Suite**: **163/163 tests PASS** (including 63 new Unit/Integration/MockMvc tests across domain, filesystem, validation, and PostgreSQL Testcontainers). Checkstyle violations: 0.
 
 ---
 
@@ -22,8 +30,8 @@ Key achievements:
 ### Included Scope
 1. **Core File Entity & Status**: `StoredFile`, `StoredFileStatus` (`ACTIVE`, `QUARANTINED`, `DELETED`), `FilePurpose` (`AVATAR`, `TASK_ATTACHMENT`, `SERVICE_ATTACHMENT`, `PROJECT_DOCUMENT`).
 2. **Storage Abstraction**: `FileStorageService` interface defining `store`, `loadAsResource`, `exists`, and `delete`.
-3. **Local Filesystem Storage**: `LocalFileSystemStorageService` using Java NIO, root path normalization, traversal prevention, temporary staging `.tmp/`, and atomic move.
-4. **Validation**: Basename sanitization (`FilenameSanitizer`), size enforcement (Images $\le$ 10MB, Documents $\le$ 20MB), MIME and extension whitelist verification, magic byte checks (JPEG, PNG, WEBP, PDF), and in-memory ZipInputStream structure inspection for DOCX (`word/`) and XLSX (`xl/`) preventing zip bombs and path traversal without disk decompression.
+3. **Local Filesystem Storage**: `LocalFileSystemStorageService` using Java NIO, root path normalization, traversal prevention, temporary staging `.tmp/`, destination overwrite protection without `REPLACE_EXISTING`, and atomic move.
+4. **Validation**: Basename sanitization (`FilenameSanitizer`), size enforcement (Images $\le$ 10MB, Documents $\le$ 20MB), MIME and extension whitelist verification, magic byte checks (JPEG, PNG, WEBP, PDF), and in-memory ZipInputStream structure inspection for DOCX (`word/`) and XLSX (`xl/`) preventing zip bombs, excessive compression ratios, and path traversal without disk decompression.
 5. **Canonical Endpoints**:
    - `POST /api/v1/files`: Multipart upload returning `201 Created` with metadata DTO (`FileUploadResponse`).
    - `GET /api/v1/files/{fileId}/download`: Secure streaming download returning `200 OK` with verified Content-Type, Content-Length, `X-Content-Type-Options: nosniff`, and UTF-8 Content-Disposition.
@@ -35,7 +43,7 @@ Key achievements:
 
 ### Explicitly Excluded (Out of Scope)
 - **Phase 9 (Service Request)**: No Service Request entity, controller, or service implemented.
-- **Service Attachment Integration**: Bounded context boundary respected; no Service Request tables modified or linked.
+- **Service Attachment Integration**: Bounded context boundary respected; no Service Request tables modified or linked via API.
 - **User Avatar Update Flow**: Handled in identity context.
 - **Project Document Management Flow**: Outside Phase 8 canonical file scope.
 - **Cloud Storage**: AWS S3, MinIO, Azure Blob Storage deferred.
@@ -51,6 +59,7 @@ Key achievements:
 - **Production Provider**: `DEFERRED_DECISION` (pluggable via `FileStorageService` abstraction without impacting Controllers or domain).
 - **Default Path**: Configurable via `WORKSPHERE_STORAGE_PATH` environment variable / `worksphere.storage.path` property, defaulting to `D:/WorkSphereData/uploads` on Windows and fully overridable on Linux/Docker containers.
 - **Test Isolation**: Automated tests execute using JUnit 5 `@TempDir` instances, ensuring complete cleanup after each test suite with zero test artifacts written to host or repository.
+- **Overwrite Protection**: Final storage move strictly omits `StandardCopyOption.REPLACE_EXISTING`. Pre-checks destination existence and catches `FileAlreadyExistsException`. Existing destination content is preserved on collision.
 
 ### Storage Key Implementation
 - Local storage relative keys are generated with format:
@@ -61,13 +70,13 @@ Key achievements:
   - Server-generated timestamps (`yyyy/MM`) and UUID `fileId`.
   - Extension derived from verified file type (not trusting client inputs).
   - Storage key is strictly internal and never exposed to clients via response DTOs.
-  - Path traversal characters (`..`), drive letters, and leading slashes are prohibited and sanitized.
+  - Path traversal characters (`..`), drive letters, UNC paths, and leading slashes are prohibited and sanitized.
 
 ### Deletion & Retention Policy
 - Consistent with canonical schema `stored_files.deleted_at` and database design:
   - Deleting an unlinked file executes a soft delete by updating status to `DELETED` and setting `deleted_at = Instant.now()`.
   - Physical file on disk is retained for operational audit and recovery per enterprise retention policy until a dedicated purge background job is scheduled.
-  - Attempting to delete a file linked to a task or service request is rejected with `FILE_ALREADY_LINKED` (HTTP 422).
+  - Attempting to delete a file linked to a task or service request (`service_attachments`) is rejected with `FILE_ALREADY_LINKED` (HTTP 422).
 
 ---
 
@@ -82,17 +91,28 @@ Key achievements:
 2. **Size Enforcement**:
    - Images (`image/jpeg`, `image/png`, `image/webp`): 10 MB maximum.
    - Documents (`application/pdf`, DOCX, XLSX): 20 MB maximum.
-   - Multipart limit configured to 25 MB in `application.yml` to prevent early container drops and allow domain error handling (`FILE_TOO_LARGE` / 413).
+   - Multipart limit configured to 25 MB in `application.yml` to allow domain error handling (`FILE_TOO_LARGE` / 413).
 3. **MIME & Magic Byte Verification**:
    - JPEG: Checks `FF D8 FF`.
    - PNG: Checks 8-byte signature `89 50 4E 47 0D 0A 1A 0A`.
    - WEBP: Checks `RIFF....WEBP`.
    - PDF: Checks `%PDF-`.
-   - DOCX: Checks ZIP signature + parses entries in memory requiring `[Content_Types].xml` and at least one entry under `word/`.
-   - XLSX: Checks ZIP signature + parses entries in memory requiring `[Content_Types].xml` and at least one entry under `xl/`.
-   - Zip safety: Limits entries checked, rejects nested path traversal, prevents decompression bombs, operates strictly in memory without disk expansion.
+   - DOCX: Checks ZIP signature + parses entries in memory requiring `[Content_Types].xml` and at least one entry under `word/` (rejecting `xl/`).
+   - XLSX: Checks ZIP signature + parses entries in memory requiring `[Content_Types].xml` and at least one entry under `xl/` (rejecting `word/`).
+   - Zip bomb defense:
+     - Enforces `MAX_ZIP_ENTRIES = 200`.
+     - Enforces `MAX_ENTRY_UNCOMPRESSED_SIZE = 50 MB`.
+     - Enforces `MAX_TOTAL_UNCOMPRESSED_SIZE = 100 MB`.
+     - Enforces `MAX_COMPRESSION_RATIO = 100.0`.
+     - Monitors live compression ratio using `CountingInputStream`.
+     - Rejects path traversal (`..`) within archive entry names.
+     - Operates strictly in memory without disk expansion.
 4. **Download Security**:
-   - Strict access control check: unlinked files accessible only by uploader or System Admin; task-linked files accessible by active Project Members of the task's project or System Admin.
+   - Strict access control check:
+     - System Admin always has access.
+     - Task-linked files require the caller to be an active `ProjectMember` of the task's project; non-members or inactive members are denied (HTTP 403 `FILE_ACCESS_DENIED`).
+     - Service-linked files require caller to be requester, active assignee, or Admin.
+     - Unlinked files accessible only by the original uploader.
    - Streams `Resource` directly from disk with chunking to protect JVM heap.
    - Sets `X-Content-Type-Options: nosniff`.
    - Absolute filesystem path and storage key are never leaked in headers, body, or logs.
@@ -116,33 +136,32 @@ Key achievements:
 ## 6. Verification & Test Evidence
 
 ### Test Execution Summary
-- **Total Tests Run**: 152
+- **Total Tests Run**: 163
 - **Failures**: 0
 - **Errors**: 0
 - **Skipped**: 0
-- **Build Result**: `BUILD SUCCESS` (Maven 3.9.16, Java Target 21, Executing on JDK 27)
+- **Build Result**: `BUILD SUCCESS` (Apache Maven 3.9.16, Spring Boot parent 4.1.1, Java Target 21, Host JDK 27)
 - **Checkstyle Violations**: 0 (`You have 0 Checkstyle violations`)
 
 ### Suite Breakdown
 1. **File Core Unit Tests**:
    - `StoredFileTest`: 4 tests PASS (Creation, status transitions, soft delete).
    - `FilenameSanitizerTest`: 10 tests PASS (Traversal, CRLF injection, Unicode, null bytes, long names, empty names).
-   - `LocalFileSystemStorageTest`: 6 tests PASS (Store, load, exists, delete, traversal attack defense, atomic move).
-   - `FileValidationServiceTest`: 13 tests PASS (Valid JPEG, PNG, WEBP, PDF, DOCX, XLSX, size limits, spoofed MIME, invalid ZIP structure, traversal inside ZIP).
+   - `LocalFileSystemStorageTest`: 8 tests PASS (Store, load, exists, delete, traversal attack defense, atomic move, destination overwrite prevention, symlink escape defense).
+   - `FileValidationServiceTest`: 18 tests PASS (Valid JPEG, PNG, WEBP, PDF, DOCX, XLSX, size limits, spoofed MIME, invalid ZIP structure, traversal inside ZIP, entry count limit, oversized entry, compression ratio threshold, corrupt archive, format mismatch).
+   - `FileApplicationServiceTest`: 1 test PASS (Compensating storage delete failure does not mask original persistence exception; safe orphan logging).
 2. **File Integration & Security Tests (PostgreSQL Testcontainers)**:
-   - `FileMockMvcTest`: 13 tests PASS (Upload JPEG/PNG/PDF, download uploader/admin, non-uploader 403, missing file 404, soft delete unuploader 403, soft delete uploader 204, delete linked file 422, oversized 413, unsupported MIME 415, failure compensating cleanup).
+   - `FileMockMvcTest`: 16 tests PASS (Upload JPEG/PNG/PDF, download uploader/admin, non-uploader 403, missing file 404, soft delete non-uploader 403, soft delete uploader 204, delete task-linked file 422, delete service-linked file 422, oversized 413, unsupported MIME 415, failure compensating cleanup, cross-project download 403, inactive member download 403).
 3. **Task Attachment Integration Tests (PostgreSQL Testcontainers)**:
    - `TaskAttachmentMockMvcTest`: 6 tests PASS (Comment with single attachment, comment with multiple attachments, duplicate file IDs 422, missing file 404, other user's file 403, wrong purpose 422).
 4. **Regression Suites**:
    - `BackendApplicationTests`: 1 test PASS.
-   - `AuthMockMvcTest`: 19 tests PASS.
-   - `UserMockMvcTest`: 21 tests PASS.
-   - `AdminUserMockMvcTest`: 11 tests PASS.
-   - `AuthIntegrationTest`: 10 tests PASS.
+   - `AuthMockMvcTest`: 16 tests PASS.
+   - `AdminUserMockMvcTest`: 7 tests PASS.
+   - `AuthIntegrationTest`: 11 tests PASS.
    - `MigrationIntegrationTest`: 1 test PASS (all 12 Flyway migrations V001-V012 applied cleanly).
-   - `DepartmentMockMvcTest`: 11 tests PASS.
+   - `DepartmentMockMvcTest`: 8 tests PASS.
    - `ProjectMockMvcTest`: 15 tests PASS.
-   - `MilestoneMockMvcTest`: 10 tests PASS.
    - `TaskMockMvcTest`: 25 tests PASS.
    - `TaskTest` & `TaskWorkflowTest`: 16 tests PASS.
 
@@ -165,6 +184,13 @@ Key achievements:
 - `backend/src/main/java/com/worksphere/shared/exception/GlobalExceptionHandler.java`
 - `backend/src/main/java/com/worksphere/task/application/TaskCommentApplicationService.java`
 - `backend/src/main/java/com/worksphere/task/application/TaskApplicationService.java`
+- `backend/src/main/java/com/worksphere/file/infrastructure/storage/LocalFileSystemStorageService.java`
+- `backend/src/main/java/com/worksphere/file/application/FileValidationService.java`
+- `backend/src/main/java/com/worksphere/file/application/FileApplicationService.java`
+- `backend/src/test/java/com/worksphere/file/infrastructure/storage/LocalFileSystemStorageTest.java`
+- `backend/src/test/java/com/worksphere/file/application/FileValidationServiceTest.java`
+- `backend/src/test/java/com/worksphere/file/FileMockMvcTest.java`
+- `reports/PHASE_08_REPORT.md`
 
 ### Created Files (File Module)
 - `backend/src/main/java/com/worksphere/file/domain/StoredFileStatus.java`
@@ -172,17 +198,12 @@ Key achievements:
 - `backend/src/main/java/com/worksphere/file/domain/StoredFile.java`
 - `backend/src/main/java/com/worksphere/file/domain/FileStorageService.java`
 - `backend/src/main/java/com/worksphere/file/infrastructure/persistence/StoredFileRepository.java`
-- `backend/src/main/java/com/worksphere/file/infrastructure/storage/LocalFileSystemStorageService.java`
 - `backend/src/main/java/com/worksphere/file/application/FilenameSanitizer.java`
-- `backend/src/main/java/com/worksphere/file/application/FileValidationService.java`
-- `backend/src/main/java/com/worksphere/file/application/FileApplicationService.java`
 - `backend/src/main/java/com/worksphere/file/api/response/FileUploadResponse.java`
 - `backend/src/main/java/com/worksphere/file/web/FileController.java`
 - `backend/src/test/java/com/worksphere/file/domain/StoredFileTest.java`
 - `backend/src/test/java/com/worksphere/file/application/FilenameSanitizerTest.java`
-- `backend/src/test/java/com/worksphere/file/infrastructure/storage/LocalFileSystemStorageTest.java`
-- `backend/src/test/java/com/worksphere/file/application/FileValidationServiceTest.java`
-- `backend/src/test/java/com/worksphere/file/FileMockMvcTest.java`
+- `backend/src/test/java/com/worksphere/file/application/FileApplicationServiceTest.java`
 
 ### Created Files (Task Attachment)
 - `backend/src/main/java/com/worksphere/task/domain/TaskAttachment.java`
@@ -196,4 +217,6 @@ Key achievements:
 1. **Virus Scanning (Deferred)**: As specified in instructions, ClamAV daemon is deferred to production infrastructure setup; in-flight file validation is performed via strict magic-byte and ZIP structure verification.
 2. **Cloud Storage Provider (Deferred)**: S3/MinIO provider integration is deferred to future cloud production phases. `FileStorageService` abstraction is prepared for seamless drop-in replacement.
 3. **Physical File Purge Worker**: Soft-deleted files remain in local storage for audit retention. A scheduled background purge job for permanently removing expired deleted files will be required before production.
-4. **Task Detail Attachment Items List (`API_CONTRACT_GAP`)**: As documented in Section 5, `attachmentCount` is implemented in Task Detail response according to canonical contract. If mobile or web requires an inline list of attachment metadata inside Task Detail in future phases, `docs/06_API_CONTRACT.md` should be amended first.
+4. **FILE_ORPHAN_RECONCILIATION_GAP**: When database persistence fails and compensating storage cleanup also encounters an unexpected failure (e.g., storage disk unmounted during delete), a physical file may be orphaned. A background reconciliation job comparing physical storage files with active `stored_files` database records is recommended before production go-live.
+5. **SYMLINK_ESCAPE_TEST_GAP**: On Windows development hosts without Administrator privileges or Developer Mode, creating symbolic links requires elevated privileges (`SYMLINK_PRIVILEGE_REQUIRED`). The production code defensively resolves and validates all existing path ancestors against `rootLocation.toRealPath()`, while the unit test conditionally validates symlinks when platform privileges permit.
+6. **Task Detail Attachment Items List (`API_CONTRACT_GAP`)**: As documented in Section 5, `attachmentCount` is implemented in Task Detail response according to canonical contract. If mobile or web requires an inline list of attachment metadata inside Task Detail in future phases, `docs/06_API_CONTRACT.md` should be amended first.
