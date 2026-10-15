@@ -4,32 +4,37 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- HEAD: d45524b8eb564268fca257441fa75b4c691fd7aa
-- origin/main: d45524b8eb564268fca257441fa75b4c691fd7aa
-- Last completed work: Phase 5 Organization and User Management (independently audited and passed)
+- HEAD: 4aa6f413457c180e7db3adaa227985cccb905e0f
+- origin/main: 4aa6f413457c180e7db3adaa227985cccb905e0f
+- Last completed work: Phase 6 Project Module (completed, audited, and patched)
 - Last validated implementation commit:
-  d45524b8eb564268fca257441fa75b4c691fd7aa
-- Last validated tests: 44 of 44 passed (0 failures, 0 errors, 0 skipped)
+  4aa6f413457c180e7db3adaa227985cccb905e0f
+- Last validated tests: 59 of 59 passed (0 failures, 0 errors, 0 skipped)
 - Last validated build: BUILD SUCCESS
 - Checkstyle: 0 violations
 - PostgreSQL integration: PASS (Image: postgres:15-alpine)
+- Invariant resolution: LAST_PROJECT_MANAGER_INVARIANT_GAP resolved
 
-## Implemented in Phase 5
+## Implemented in Phase 6
 
-- Department Domain, Repository, Application Service, and REST Endpoints (`GET /api/v1/departments`, `POST /api/v1/admin/departments`, `PUT /api/v1/admin/departments/{id}`, `PUT /api/v1/admin/departments/{id}/deactivate`).
-- Admin User Management Application Service and REST Endpoints (`GET /api/v1/admin/users`, `POST /api/v1/admin/users`, `PUT /api/v1/admin/users/{userId}`, `PUT /api/v1/admin/users/{userId}/lock`, `PUT /api/v1/admin/users/{userId}/unlock`).
-- UserRole mapping entity and repository for explicit `user_roles` management.
-- Team and Team Member Domain and Application Services.
+- Project Domain, Repository, Application Service, and REST Endpoints (`GET /api/v1/projects`, `POST /api/v1/projects`, `GET /api/v1/projects/{projectId}`, `PUT /api/v1/projects/{projectId}`, `PUT /api/v1/projects/{projectId}/status`).
+- Project Member Domain, Repository, Application Service, and REST Endpoints (`GET /api/v1/projects/{projectId}/members`, `POST /api/v1/projects/{projectId}/members`, `PUT /api/v1/projects/{projectId}/members/{memberId}`, `DELETE /api/v1/projects/{projectId}/members/{memberId}`).
+- Final Project Manager invariant preserved on both delete and role update.
+- Milestone Domain, Repository, Application Service, and REST Endpoints (`POST /api/v1/projects/{projectId}/milestones`, `GET /api/v1/projects/{projectId}/milestones`).
+- ProjectStatusHistory recorded automatically within the same transaction during status transitions.
+- Optimistic Locking with HTTP 409 `OPTIMISTIC_LOCK_CONFLICT`.
 
 ## Deferred / Known Gaps
 
 - `TEMPORARY_PASSWORD_FLOW_GAP`: User creation in `PENDING` status with hashed temporary password. Activation workflow and first-time password setup endpoint are deferred until canonical docs provide detailed specifications.
 - `TEAM_API_CONTRACT_GAP`: Team REST controllers are deferred because `06_API_CONTRACT.md` does not specify Team endpoints.
 
-## Next Permitted Phase
+## Next Permitted Step
 
-- **Phase 6: Project Module** (per `docs/08_DEVELOPMENT_ROADMAP.md`).
-- Scope boundary: Phase 6 must focus strictly on the Project domain. Do not expand into Tasks, Comments, Files, Assets, Service Requests, or Notifications.
+- **Mobile UI/UX Design Baseline**.
+- Phase 7 (Task Management) chưa bắt đầu.
+- Nhiệm vụ UI/UX chỉ tạo tài liệu thiết kế (User Flow, Screen Inventory, Wireframe, Design System, Component Inventory, UI State Matrix, Navigation Map, API-Screen Mapping, Accessibility Checklist), **không tạo source mobile**.
+- Sau khi UI/UX design baseline được review mới chuyển sang các bước implementation tiếp theo.
 
 ## New Session Procedure
 

@@ -114,3 +114,27 @@ Current operating mode:
 - Team and Team Member have database schema and domain/application layer implementations.
 - No REST Controllers are created for Team or Team Member because endpoints are not defined in `06_API_CONTRACT.md`.
 - Exposure of Team endpoints is deferred until canonical API extensions are defined.
+
+## D-013 Project Manager Invariant
+
+- Mỗi Project phải luôn có ít nhất một active PROJECT_MANAGER.
+- Không được xóa active Project Manager cuối cùng.
+- Không được đổi role của active Project Manager cuối cùng sang role khác.
+- Giữ nguyên role PROJECT_MANAGER được phép.
+- Giáng cấp khi còn Project Manager khác được phép.
+
+## D-014 Mobile Design Before Implementation
+
+- Không triển khai React Native screen trước khi có UI/UX baseline.
+- UI/UX baseline phải gồm:
+  - User Flow
+  - Screen Inventory
+  - Wireframe
+  - Design System
+  - Component Inventory
+  - UI State Matrix
+  - Navigation Map
+  - API-Screen Mapping
+  - Accessibility Checklist
+- Thiết kế không được tạo chức năng ngoài canonical docs.
+- File Figma chỉ được tuyên bố tồn tại nếu thực sự đã tạo.

@@ -3,8 +3,8 @@
 ## Git Checkpoint
 
 - Branch: main
-- HEAD: d45524b8eb564268fca257441fa75b4c691fd7aa
-- origin/main: d45524b8eb564268fca257441fa75b4c691fd7aa
+- HEAD: 4aa6f413457c180e7db3adaa227985cccb905e0f
+- origin/main: 4aa6f413457c180e7db3adaa227985cccb905e0f
 - Working tree at checkpoint: clean
 
 ## Validated Progress
@@ -15,21 +15,22 @@
 - Phase 3: PostgreSQL validation completed
 - Phase 4: Authentication and Authorization completed
 - Phase 5: Organization and User Management completed and independently audited
+- Phase 6: Project Module completed, audited and patched (LAST_PROJECT_MANAGER_INVARIANT_GAP resolved)
 
 ## Latest Validated Implementation
 
 - Commit:
-  d45524b8eb564268fca257441fa75b4c691fd7aa
+  4aa6f413457c180e7db3adaa227985cccb905e0f
 
 - Commit message:
-  feat(organization): implement user and department management
+  fix(project): preserve final project manager invariant
 
 ## Latest Evidence
 
 - Maven clean test: BUILD SUCCESS (exit code 0)
 - Checkstyle: 0 violations
-- Total tests: 44
-- Passed: 44
+- Total tests: 59
+- Passed: 59
 - Failed: 0
 - Errors: 0
 - Skipped: 0
@@ -42,10 +43,12 @@
   - AuthMockMvcTest: 16
   - AdminUserMockMvcTest: 7
   - DepartmentMockMvcTest: 8
+  - ProjectMockMvcTest: 15
 - Canonical documents: unchanged (10/10 files preserved)
 - Flyway V001 to V011: unchanged
 - Migration V012: not created
-- Project / Phase 6 code: none
+- Task Management / Phase 7 code: none
+- LAST_PROJECT_MANAGER_INVARIANT_GAP: resolved
 - HEAD equals origin/main
 - Working tree is clean
 
@@ -54,9 +57,11 @@
 - TEMPORARY_PASSWORD_FLOW_GAP: Admin creates User with status PENDING and temporary random password hashed via BCrypt. Plaintext password is not logged and not returned in response. Activation flow, token issuance, and first-time password setup endpoint are not yet defined in canonical documents and remain deferred.
 - TEAM_API_CONTRACT_GAP: Team and Team Member domain entities, repositories, and application services are implemented, but REST controllers are not exposed because endpoints are not defined in 06_API_CONTRACT.md.
 
-## Next Permitted Phase
+## Next Permitted Step
 
-- Phase 6: Project Module (per docs/08_DEVELOPMENT_ROADMAP.md)
+- Phase 7 chưa được phép bắt đầu ngay.
+- Bước tiếp theo được phép: **UI/UX Design Baseline for Mobile**.
+- Sau khi UI/UX được review mới chuyển sang implementation tiếp theo.
 
 ## Trust Rules
 
@@ -67,8 +72,8 @@
 
 ## Recent Git Log
 
-d45524b (HEAD -> main, origin/main, origin/HEAD) feat(organization): implement user and department management
+4aa6f41 (HEAD -> main, origin/main, origin/HEAD) fix(project): preserve final project manager invariant
+ad40648 feat(project): implement project management module
+eda1f51 docs(agent): checkpoint phase 5 completion
+d45524b feat(organization): implement user and department management
 5034caf docs(agent): add persistent project memory
-1ff7fcf fix(auth): align security handlers and complete API tests
-392fa5d feat(auth): complete authentication and authorization module (phase 4)
-03d81c8 test(database): validate migrations on PostgreSQL
