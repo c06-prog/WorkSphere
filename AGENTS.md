@@ -138,13 +138,29 @@ Nguyên tắc mạng Android Emulator:
 
 ## Tool Discovery, Installation and Evidence Policy
 
-- Agent được phép tìm kiếm công cụ có sẵn bằng các lệnh chỉ đọc (Get-Command, where.exe, winget list/search, docker ps, adb version, java/node/npm version).
-- Agent phải ưu tiên giải pháp chính thức, reusable và có sẵn trước khi tự viết lại mã.
-- Agent được cài công cụ khi nhiệm vụ WorkSphere thực sự cần, có nguồn chính thức, verified publisher, license tương thích, ưu tiên winget.
-- Mọi công cụ và ứng dụng sử dụng trong WorkSphere phải được cập nhật vào reports/ENVIRONMENT_TOOL_REGISTRY.md.
-- Ứng dụng mới cài đặt phải có đầy đủ thông tin: tên, nguồn, publisher, version, license, executable path và data path.
+Mục đích của chính sách này là mở rộng khả năng thực thi và tính tự chủ của Agent, không phải giới hạn khả năng đang có. Trong mọi nhiệm vụ WorkSphere tiếp theo, Agent được chủ động:
+
+- Tìm kiếm, phát hiện ứng dụng và công cụ có sẵn bằng các lệnh chỉ đọc (Get-Command, where.exe, winget list/search, docker ps, adb version, java/node/npm version).
+- Tìm executable, CLI, shortcut, service và đường dẫn dữ liệu.
+- Mở ứng dụng hoặc service khi nhiệm vụ cần (ưu tiên mở công cụ có sẵn hơn là cài mới công cụ trùng lặp).
+- Cài công cụ còn thiếu từ nguồn chính thức khi cần để hoàn thành nhiệm vụ và không có công cụ tương đương trên máy (verified publisher, license tương thích, ưu tiên winget).
+- Cấu hình tích hợp công cụ với WorkSphere và cập nhật reports/ENVIRONMENT_TOOL_REGISTRY.md khi phát hiện, cài đặt, nâng cấp hoặc thay đổi vị trí công cụ.
+- Điều khiển ứng dụng bằng CLI, ADB, browser automation, extension API hoặc UI/accessibility automation có kiểm soát (xác minh cửa sổ/tiến trình mục tiêu, không click theo tọa độ mù).
+- Chạy build, test, emulator, container và trình duyệt.
+- Thu thập log, test result, health status, screenshot và screen recording phục vụ kiểm thử và báo cáo (không chụp dữ liệu nhạy cảm; ảnh tạm lưu tại design/prototype/review-output/, ảnh báo cáo lưu tại reports/screenshots/).
+- Dừng tiến trình do Agent tự khởi động sau khi hoàn tất nhiệm vụ.
 - Dữ liệu lớn (SDK, images, cache, virtual devices, build artifacts) ưu tiên đặt tại ổ D:.
-- Khi gặp Windows UAC, màn hình đăng nhập tài khoản, thanh toán, điều khoản pháp lý hoặc quyền hệ điều hành nhạy cảm: Agent phải dừng và báo BLOCKED_FOR_USER_ACTION kèm hướng dẫn chi tiết cho người dùng, không được click mù hay tự động chấp nhận.
-- Agent được phép mở, đóng và điều khiển các ứng dụng, CLI, emulator, browser prototype phục vụ cho nhiệm vụ WorkSphere trong phạm vi an toàn.
-- Agent được phép chụp screenshot và video kiểm thử không chứa dữ liệu nhạy cảm; ảnh tạm lưu tại design/prototype/review-output/, ảnh báo cáo lưu tại reports/screenshots/.
-- Tuyệt đối không truy cập, đọc hoặc lưu trữ dữ liệu cá nhân, mật khẩu, token, secret hoặc tài nguyên ngoài phạm vi WorkSphere.
+
+Agent không cần xin xác nhận riêng cho các thao tác không đặc quyền, có thể đảo ngược và chỉ ảnh hưởng môi trường WorkSphere.
+
+Agent chỉ báo BLOCKED_FOR_USER_ACTION khi hệ điều hành hoặc ứng dụng thực sự yêu cầu người dùng xử lý:
+- Windows UAC hoặc yêu cầu quyền Administrator.
+- Đăng nhập tài khoản.
+- CAPTCHA.
+- Điều khoản pháp lý / EULA.
+- Thanh toán hoặc nhập license key.
+- Windows Firewall prompt.
+- Quyền Android nhạy cảm.
+- Hộp thoại không thể xử lý an toàn bằng CLI/API.
+
+Tuyệt đối không truy cập, đọc hoặc lưu trữ dữ liệu cá nhân, mật khẩu, token, secret hoặc tài nguyên ngoài phạm vi WorkSphere.

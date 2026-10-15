@@ -182,3 +182,11 @@ Current operating mode:
 - Agent được phép sử dụng CLI, ADB, browser automation, chụp screenshot và video ngắn phục vụ kiểm thử và báo cáo.
 - Nghiêm cấm thu thập, ghi log hoặc chụp ảnh chứa thông tin cá nhân, mật khẩu, token, API key hoặc bí mật.
 - Ảnh chụp tạm thời trong `design/prototype/review-output/` không được commit mặc định; chỉ ảnh đã duyệt mới được đưa vào `reports/screenshots/`.
+
+## D-021 Proactive Execution Scope and Autonomy
+
+- Tool Discovery and Installation Policy nhằm mở rộng khả năng thực thi và tính tự chủ lâu dài của Agent, không hạn chế các năng lực sẵn có.
+- Trong mọi nhiệm vụ tiếp theo, Agent được chủ động: phát hiện ứng dụng/service; tìm CLI/shortcut/data path; mở service cần thiết; cài đặt công cụ chính thức còn thiếu khi cần; cấu hình tích hợp; điều khiển qua CLI/ADB/automation; chạy build/test/emulator/container; thu thập telemetry/logs/screenshots; dừng tiến trình tự khởi chạy; và cập nhật registry.
+- Không cần xin xác nhận riêng cho các thao tác không đặc quyền, có thể đảo ngược và chỉ ảnh hưởng môi trường WorkSphere.
+- Chỉ báo `BLOCKED_FOR_USER_ACTION` khi thực sự có yêu cầu can thiệp từ người dùng (UAC, login, captcha, điều khoản EULA, payment, firewall, quyền Android nhạy cảm).
+- Nếu ứng dụng không có CLI nhưng cần kiểm thử giao diện: được phép dùng UI/accessibility automation có kiểm soát với tiến trình mục tiêu đã xác minh, không click tọa độ mù, không truy cập dữ liệu cá nhân.
