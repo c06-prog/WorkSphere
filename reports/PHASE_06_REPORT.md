@@ -80,10 +80,21 @@
 - [GlobalExceptionHandler](file:///D:/WorkSphere/backend/src/main/java/com/worksphere/shared/exception/GlobalExceptionHandler.java):
   - Bổ sung xử lý `ObjectOptimisticLockingFailureException` trả về HTTP 409 Conflict với error code `OPTIMISTIC_LOCK_CONFLICT` theo đúng API Contract.
 
-## 4. Kết quả Kiểm thử & Xác thực
-- **Checkstyle**: 0 Checkstyle violations.
+## 4. Bản vá LAST_PROJECT_MANAGER_INVARIANT_GAP
+- **Vấn đề phát hiện qua Audit**: Phương thức `updateMemberRole` trong `ProjectMemberApplicationService` cho phép giáng cấp `PROJECT_MANAGER` duy nhất của dự án thành `TEAM_LEADER`, `MEMBER` hoặc `OBSERVER`, làm mất đi người quản lý duy nhất.
+- **Giải pháp khắc phục**:
+  - Trong [ProjectMemberApplicationService.java](file:///D:/WorkSphere/backend/src/main/java/com/worksphere/project/application/ProjectMemberApplicationService.java):
+    - Kiểm tra nếu thành viên đang active, vai trò hiện tại là `PROJECT_MANAGER`, vai trò mới khác `PROJECT_MANAGER`, và số lượng `PROJECT_MANAGER` active của dự án `<= 1` thì từ chối ngay với ngoại lệ `BusinessRuleException("PROJECT_MANAGER_REQUIRED", "Không thể giáng cấp Project Manager duy nhất của dự án")`.
+    - Không chặn khi giữ nguyên vai trò `PROJECT_MANAGER` hoặc khi dự án vẫn còn ít nhất một `PROJECT_MANAGER` active khác.
+- **Kiểm thử bổ sung**:
+  - `updateMemberRole_shouldFailWhenDemotingSoleProjectManager`: Giáng cấp PM duy nhất bị từ chối với HTTP 422 `PROJECT_MANAGER_REQUIRED`, vai trò trong DB không đổi (PASS).
+  - `updateMemberRole_shouldSucceedWhenAnotherProjectManagerExists`: Giáng cấp PM khi còn PM khác thành công, vai trò mới được lưu, dự án còn 1 active PM (PASS).
+  - `updateMemberRole_shouldSucceedWhenKeepingSameProjectManagerRole`: Cập nhật giữ nguyên vai trò `PROJECT_MANAGER` không bị chặn (PASS).
+
+## 5. Kết quả Kiểm thử & Xác thực
+- **Checkstyle**: 0 Checkstyle violations (`.\mvnw.cmd checkstyle:check "-Dcheckstyle.config.location=checkstyle.xml"` exit code 0).
 - **Integration Test MockMvc**:
-  - [ProjectMockMvcTest](file:///D:/WorkSphere/backend/src/test/java/com/worksphere/project/ProjectMockMvcTest.java): 12/12 tests PASS trên PostgreSQL Testcontainers.
+  - [ProjectMockMvcTest](file:///D:/WorkSphere/backend/src/test/java/com/worksphere/project/ProjectMockMvcTest.java): 15/15 tests PASS trên PostgreSQL Testcontainers.
     - `getProjects_shouldReturnEmptyListInitially` (PASS)
     - `getProjects_shouldFailWhenUnauthenticated` (401 PASS)
     - `getProjects_shouldFailWhenMissingPermission` (403 PASS)
@@ -94,8 +105,11 @@
     - `updateProject_shouldFailWhenOptimisticLockConflict` (409 OPTIMISTIC_LOCK_CONFLICT PASS)
     - `changeProjectStatus_shouldSucceedAndRecordHistory` (DRAFT -> ACTIVE + history recorded PASS)
     - `changeProjectStatus_shouldFailWhenInvalidTransition` (DRAFT -> COMPLETED rejected PASS)
-    - `projectMembers_crudWorkflow` (Add, duplicate rejection, list, update role, protect last PM, remove employee PASS)
+    - `projectMembers_crudWorkflow` (Add, duplicate rejection, list, update role, protect last PM on delete, remove employee PASS)
     - `milestones_crudWorkflow` (Create milestone, list milestones PASS)
+    - `updateMemberRole_shouldFailWhenDemotingSoleProjectManager` (422 PROJECT_MANAGER_REQUIRED PASS)
+    - `updateMemberRole_shouldSucceedWhenAnotherProjectManagerExists` (200 PASS)
+    - `updateMemberRole_shouldSucceedWhenKeepingSameProjectManagerRole` (200 PASS)
 - **Hồi quy toàn bộ Test Suite**:
   - `com.worksphere.BackendApplicationTests`: 1 test
   - `com.worksphere.MigrationIntegrationTest`: 1 test
@@ -103,7 +117,8 @@
   - `com.worksphere.identity.AuthMockMvcTest`: 16 tests
   - `com.worksphere.identity.AdminUserMockMvcTest`: 7 tests
   - `com.worksphere.organization.DepartmentMockMvcTest`: 8 tests
-  - `com.worksphere.project.ProjectMockMvcTest`: 12 tests
-  - **Tổng cộng**: **56/56 tests PASS**, 0 Failures, 0 Errors, 0 Skipped, BUILD SUCCESS, exit code 0.
+  - `com.worksphere.project.ProjectMockMvcTest`: 15 tests
+  - **Tổng cộng**: **59/59 tests PASS**, 0 Failures, 0 Errors, 0 Skipped, BUILD SUCCESS, exit code 0.
 - **Secret Scan**: Không phát hiện mật khẩu plaintext, token hay credentials lộ trong repository.
 - **Tài liệu Canonical & Migration**: 10 file tài liệu canonical và Flyway `V001`-`V011` không bị thay đổi.
+- **Ghi chú kỹ thuật**: Giao dịch thay đổi trạng thái và ghi log lịch sử nằm trong cùng `@Transactional`; cơ chế rollback khi xảy ra lỗi dựa trên quản lý transaction của Spring Framework.

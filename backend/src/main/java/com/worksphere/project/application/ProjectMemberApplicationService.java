@@ -120,6 +120,18 @@ public class ProjectMemberApplicationService {
             throw new BusinessRuleException("INVALID_PROJECT_MEMBER", "Thành viên không thuộc dự án này");
         }
 
+        // Rule: Không cho giáng cấp Project Manager cuối cùng của dự án
+        if (member.isActive()
+                && member.getProjectRole() == ProjectRole.PROJECT_MANAGER
+                && request.projectRole() != ProjectRole.PROJECT_MANAGER) {
+            long pmCount = projectMemberRepository.countByProjectIdAndProjectRoleAndActiveTrue(
+                    projectId, ProjectRole.PROJECT_MANAGER);
+            if (pmCount <= 1) {
+                throw new BusinessRuleException("PROJECT_MANAGER_REQUIRED",
+                        "Không thể giáng cấp Project Manager duy nhất của dự án");
+            }
+        }
+
         member.updateRole(request.projectRole());
         ProjectMember saved = projectMemberRepository.save(member);
 

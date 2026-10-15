@@ -546,4 +546,104 @@ public class ProjectMockMvcTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data", hasSize(1)));
     }
+
+    @Test
+    @Order(13)
+    void updateMemberRole_shouldFailWhenDemotingSoleProjectManager() throws Exception {
+        Project project = projectRepository.save(Project.create(
+                UUID.randomUUID(),
+                "PRJ-DEMOTE-FAIL",
+                "Dự án thử giáng cấp PM duy nhất",
+                null,
+                pmUserId,
+                null,
+                ProjectPriority.MEDIUM,
+                null,
+                null,
+                pmUserId
+        ));
+        ProjectMember solePm = projectMemberRepository.save(ProjectMember.create(
+                UUID.randomUUID(), project.getId(), pmUserId, ProjectRole.PROJECT_MANAGER, pmUserId
+        ));
+
+        UpdateProjectMemberRoleRequest demoteReq = new UpdateProjectMemberRoleRequest(ProjectRole.MEMBER);
+        mockMvc.perform(put("/api/v1/projects/" + project.getId() + "/members/" + solePm.getId())
+                        .header("Authorization", "Bearer " + pmToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(demoteReq)))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("PROJECT_MANAGER_REQUIRED"));
+
+        // Verify role in database remains PROJECT_MANAGER
+        ProjectMember reloaded = projectMemberRepository.findById(solePm.getId()).orElseThrow();
+        org.junit.jupiter.api.Assertions.assertEquals(ProjectRole.PROJECT_MANAGER, reloaded.getProjectRole());
+    }
+
+    @Test
+    @Order(14)
+    void updateMemberRole_shouldSucceedWhenAnotherProjectManagerExists() throws Exception {
+        Project project = projectRepository.save(Project.create(
+                UUID.randomUUID(),
+                "PRJ-DEMOTE-OK",
+                "Dự án có 2 PM",
+                null,
+                pmUserId,
+                null,
+                ProjectPriority.MEDIUM,
+                null,
+                null,
+                pmUserId
+        ));
+        projectMemberRepository.save(ProjectMember.create(
+                UUID.randomUUID(), project.getId(), pmUserId, ProjectRole.PROJECT_MANAGER, pmUserId
+        ));
+        ProjectMember secondPm = projectMemberRepository.save(ProjectMember.create(
+                UUID.randomUUID(), project.getId(), employeeUserId, ProjectRole.PROJECT_MANAGER, pmUserId
+        ));
+
+        // Demote second PM to TEAM_LEADER
+        UpdateProjectMemberRoleRequest demoteReq = new UpdateProjectMemberRoleRequest(ProjectRole.TEAM_LEADER);
+        mockMvc.perform(put("/api/v1/projects/" + project.getId() + "/members/" + secondPm.getId())
+                        .header("Authorization", "Bearer " + pmToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(demoteReq)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.projectRole").value("TEAM_LEADER"));
+
+        ProjectMember reloaded = projectMemberRepository.findById(secondPm.getId()).orElseThrow();
+        org.junit.jupiter.api.Assertions.assertEquals(ProjectRole.TEAM_LEADER, reloaded.getProjectRole());
+
+        // Verify project still has 1 active PROJECT_MANAGER
+        long pmCount = projectMemberRepository.countByProjectIdAndProjectRoleAndActiveTrue(
+                project.getId(), ProjectRole.PROJECT_MANAGER);
+        org.junit.jupiter.api.Assertions.assertEquals(1, pmCount);
+    }
+
+    @Test
+    @Order(15)
+    void updateMemberRole_shouldSucceedWhenKeepingSameProjectManagerRole() throws Exception {
+        Project project = projectRepository.save(Project.create(
+                UUID.randomUUID(),
+                "PRJ-SAME-PM",
+                "Dự án giữ nguyên vai trò PM",
+                null,
+                pmUserId,
+                null,
+                ProjectPriority.MEDIUM,
+                null,
+                null,
+                pmUserId
+        ));
+        ProjectMember solePm = projectMemberRepository.save(ProjectMember.create(
+                UUID.randomUUID(), project.getId(), pmUserId, ProjectRole.PROJECT_MANAGER, pmUserId
+        ));
+
+        UpdateProjectMemberRoleRequest sameReq = new UpdateProjectMemberRoleRequest(ProjectRole.PROJECT_MANAGER);
+        mockMvc.perform(put("/api/v1/projects/" + project.getId() + "/members/" + solePm.getId())
+                        .header("Authorization", "Bearer " + pmToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(sameReq)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.projectRole").value("PROJECT_MANAGER"));
+    }
 }
