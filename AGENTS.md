@@ -67,3 +67,71 @@ Every model and every new session must:
 - After push: verify HEAD equals origin/main and working tree is clean.
 - When provider or model changes, reread persistent project memory.
 - If model output conflicts with Git or canonical documents, Git and canonical documents win.
+
+## Runtime Tool Authorization
+
+Agent được phép sử dụng trong nhiệm vụ WorkSphere khi cần:
+
+- PowerShell và Terminal.
+- Git.
+- Maven Wrapper.
+- Java 21.
+- Docker CLI và Docker Desktop Engine.
+- Testcontainers.
+- PostgreSQL container.
+- Node.js và npm khi mobile bắt đầu.
+- Android SDK.
+- ADB.
+- Android Emulator.
+- Gradle Wrapper.
+- Logcat.
+- Android screenshot và screen recording.
+- Browser automation cho prototype local.
+- Kiểm tra port và health endpoint.
+
+Agent được phép tự động:
+
+- Kiểm tra Docker Engine.
+- Khởi động worksphere-dev-pg khi task cần database dev.
+- Khởi động backend bằng profile đúng.
+- Kiểm tra backend health.
+- Kiểm tra adb devices.
+- Chọn emulator-5554 khi đây là thiết bị duy nhất ở trạng thái device.
+- Build Android Debug khi source mobile tồn tại.
+- Cài debug APK.
+- Mở và dừng ứng dụng WorkSphere.
+- Chạy test.
+- Thu logcat có lọc.
+- Chụp screenshot phục vụ kiểm thử và báo cáo.
+- Quay video ngắn phục vụ kiểm thử.
+- Dừng tiến trình do Agent tự khởi chạy.
+- Xóa container tạm do Testcontainers tạo.
+
+Agent không được:
+
+- Xóa hoặc sửa jenkins-lts.
+- Xóa Docker image, volume hoặc dữ liệu Docker.
+- Xóa worksphere-dev-pg.
+- Factory reset Android Emulator.
+- Xóa AVD.
+- Xóa Android SDK.
+- Điều khiển thiết bị khác ngoài serial đã xác minh.
+- Mở port public.
+- Tắt firewall.
+- Commit APK, AAB, keystore, logcat thô hoặc video lớn.
+- Chụp hoặc commit secret, token hoặc dữ liệu nhạy cảm.
+- Tự xử lý hộp thoại tài khoản, thanh toán hoặc điều khoản pháp lý.
+- Click mù khi gặp Windows UAC hoặc Android permission không rõ.
+
+Nếu cần thao tác thủ công:
+
+- Báo BLOCKED_FOR_USER_ACTION.
+- Nêu chính xác hộp thoại và thao tác người dùng cần thực hiện.
+- Không lặp vô hạn.
+
+Nguyên tắc mạng Android Emulator:
+
+- localhost trong emulator là chính emulator.
+- 10.0.2.2 là máy Windows host.
+- Không dùng IP emulator làm backend host.
+- Không hard-code backend URL production vào source.

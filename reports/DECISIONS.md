@@ -138,3 +138,17 @@ Current operating mode:
   - Accessibility Checklist
 - Thiết kế không được tạo chức năng ngoài canonical docs.
 - File Figma chỉ được tuyên bố tồn tại nếu thực sự đã tạo.
+
+## D-015 Runtime Automation Authorization
+
+- Agent được dùng Docker, Maven, Gradle, ADB và emulator theo phạm vi AGENTS.md.
+- Agent chỉ thao tác tài nguyên của WorkSphere.
+- Jenkins và Docker volumes được bảo vệ.
+- Hộp thoại nhạy cảm phải chuyển cho người dùng.
+
+## D-016 Visual Prototype Gate
+
+- Đặc tả Markdown chưa được coi là visual mockup.
+- Trước khi code React Native phải có visual prototype cho các màn hình lõi.
+- Prototype phải được review trước implementation.
+- Không tuyên bố có Figma nếu chưa tạo file Figma thật.
