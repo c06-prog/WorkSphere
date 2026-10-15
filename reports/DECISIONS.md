@@ -219,3 +219,30 @@ Current operating mode:
 - Image Docker chính thức `eclipse-temurin:21-jdk` đóng vai trò môi trường đối chuẩn Java 21 có thể tái lập độc lập (Compile PASS, Checkstyle 0 violations, Unit tests 16/16 PASS, H2 context 1/1 PASS).
 - Không tuyên bố full Java 21 integration PASS nếu Testcontainers chưa chạy trong môi trường Java 21 (do Docker socket có chủ đích không được mount vào container tạm để bảo vệ an toàn hệ thống).
 - Jenkins pipeline hoặc môi trường CI/CD chuyên dụng với Docker socket an toàn là kênh mong muốn để thực thi toàn bộ integration test matrix trên Java 21.
+
+## D-026 Web Runtime and Browser Automation Authorization
+
+- Mở rộng năng lực thực thi cho Agent khi WorkSphere có giao diện web, prototype web, trang quản trị, tài liệu web, Jenkins UI hoặc cần kiểm thử qua trình duyệt. Quyền này có hiệu lực lâu dài cho mọi nhiệm vụ WorkSphere tiếp theo.
+- Agent được chủ động: phát hiện trình duyệt đã cài; xác định executable path và version; mở trình duyệt khi task cần; dùng headless browser (`--headless=new`); dùng profile tạm riêng cho WorkSphere; chạy local HTTP server chỉ bind localhost (`127.0.0.1`); điều hướng, nhập dữ liệu test, bấm nút, kiểm tra DOM; thu thập console log, network status và HTTP response; chụp screenshot; quay video kiểm thử ngắn; kiểm tra responsive viewport; kiểm tra accessibility; kiểm thử website/prototype WorkSphere; kiểm tra Jenkins UI; và dừng browser/server do Agent tự khởi chạy.
+- Agent không cần xin phép riêng cho thao tác không đặc quyền, có thể đảo ngược và chỉ ảnh hưởng môi trường WorkSphere.
+
+## D-027 Browser Tool Hierarchy, Storage Isolation, and Security
+
+- Thứ tự ưu tiên công cụ trước khi cài mới:
+  1. Microsoft Edge đã cài trên Windows host.
+  2. Khả năng headless có sẵn của Edge (`msedge.exe --headless=new`).
+  3. Browser automation đang có trong Antigravity.
+  4. Microsoft Edge WebDriver chính thức từ Microsoft phù hợp phiên bản Edge (lưu ngoài repository tại `D:\AI\Tools\EdgeWebDriver\<version>`).
+  5. Selenium hoặc Playwright chỉ khi task thực sự cần. Không cài nhiều framework trùng chức năng.
+- Phân bổ lưu trữ và cách ly tuyệt đối ngoài repository `D:\WorkSphere`:
+  - `D:\AI\Tools\EdgeWebDriver\<version>`
+  - `D:\AI\Profiles\Edge\WorkSphere` (profile test riêng biệt, cấm truy cập profile Edge cá nhân của người dùng)
+  - `D:\AI\Cache\Edge`
+  - `D:\AI\Temp\Edge`
+- An toàn dữ liệu và bằng chứng kiểm thử:
+  - Ảnh tạm: `design/prototype/review-output/` (không commit mặc định).
+  - Ảnh báo cáo: `reports/screenshots/` (chỉ commit khi đã kiểm tra không chứa secret, token, mật khẩu, Authorization header, API key, hay dữ liệu cá nhân thật).
+  - Nghiêm cấm commit: browser installer, browser binary, WebDriver executable (`msedgedriver.exe`), browser profile, cookie, cache, downloads tạm, hoặc file HAR chứa token.
+- Mạng và Web Frontend tương lai:
+  - Local server chỉ bind `127.0.0.1`. Cấm bind `0.0.0.0`, cấm mở port public ra Internet, cấm tắt firewall.
+  - Không tự tạo Web Frontend nếu Roadmap không yêu cầu; tuân thủ nghiêm ngặt license khi tái sử dụng mã nguồn.

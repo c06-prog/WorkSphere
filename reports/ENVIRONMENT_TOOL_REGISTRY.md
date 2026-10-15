@@ -577,3 +577,59 @@ Ngày xác minh: 15/10/2026.
 - **Ghi chú an toàn**: Không lưu thông tin xác thực hoặc credential vào hồ sơ
 - **Ngày xác minh**: 15/10/2026
 - **Cách tìm lại**: `docker images eclipse-temurin:21-jdk`
+
+---
+
+### 2.25. Microsoft Edge
+- **Mục đích**: Trình duyệt web chuẩn trên Windows host, phục vụ kiểm thử web UI, prototype, Jenkins UI, responsive/accessibility testing, và headless automation.
+- **Trạng thái**: `INSTALLED`
+- **Phiên bản**: `155.0.4283.45`
+- **Publisher**: Microsoft Corporation
+- **Nguồn cài đặt**: Windows default / Microsoft Edge Installer
+- **License**: Microsoft Software License Terms (Proprietary)
+- **Executable path**: `C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe`
+- **Headless capability**: Sẵn sàng (`--headless=new`)
+- **Test Profile path**: `D:\AI\Profiles\Edge\WorkSphere`
+- **Cache path**: `D:\AI\Cache\Edge`
+- **Temp path**: `D:\AI\Temp\Edge`
+- **Screenshot paths**:
+  - Ảnh tạm: `design/prototype/review-output/`
+  - Ảnh báo cáo: `reports/screenshots/`
+- **Cách mở**: CLI / PowerShell (`Start-Process`) hoặc Antigravity browser automation
+- **Lệnh kiểm tra**: `(Get-Item "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe").VersionInfo`
+- **Lệnh mở headless mẫu**:
+  ```powershell
+  & "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" `
+    --headless=new `
+    --user-data-dir="D:\AI\Profiles\Edge\WorkSphere" `
+    --dump-dom "http://127.0.0.1:8080"
+  ```
+- **Quyền Administrator**: Không cần khi chạy
+- **Tích hợp WorkSphere**: Kiểm thử giao diện web prototype, tài liệu, Jenkins UI và web application tương lai
+- **Ghi chú an toàn**:
+  - Nghiêm cấm can thiệp profile Edge cá nhân của người dùng (cookie, password, history, extension, tài khoản).
+  - Nghiêm cấm đóng cửa sổ Edge cá nhân của người dùng.
+  - Cấm lưu trữ profile, cache, downloads vào repository `D:\WorkSphere`.
+  - Kiểm tra bảo mật screenshot (không chụp password, token, Authorization header, cookie).
+- **Ngày xác minh**: 15/10/2026
+- **Cách tìm lại**: `Test-Path "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"`
+
+---
+
+### 2.26. Microsoft Edge WebDriver (msedgedriver)
+- **Mục đích**: Driver tự động hóa trình duyệt Microsoft Edge theo chuẩn W3C WebDriver.
+- **Trạng thái**: `NOT_INSTALLED` (Sẵn sàng cài đặt theo nhu cầu tác vụ thực tế)
+- **Phiên bản**: `155.x` (tương thích phiên bản Edge `155.0.4283.45` khi được cài)
+- **Publisher**: Microsoft Corporation
+- **Nguồn cài đặt dự kiến**: Official Microsoft Edge WebDriver Portal (`https://developer.microsoft.com/en-us/microsoft-edge/tools/webdriver/`)
+- **License**: Microsoft Software License Terms
+- **Executable path dự kiến**: `D:\AI\Tools\EdgeWebDriver\155.0.4283.45\msedgedriver.exe`
+- **Data / Profile path**: `D:\AI\Profiles\Edge\WorkSphere`
+- **Log path**: `D:\AI\Logs\msedgedriver.log`
+- **Cách mở**: CLI / Automation runner
+- **Lệnh kiểm tra**: `where.exe msedgedriver` hoặc kiểm tra đường dẫn tại `D:\AI\Tools\EdgeWebDriver`
+- **Quyền Administrator**: Không cần khi chạy
+- **Tích hợp WorkSphere**: Tự động hóa kiểm thử E2E khi có yêu cầu chuyên sâu
+- **Ghi chú an toàn**: Không commit `msedgedriver.exe` vào Git repository; không tải WebDriver từ nguồn thứ ba không chính thức
+- **Ngày xác minh**: 15/10/2026
+- **Cách tìm lại**: `Test-Path "D:\AI\Tools\EdgeWebDriver"`

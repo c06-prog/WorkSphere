@@ -86,7 +86,10 @@ Agent được phép sử dụng trong nhiệm vụ WorkSphere khi cần:
 - Gradle Wrapper.
 - Logcat.
 - Android screenshot và screen recording.
-- Browser automation cho prototype local.
+- Microsoft Edge và headless browser (`--headless=new`).
+- Browser automation tích hợp cho prototype local, web UI, tài liệu và Jenkins.
+- Edge WebDriver tải từ nguồn chính thức Microsoft khi nhiệm vụ thực sự cần.
+- Local HTTP server kiểm thử chỉ bind localhost (127.0.0.1).
 - Kiểm tra port và health endpoint.
 
 Agent được phép tự động:
@@ -102,9 +105,14 @@ Agent được phép tự động:
 - Mở và dừng ứng dụng WorkSphere.
 - Chạy test.
 - Thu logcat có lọc.
-- Chụp screenshot phục vụ kiểm thử và báo cáo.
+- Phát hiện trình duyệt, executable path và version (ưu tiên Microsoft Edge có sẵn trên Windows).
+- Mở trình duyệt bằng headless mode (`--headless=new`) hoặc browser automation có sẵn trong Antigravity.
+- Khởi chạy local HTTP server (127.0.0.1) phục vụ prototype hoặc kiểm thử web.
+- Điều hướng, tương tác DOM, kiểm tra responsive viewport, kiểm tra accessibility, thu console log và HTTP status.
+- Sử dụng profile kiểm thử riêng biệt tại `D:\AI\Profiles\Edge\WorkSphere`.
+- Chụp screenshot phục vụ kiểm thử và báo cáo (ảnh tạm lưu tại `design/prototype/review-output/`, ảnh báo cáo lưu tại `reports/screenshots/`).
 - Quay video ngắn phục vụ kiểm thử.
-- Dừng tiến trình do Agent tự khởi chạy.
+- Dừng tiến trình do Agent tự khởi chạy (backend, server test, emulator, browser process/profile của Agent).
 - Xóa container tạm do Testcontainers tạo.
 
 Agent không được:
@@ -116,10 +124,15 @@ Agent không được:
 - Xóa AVD.
 - Xóa Android SDK.
 - Điều khiển thiết bị khác ngoài serial đã xác minh.
-- Mở port public.
-- Tắt firewall.
-- Commit APK, AAB, keystore, logcat thô hoặc video lớn.
-- Chụp hoặc commit secret, token hoặc dữ liệu nhạy cảm.
+- Truy cập, sử dụng, sao chép hoặc can thiệp profile Edge cá nhân của người dùng (cookie, password, history, extension, tài khoản).
+- Đóng cửa sổ trình duyệt cá nhân của người dùng.
+- Tải browser, WebDriver, browser profile hoặc cache vào repository `D:\WorkSphere` (phải lưu tại `D:\AI\Tools\EdgeWebDriver\<version>`, `D:\AI\Profiles\Edge\WorkSphere`, `D:\AI\Cache\Edge`, `D:\AI\Temp\Edge`).
+- Bind server 0.0.0.0 nếu task không yêu cầu.
+- Mở port public ra Internet.
+- Tắt firewall hoặc tự xác nhận Firewall prompt.
+- Gửi dữ liệu WorkSphere tới website hoặc dịch vụ bên ngoài không được phép.
+- Commit APK, AAB, keystore, logcat thô, video lớn, browser installer, browser binary, WebDriver executable (`msedgedriver.exe`), browser profile, cookie, cache hoặc HAR chứa token.
+- Chụp hoặc commit secret, token, mật khẩu, Authorization header, API key hoặc dữ liệu cá nhân nhạy cảm.
 - Tự xử lý hộp thoại tài khoản, thanh toán hoặc điều khoản pháp lý.
 - Click mù khi gặp Windows UAC hoặc Android permission không rõ.
 
@@ -129,10 +142,11 @@ Nếu cần thao tác thủ công:
 - Nêu chính xác hộp thoại và thao tác người dùng cần thực hiện.
 - Không lặp vô hạn.
 
-Nguyên tắc mạng Android Emulator:
+Nguyên tắc mạng và trình duyệt:
 
 - localhost trong emulator là chính emulator.
-- 10.0.2.2 là máy Windows host.
+- 10.0.2.2 là máy Windows host khi emulator truy cập.
+- localhost / 127.0.0.1 là máy Windows host khi trình duyệt trên host truy cập.
 - Không dùng IP emulator làm backend host.
 - Không hard-code backend URL production vào source.
 
