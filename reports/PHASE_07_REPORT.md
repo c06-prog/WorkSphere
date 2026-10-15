@@ -324,6 +324,7 @@ Mọi entity JPA ánh xạ chính xác 100% cột trong Flyway migrations `V005`
 
 ## 16. Tổng hợp kiểm thử toàn bộ hệ thống (Regression Suite)
 
+### 16.1. Kiểm thử toàn diện trên Host JDK 27 (với Testcontainers PostgreSQL)
 - **Tổng số tests**: **100/100 PASS**
   - `com.worksphere.BackendApplicationTests`: 1 test PASS
   - `com.worksphere.MigrationIntegrationTest`: 1 test PASS (chạy Flyway V001-V012 trên PostgreSQL)
@@ -332,20 +333,40 @@ Mọi entity JPA ánh xạ chính xác 100% cột trong Flyway migrations `V005`
   - `com.worksphere.identity.AdminUserMockMvcTest`: 7 tests PASS
   - `com.worksphere.organization.DepartmentMockMvcTest`: 8 tests PASS
   - `com.worksphere.project.ProjectMockMvcTest`: 15 tests PASS
-  - `com.worksphere.task.TaskMockMvcTest`: 25 tests PASS
+  - `com.worksphere.task.TaskMockMvcTest`: 25 tests PASS (bao gồm 10 tests mới của bản vá)
   - `com.worksphere.task.TaskTest`: 6 tests PASS
   - `com.worksphere.task.TaskWorkflowTest`: 10 tests PASS
-- **Failures**: 0
-- **Errors**: 0
-- **Skipped**: 0
+- **Failures**: 0 | **Errors**: 0 | **Skipped**: 0
 - **Build Status**: **BUILD SUCCESS**
-- **Maven execution time**: 01:43 min
+- **Thời gian chạy**: ~1m 37s
+
+### 16.2. Kiểm chuẩn môi trường Java 21 (Docker `eclipse-temurin:21-jdk`)
+Thực thi kiểm chuẩn độc lập trong container Java 21 chính thức để xác minh tính tương thích bytecode Java 21 theo Roadmap:
+- **Image**: `eclipse-temurin:21-jdk` (Digest: `sha256:f9bf7e9fe2f9bc4657537c1a7e20c768f0c3bafca41598263be4714783dd62eb`)
+- **Runtime**: `Temurin-21.0.12.1+1 (build 21.0.12.1+1-LTS)`, Apache Maven `3.9.16`
+- **Lệnh thực thi**:
+  ```powershell
+  # Checkstyle trên Java 21
+  docker run --rm -v "D:\WorkSphere\backend:/workspace" -v "C:\Users\dienm\.m2:/root/.m2" -w /workspace eclipse-temurin:21-jdk sh -c "sh ./mvnw checkstyle:check -Dcheckstyle.config.location=checkstyle.xml"
+
+  # Unit tests trên Java 21
+  docker run --rm -v "D:\WorkSphere\backend:/workspace" -v "C:\Users\dienm\.m2:/root/.m2" -w /workspace eclipse-temurin:21-jdk sh -c "sh ./mvnw test -Dtest=TaskTest,TaskWorkflowTest"
+
+  # H2 context load test trên Java 21
+  docker run --rm -v "D:\WorkSphere\backend:/workspace" -v "C:\Users\dienm\.m2:/root/.m2" -w /workspace eclipse-temurin:21-jdk sh -c "sh ./mvnw test -Dtest=BackendApplicationTests"
+  ```
+- **Kết quả**:
+  - `javac [debug parameters release 21]`: Biên dịch 110 tệp mã nguồn **PASS**.
+  - Checkstyle: **0 violations PASS**.
+  - Unit tests: **16/16 tests PASS** (`TaskTest`: 6, `TaskWorkflowTest`: 10).
+  - H2 Context test: `BackendApplicationTests` **1/1 test PASS** (Flyway V001-V011 trên H2 engine hoạt động chính xác qua `TaskFlywayConfiguration`).
+- **Ghi chú hạ tầng**: Container Java 21 tạm thời không mount Docker socket để bảo đảm an toàn hệ thống (không kích hoạt Docker-in-Docker phức tạp). Do đó, các bài test integration phụ thuộc Testcontainers PostgreSQL được thực thi trên host suite.
 
 ---
 
 ## 17. Kiểm tra tuân thủ Checkstyle & Secret Scan
 
-- **Checkstyle**: 0 violations (`checkstyle:check` exit code 0).
+- **Checkstyle**: 0 violations (`checkstyle:check` exit code 0 trên cả Host JDK 27 và Container Java 21).
 - **Secret scan**: 0 secret, token, mật khẩu, private key hay file `.env` thật nào bị commit.
 - **Tài liệu chuẩn mực**: `docs/` 100% không bị sửa đổi.
 - **Migrations cơ sở dữ liệu**: `V001` - `V011` 100% không bị sửa đổi; chỉ thêm migration mới `V012`.
@@ -353,30 +374,61 @@ Mọi entity JPA ánh xạ chính xác 100% cột trong Flyway migrations `V005`
 
 ---
 
-## 18. Danh sách tệp sửa đổi & tạo mới trong bản vá Phase 7
+## 18. V012 Pre-Flight Runbook & Thử nghiệm Dữ liệu Lịch sử
+
+- **Runbook vận hành**: Đã lập tài liệu hướng dẫn tiền kiểm và xử lý dữ liệu trùng lặp tại:
+  `reports/runbooks/V012_ACTIVE_TASK_ASSIGNMENT_UNIQUENESS.md`
+- **Kết quả thử nghiệm thực tế trên PostgreSQL**:
+  - Kịch bản dữ liệu trùng lặp active (`is_active = TRUE`): Migration V012 dừng lại ngay lập tức và an toàn với lỗi `23505` (`duplicate key value violates unique constraint "uk_task_assignments_active"`), rollback toàn bộ giao dịch, bảo toàn nguyên vẹn 100% dữ liệu.
+  - Kịch bản dữ liệu hợp lệ: Migration V012 hoàn tất thành công trong 0.021s, index partial hoạt động chuẩn xác, chặn trùng lặp active mới và cho phép tái phân công sau khi inactive.
+
+---
+
+## 19. Đánh giá Cấu hình TaskFlywayConfiguration
+
+- **Cơ chế**: Sử dụng `FlywayConfigurationCustomizer` kiểm tra `conn.getMetaData().getDatabaseProductName()`.
+  - Trên H2 database: đặt `target = V011` để tránh lỗi cú pháp `WHERE` partial index.
+  - Trên PostgreSQL (dev, staging, testcontainers, prod): không can thiệp, di trú đầy đủ đến `V012`.
+- **Kiểm chứng thực tế**:
+  - H2 test (`BackendApplicationTests`): PASS trên cả Java 27 và Java 21.
+  - PostgreSQL dev container (`worksphere-dev-pg`): Migrate thành công lên V012.
+  - PostgreSQL testcontainers: Migrate thành công lên V012.
+- **Kết luận**: Không gây rủi ro che giấu hoặc bỏ qua V012 trên môi trường PostgreSQL production.
+
+---
+
+## 20. Nợ kỹ thuật ghi nhận (Technical Debt - Low)
+
+1. **`TASK_FLYWAY_CONFIGURATION_MODULE_LOCATION_LOW`**:
+   - `TaskFlywayConfiguration` hiện đặt trong `com.worksphere.task.infrastructure`. Về mặt kiến trúc, cấu hình đa cơ sở dữ liệu này phù hợp hơn khi đặt trong module hạ tầng dùng chung (`com.worksphere.shared.infrastructure`). Sẽ chuyển vị trí trong đợt refactor sau mà không cần sửa đổi trong Phase 7.
+2. **`DATA_INTEGRITY_ERROR_MAPPING_FALLBACK_LOW`**:
+   - Phương thức `isTaskAssignmentUniqueViolation` có điều kiện fallback `message.contains("task_assignments")`. Trong tương lai, khuyến nghị duyệt chuỗi nguyên nhân `SQLException`, kiểm tra mã lỗi PostgreSQL `23505` và so sánh chính xác tên constraint `uk_task_assignments_active`.
+3. **`TEMPORARY_PASSWORD_FLOW_GAP`**: Chưa có flow kích hoạt mật khẩu tạm (deferred).
+4. **`TEAM_API_CONTRACT_GAP`**: API Team chưa xuất hiện trong Section 12 (deferred).
+5. **`DASHBOARD_AGGREGATED_API_GAP`**: API Dashboard tổng hợp (deferred).
+6. **`TASK_ATTACHMENT_DEFERRED_UNTIL_PHASE_08`**: Đính kèm tệp cho task chờ module File / `stored_files` ở Phase 8.
+7. **`TASK_DELETE_RULE_AMBIGUITY_DEFERRED`**: Định nghĩa “Business history quan trọng” chưa đầy đủ trong canonical docs; giữ logic hiện tại xét status history, cấm thay đổi ngầm trong các phase tiếp theo.
+
+---
+
+## 21. Danh sách tệp sửa đổi & tạo mới trong bản vá Phase 7
 
 ### Tệp tạo mới:
 1. `backend/src/main/resources/db/migration/V012__add_active_task_assignment_uniqueness.sql`
 2. `backend/src/main/java/com/worksphere/task/infrastructure/TaskFlywayConfiguration.java`
+3. `reports/runbooks/V012_ACTIVE_TASK_ASSIGNMENT_UNIQUENESS.md`
 
 ### Tệp sửa đổi:
 1. `backend/src/main/java/com/worksphere/task/application/TaskApplicationService.java`
 2. `backend/src/main/java/com/worksphere/task/application/TaskCommentApplicationService.java`
 3. `backend/src/test/java/com/worksphere/task/TaskMockMvcTest.java`
 4. `reports/PHASE_07_REPORT.md`
+5. `reports/ENVIRONMENT_TOOL_REGISTRY.md`
 
 ---
 
-## 19. Các khoảng trống tồn đọng đã ghi nhận (Deferred Gaps)
+## 22. Kết luận & Trạng thái hoàn tất
 
-- `TEMPORARY_PASSWORD_FLOW_GAP`: Chưa có flow kích hoạt mật khẩu tạm (deferred).
-- `TEAM_API_CONTRACT_GAP`: API Team chưa xuất hiện trong Section 12 (deferred).
-- `DASHBOARD_AGGREGATED_API_GAP`: API Dashboard tổng hợp (deferred).
-- `TASK_ATTACHMENT_DEFERRED_UNTIL_PHASE_08`: Đính kèm tệp cho task chờ module File / `stored_files` ở Phase 8.
-- `TASK_DELETE_RULE_AMBIGUITY_DEFERRED`: Định nghĩa “Business history quan trọng” chưa đầy đủ trong canonical docs; giữ logic hiện tại xét status history, cấm thay đổi ngầm trong các phase tiếp theo.
+Toàn bộ các yêu cầu kiểm toán, kiểm chuẩn Java 21 trên Docker, runbook tiền kiểm V012 và bảo toàn bất biến nghiệp vụ Phase 7 đã hoàn thành đầy đủ.
 
----
-
-## 20. Kết luận
-
-**PHASE_07_PATCH_PASS_PUSHED**
+**PHASE_07_OPERATIONAL_GATES_PASS_PUSHED**

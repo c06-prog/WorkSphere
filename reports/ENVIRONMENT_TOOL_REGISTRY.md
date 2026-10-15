@@ -542,3 +542,38 @@ Ngày xác minh: 15/10/2026.
 - **Ghi chú an toàn**: Không tự cài đặt nếu chưa có nhiệm vụ yêu cầu
 - **Ngày xác minh**: 15/10/2026
 - **Cách tìm lại**: `where.exe scoop`
+
+---
+
+### 2.24. Java 21 Validation Runtime (Docker `eclipse-temurin:21-jdk`)
+- **Mục đích**: Môi trường container thực thi kiểm thử chuẩn hóa bytecode Java 21 cho backend WorkSphere theo Roadmap.
+- **Trạng thái**: `INSTALLED` (Docker Image đã tải về local)
+- **Host Java**: Oracle JDK 27 (`27+35-2325`, `D:\Java\bin\java.exe`)
+- **Java 21 trên Windows Host**: `NOT_FOUND` / `NOT_INSTALLED` (không cài trực tiếp lên Windows để tránh can thiệp biến môi trường hệ thống)
+- **Project Target**: Java 21 (`pom.xml` cấu hình `<java.version>21</java.version>`, tương đương `javac -release 21`)
+- **Maven Wrapper**: `Apache Maven 3.9.16`
+- **Spring Boot**: `4.1.1`
+- **Docker Java 21 Image**: `eclipse-temurin:21-jdk`
+- **Phiên bản Runtime Container**: `Temurin-21.0.12.1+1 (build 21.0.12.1+1-LTS)`
+- **Image Digest**: `sha256:f9bf7e9fe2f9bc4657537c1a7e20c768f0c3bafca41598263be4714783dd62eb`
+- **Jenkins CI/CD**: `jenkins/jenkins:lts-jdk21` đang chạy, cấu hình JDK 21
+- **Lệnh kiểm tra & xác minh**:
+  ```powershell
+  docker run --rm `
+    -v "D:\WorkSphere\backend:/workspace" `
+    -v "C:\Users\dienm\.m2:/root/.m2" `
+    -w /workspace `
+    eclipse-temurin:21-jdk `
+    sh -c "java -version && sh ./mvnw -v"
+  ```
+- **Kết quả xác minh (15/10/2026)**:
+  - `java -version`: OpenJDK 21.0.12.1 LTS PASS
+  - `mvnw -v`: Apache Maven 3.9.16 PASS
+  - `checkstyle:check`: 0 violations PASS
+  - Unit tests (`TaskTest`, `TaskWorkflowTest`): 16/16 PASS
+  - H2 Context test (`BackendApplicationTests`): 1/1 PASS
+- **Quyền Administrator**: Không cần
+- **Tích hợp WorkSphere**: Đóng vai trò môi trường đối chuẩn Java 21 mà không cần cài đặt JDK mới lên máy chủ Windows
+- **Ghi chú an toàn**: Không lưu thông tin xác thực hoặc credential vào hồ sơ
+- **Ngày xác minh**: 15/10/2026
+- **Cách tìm lại**: `docker images eclipse-temurin:21-jdk`
