@@ -152,3 +152,18 @@ Current operating mode:
 - Trước khi code React Native phải có visual prototype cho các màn hình lõi.
 - Prototype phải được review trước implementation.
 - Không tuyên bố có Figma nếu chưa tạo file Figma thật.
+
+## D-017 Visual Prototype Baseline
+
+- Commit `b58d5d8` là baseline trực quan cho mobile.
+- Prototype HTML/CSS/JavaScript là tài liệu thiết kế tương tác, không phải source production.
+- React Native phải bám Screen ID, token, component và UI state từ baseline.
+- Prototype không được dùng làm production web application.
+- Mọi thay đổi UI lớn sau baseline phải được review trước khi đưa vào React Native.
+
+## D-018 Review Screenshot Policy
+
+- Ảnh tự động trong `design/prototype/review-output/` là artifact kiểm thử local.
+- Không commit mặc định.
+- Chỉ ảnh được chọn cho báo cáo hoặc release evidence mới được sao chép vào `reports/screenshots/`.
+- Ảnh chứa secret, token hoặc dữ liệu thật bị cấm commit.
