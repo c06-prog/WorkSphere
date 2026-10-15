@@ -3,9 +3,16 @@
 ## Git Checkpoint
 
 - Branch: main
-- HEAD: abefa44b0d6ec00a28798b74b17b7ecbbb726168
-- origin/main: abefa44b0d6ec00a28798b74b17b7ecbbb726168
+- Current Checkpoint HEAD: daa69a102b2f77ecc70eb2b7b08614c302ab5e03
+- origin/main: daa69a102b2f77ecc70eb2b7b08614c302ab5e03
 - Working tree at checkpoint: clean
+
+## Latest Validated Implementation
+
+- Commit: e2622d263ae04358bfb6f9f1617036a6aa478249
+- Commit message: fix(task): harden assignment and task invariants
+- Implementation Base: abefa44b0d6ec00a28798b74b17b7ecbbb726168 (feat(task): implement task management module)
+- Operational Documentation Checkpoint: daa69a102b2f77ecc70eb2b7b08614c302ab5e03 (docs(ops): add V012 preflight and Java 21 validation)
 
 ## Validated Progress
 
@@ -22,61 +29,56 @@
 - Validated Viewports: 411 × 914 dp (emulator-5554 / Android 15) and 360 × 800 dp (Android Small)
 - Android Test Lab: verified (emulator-5554, Android 15, API 35, 1080x2400, 420dpi)
 - ADB: verified (D:\AndroidSDK\platform-tools\adb.exe, version 1.0.41)
-- Docker: verified (Docker Desktop 4.94.0, Engine 29.8.2, jenkins-lts running, worksphere-dev-pg exited)
-- Tool Installation Authorization: enabled with safeguards (D-019, D-020, allowlist, user action protection)
-- Tool Registry: created at reports/ENVIRONMENT_TOOL_REGISTRY.md (23 core tools documented)
-- Phase 7 Implementation: commit abefa44b0d6ec00a28798b74b17b7ecbbb726168 đã được triển khai và audit độc lập
-- Phase 7 Audit Status: chưa được đóng vì còn các findings cần lập kế hoạch vá (patch planning)
-
-## Audit Findings Phase 7 (Pending Resolution)
-
-- HIGH:
-  - `TASK_ASSIGNMENT_CONCURRENCY_RISK`: Bảng `task_assignments` thiếu database unique constraint hoặc partial unique index cho `(task_id, assignee_id) WHERE is_active = true`. Uniqueness chỉ được bảo vệ qua exists-check ở application service.
-- MEDIUM:
-  - `TASK_HIERARCHY_DEPTH_POLICY_GAP`: Giới hạn duyệt cây tổ tiên 50 cấp ném `TASK_PARENT_CYCLE_DETECTED`, gán nhầm độ sâu phân cấp thành chu trình dù không có vòng lặp.
-  - `TASK_STATUS_HISTORY_ROLLBACK_TEST_GAP`: `@Transactional` trên `changeStatus` chưa có integration test xác minh Task status được rollback khi insert Status History gặp lỗi trên PostgreSQL thật.
-  - `TASK_DELETE_RULE_AMBIGUITY`: `TASK_CANNOT_DELETE_HAS_HISTORY` chặn xóa mềm task ngay sau transition đầu tiên; chưa định nghĩa rõ phạm vi "lịch sử nghiệp vụ quan trọng" và chưa xử lý subtask dangling khi xóa cha.
-  - `TASK_COMMENT_AUTHORIZATION_DEVIATION`: Logic cho phép `PROJECT_MANAGER` sửa/xóa comment của người khác, trong khi canonical doc quy định tác giả hoặc quản trị viên (System Admin).
-
-## Latest Validated Implementation
-
-- Commit:
-  abefa44b0d6ec00a28798b74b17b7ecbbb726168
-
-- Commit message:
-  feat(task): implement task management module
+- Docker: verified (Docker Desktop 4.94.0, Engine 29.8.2, jenkins-lts running, worksphere-dev-pg available)
+- Tool Installation Authorization: enabled with safeguards (D-019, D-020, D-021, allowlist, user action protection)
+- Tool Registry: updated at reports/ENVIRONMENT_TOOL_REGISTRY.md (24 entries, including Java 21 validation container)
+- Phase 7 (Task Management Module): COMPLETED, AUDITED, PATCHED, OPERATIONALLY VALIDATED
+  - Task Core lifecycle, workflow state machine, optimistic locking, allowedActions computation: verified.
+  - Subtask hierarchy and cycle detection via visited set (52 levels tested without recursion overflow): verified.
+  - Task Assignment with partial unique index V012 (concurrency tested 5 times with 4 threads, 1 winner): verified.
+  - Status History and transactional rollback on PostgreSQL engine failure: verified.
+  - Task Comment authorization (author and System Admin only, PM non-admin forbidden): verified.
+  - V012 Operational Runbook created and tracked at reports/runbooks/V012_ACTIVE_TASK_ASSIGNMENT_UNIQUENESS.md.
 
 ## Latest Evidence
 
-- Task Management Backend: 29 tracked files (Domain, Repositories, Services, Controller, DTOs, Tests, Report)
-- Maven clean test: BUILD SUCCESS (exit code 0)
-- Checkstyle: 0 violations
-- Total tests: 90
-- Passed: 90
-- Failed: 0
-- Errors: 0
-- Skipped: 0
-- Flaky / Rerun: 0
-- PostgreSQL Testcontainers: PASS (Image: postgres:15-alpine)
-- Canonical documents: unchanged (10/10 files preserved)
-- Flyway V001 to V011: unchanged
-- Migration V012: not created
-- HEAD equals origin/main
-- Working tree is clean
+- Backend Test Suite on Host (Oracle JDK 27, Testcontainers postgres:15-alpine):
+  - Checkstyle: 0 violations
+  - Total tests: 100/100 PASS (59 regression + 41 Task module tests)
+  - Failures: 0 | Errors: 0 | Skipped: 0
+  - Maven execution: BUILD SUCCESS (exit code 0)
+- Java 21 Validation Suite (Docker eclipse-temurin:21-jdk, runtime Temurin-21.0.12.1+1):
+  - Checkstyle: 0 violations PASS
+  - javac [release 21] 110 source files: PASS
+  - Unit tests (TaskTest, TaskWorkflowTest): 16/16 PASS
+  - H2 context integration test (BackendApplicationTests): 1/1 PASS
+  - Lưu ý phạm vi: Java 21 full Testcontainers suite bên trong container tạm thời KHÔNG thực thi vì Docker socket có chủ đích không được mount để bảo vệ an toàn hệ thống và tránh Docker-in-Docker phức tạp.
+- Database & Migrations:
+  - V001 to V011: unchanged 100%
+  - V012: applied and validated on PostgreSQL (partial unique index uk_task_assignments_active verified in pg_indexes)
+  - V012 preflight runbook: created at reports/runbooks/V012_ACTIVE_TASK_ASSIGNMENT_UNIQUENESS.md
+- Canonical documents: unchanged 100% (10/10 canonical documents in docs/ preserved)
+- Working tree: clean
+- HEAD equals origin/main: verified
 
-## Known Gaps
+## Deferred Items & Known Gaps
 
-- TEMPORARY_PASSWORD_FLOW_GAP: Admin tạo User với trạng thái PENDING và mật khẩu tạm thời hash BCrypt. Luồng kích hoạt, cấp token và endpoint thiết lập mật khẩu lần đầu chưa có trong canonical docs, tiếp tục hoãn (deferred).
-- TEAM_API_CONTRACT_GAP: Team và Team Member domain/repository/service đã hoàn thành nhưng chưa có REST controller vì 06_API_CONTRACT.md chưa định nghĩa endpoints.
-- DASHBOARD_AGGREGATED_API_GAP: API GET /api/v1/dashboard/me có trong hợp đồng nhưng chưa có backend controller.
-- TASK_ATTACHMENT_DEFERRED_UNTIL_PHASE_08: Đính kèm tệp cho Task chờ module File / `stored_files` ở Phase 8.
+- TASK_DELETE_RULE_AMBIGUITY_DEFERRED: Canonical docs chưa định nghĩa đầy đủ "business history quan trọng". Logic hiện tại chỉ kiểm tra task status history (TASK_CANNOT_DELETE_HAS_HISTORY). Phase sau không được âm thầm thay đổi rule này mà phải chờ quyết định thiết kế chính thức.
+- TASK_ATTACHMENT_DEFERRED_UNTIL_PHASE_08: Bảng task_attachments giữ nguyên trong database; không triển khai Entity/Service/API do phụ thuộc File Module và stored_files theo Roadmap.
+- Technical Debt mức Low:
+  - TASK_FLYWAY_CONFIGURATION_MODULE_LOCATION_LOW: TaskFlywayConfiguration hiện ở task.infrastructure. Có thể chuyển sang shared.infrastructure trong đợt refactor riêng; không phải lỗi chặn.
+  - DATA_INTEGRITY_ERROR_MAPPING_FALLBACK_LOW: Exception mapping còn fallback message.contains("task_assignments"). Nên nâng cấp sang duyệt SQLException chain, mã lỗi 23505 và tên constraint cụ thể trong refactor riêng; không phải lỗi chặn.
+- Deferred gaps cũ:
+  - TEMPORARY_PASSWORD_FLOW_GAP: Admin tạo User với trạng thái PENDING và mật khẩu tạm thời hash BCrypt. Luồng kích hoạt, cấp token và endpoint thiết lập mật khẩu lần đầu chưa có trong canonical docs, tiếp tục hoãn.
+  - TEAM_API_CONTRACT_GAP: Team và Team Member domain/repository/service đã hoàn thành nhưng chưa có REST controller vì 06_API_CONTRACT.md chưa định nghĩa endpoints.
+  - DASHBOARD_AGGREGATED_API_GAP: API GET /api/v1/dashboard/me có trong hợp đồng nhưng chưa có backend controller.
+  - PUT_ME_PASSWORD_TEST_GAP: Test coverage cho luồng đổi mật khẩu người dùng hiện tại tiếp tục hoãn.
 
-## Next Permitted Task
+## Next Permitted Phase
 
-- **PHASE_07_PATCH_PLANNING**.
-- Không đánh dấu Phase 7 hoàn tất khi chưa xử lý các audit findings.
-- Không bắt đầu Phase 8 (File Module).
-- Không bắt đầu triển khai React Native / mobile.
+- **Giai đoạn 8: File Module** (theo đúng docs/08_DEVELOPMENT_ROADMAP.md Section 12, P0 - Nền tảng bắt buộc cho Attachment).
+- Phải bắt đầu bằng nhiệm vụ khảo sát phạm vi (Audit/Plan) của Giai đoạn 8 trước khi viết mã nguồn.
+- Không bắt đầu triển khai React Native / mobile source trong giai đoạn này.
 
 ## Trust Rules
 
@@ -87,8 +89,8 @@
 
 ## Recent Git Log
 
-abefa44 (HEAD -> main, origin/main, origin/HEAD) feat(task): implement task management module
-c9702ac docs(agent): checkpoint visual prototype
-b58d5d8 feat(design): add interactive mobile prototype
-94a8377 docs(agent): authorize mobile test runtime
-e670233 docs(design): add mobile UI UX baseline
+daa69a1 (HEAD -> main, origin/main, origin/HEAD) docs(ops): add V012 preflight and Java 21 validation
+e2622d2 fix(task): harden assignment and task invariants
+d548dcb docs(agent): codify proactive execution scope and autonomy principles
+cd3a201 docs(agent): authorize managed tool installation
+abefa44 feat(task): implement task management module

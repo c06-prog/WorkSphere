@@ -190,3 +190,32 @@ Current operating mode:
 - Không cần xin xác nhận riêng cho các thao tác không đặc quyền, có thể đảo ngược và chỉ ảnh hưởng môi trường WorkSphere.
 - Chỉ báo `BLOCKED_FOR_USER_ACTION` khi thực sự có yêu cầu can thiệp từ người dùng (UAC, login, captcha, điều khoản EULA, payment, firewall, quyền Android nhạy cảm).
 - Nếu ứng dụng không có CLI nhưng cần kiểm thử giao diện: được phép dùng UI/accessibility automation có kiểm soát với tiến trình mục tiêu đã xác minh, không click tọa độ mù, không truy cập dữ liệu cá nhân.
+
+## D-022 Active Task Assignment Uniqueness
+
+- Mỗi cặp `task_id` + `assignee_id` chỉ có tối đa một bản ghi phân công đang hoạt động (`is_active = TRUE`).
+- PostgreSQL partial unique index `uk_task_assignments_active` (migration `V012`) là hàng rào toàn vẹn dữ liệu cuối cùng ở mức database engine.
+- Kiểm tra `existsByTaskIdAndAssigneeIdAndActiveTrue` ở tầng application service chỉ đóng vai trò fail-fast.
+- Bản ghi phân công đã hết hiệu lực (`is_active = FALSE`) không cản trở việc tái phân công (reassign) thành viên đó trong tương lai.
+- Trước khi deploy migration V012 lên bất kỳ môi trường nào có dữ liệu lịch sử, bắt buộc thực hiện theo đúng Runbook tiền kiểm tại `reports/runbooks/V012_ACTIVE_TASK_ASSIGNMENT_UNIQUENESS.md`.
+- Tuyệt đối không tự động xóa hoặc deactivate dữ liệu trùng lặp trên môi trường production khi chưa có phê duyệt chính thức từ người có thẩm quyền nghiệp vụ.
+
+## D-023 Task Comment Ownership and Scope
+
+- Chỉ tác giả bình luận (`author_id`) hoặc Quản trị viên hệ thống chuẩn mực (`ADMIN`) mới có quyền chỉnh sửa hoặc xóa bình luận.
+- Vai trò `PROJECT_MANAGER` không tự động có quyền sửa hoặc xóa bình luận của người khác nếu không phải là tác giả và không mang quyền System Admin.
+- Bình luận phản hồi (parent comment) bắt buộc phải thuộc cùng Task và chưa bị xóa mềm (`is_deleted = FALSE`).
+
+## D-024 Task Hierarchy Cycle Detection Policy
+
+- Chu trình phân cấp công việc được phát hiện chính xác bằng tập hợp định danh tổ tiên đã duyệt (`Set<UUID> visited`).
+- Không áp dụng giới hạn nghiệp vụ tùy tiện 50 cấp; chuỗi phân cấp hợp lệ sâu hơn 50 cấp không bị xem là chu trình lỗi.
+- Công việc cha bắt buộc phải tồn tại, không bị xóa mềm (`is_deleted = FALSE`) và phải thuộc cùng dự án (`project_id`).
+
+## D-025 Java 21 Validation Evidence and Test Matrix
+
+- Dự án WorkSphere giữ nguyên mục tiêu biên dịch bytecode chuẩn là Java 21 (`<java.version>21</java.version>`, tương đương `javac -release 21`).
+- Môi trường Windows host hiện sử dụng JDK 27 để thực thi full regression integration suite (100/100 tests PASS với Testcontainers PostgreSQL).
+- Image Docker chính thức `eclipse-temurin:21-jdk` đóng vai trò môi trường đối chuẩn Java 21 có thể tái lập độc lập (Compile PASS, Checkstyle 0 violations, Unit tests 16/16 PASS, H2 context 1/1 PASS).
+- Không tuyên bố full Java 21 integration PASS nếu Testcontainers chưa chạy trong môi trường Java 21 (do Docker socket có chủ đích không được mount vào container tạm để bảo vệ an toàn hệ thống).
+- Jenkins pipeline hoặc môi trường CI/CD chuyên dụng với Docker socket an toàn là kênh mong muốn để thực thi toàn bộ integration test matrix trên Java 21.
