@@ -246,3 +246,46 @@ Current operating mode:
 - Mạng và Web Frontend tương lai:
   - Local server chỉ bind `127.0.0.1`. Cấm bind `0.0.0.0`, cấm mở port public ra Internet, cấm tắt firewall.
   - Không tự tạo Web Frontend nếu Roadmap không yêu cầu; tuân thủ nghiêm ngặt license khi tái sử dụng mã nguồn.
+
+## D-028 Phase 8 Local Storage Baseline
+
+- Môi trường Development và Test sử dụng nhà cung cấp lưu trữ cục bộ (`LocalFileSystemStorageService`).
+- Thư mục gốc lưu trữ được cấu hình qua biến môi trường `WORKSPHERE_STORAGE_PATH` (hoặc thuộc tính `worksphere.storage.path`), mặc định `D:/WorkSphereData/uploads` trên Windows và có thể ghi đè linh hoạt trên Linux/container.
+- Đường dẫn vật lý tuyệt đối của file trên filesystem máy chủ tuyệt đối không xuất hiện trong API response, headers, body hoặc log trả về cho client.
+- Định danh lưu trữ (`storagePath`) là relative server-generated key có định dạng `<purpose>/<yyyy>/<MM>/<fileId>.<extension>`, được sinh ngẫu nhiên bằng UUID trên máy chủ và chỉ quản lý nội bộ.
+- Tên tệp gốc từ phía client (`originalFilename`) chỉ được lưu dưới dạng metadata và phục vụ việc xây dựng header `Content-Disposition` tuân thủ chuẩn RFC 5987 (UTF-8).
+- Nhà cung cấp lưu trữ cho môi trường Production (Amazon S3, MinIO, Azure Blob Storage) tiếp tục được hoãn quyết định cho đến các giai đoạn triển khai hạ tầng đám mây.
+
+## D-029 File Type and Archive Security
+
+- Tuyệt đối không tin cậy header `Content-Type` hoặc phần mở rộng (`extension`) do phía client gửi lên.
+- Các định dạng tệp ảnh và PDF (JPEG, PNG, WEBP, PDF) bắt buộc phải được xác thực bằng magic bytes / signature nhị phân thực tế của tệp.
+- Các định dạng tài liệu Office OpenXML (DOCX, XLSX) bắt buộc phải được xác thực cấu trúc nội dung ZIP bên trong luồng bộ nhớ mà không được giải nén ra hệ thống tệp đĩa.
+- Kiểm tra an toàn tệp nén (ZIP safety) bắt buộc phải thực thi các giới hạn tài nguyên nghiêm ngặt:
+  - Số lượng entry tối đa: `MAX_ZIP_ENTRIES = 200`.
+  - Dung lượng giải nén tối đa cho mỗi entry: `MAX_ENTRY_UNCOMPRESSED_SIZE = 50 MB`.
+  - Tổng dung lượng giải nén tích lũy tối đa: `MAX_TOTAL_UNCOMPRESSED_SIZE = 100 MB`.
+  - Tỷ lệ nén tối đa: `MAX_COMPRESSION_RATIO = 100.0` (kiểm tra cả tỷ lệ khai báo trong metadata header và tỷ lệ thực tế theo dõi luồng thời gian thực qua `CountingInputStream`).
+  - Nghiêm cấm mọi dạng path traversal (`..`), dấu gạch chéo ngược (`\`), đường dẫn tuyệt đối (`/`), hoặc ký hiệu ổ đĩa (`C:`) trong tên entry của tệp nén.
+
+## D-030 File Access Follows Business Linkage
+
+- Quyền tải xuống và truy cập tệp tuân thủ chặt chẽ liên kết nghiệp vụ thực tế, không cho phép truy cập chỉ bằng việc đoán định danh `fileId`:
+  - Tệp chưa liên kết (`unlinked`): chỉ người tải lên ban đầu (`uploaded_by`) hoặc Quản trị viên hệ thống (`ADMIN`) mới được phép truy cập.
+  - Tệp đã gắn kết với công việc (`task_attachments`): quyền tải xuống kế thừa trạng thái thành viên hoạt động (`active`) của dự án chứa công việc đó. Thành viên không thuộc dự án hoặc thành viên đã bị hủy kích hoạt (`INACTIVE`) bị từ chối truy cập (HTTP 403 `FILE_ACCESS_DENIED`).
+  - Tệp đã gắn kết với yêu cầu dịch vụ (`service_attachments`): quyền tải xuống thuộc về người tạo yêu cầu, kỹ thuật viên được phân công, hoặc Quản trị viên.
+- Tệp đang được liên kết với công việc hoặc yêu cầu dịch vụ tuyệt đối không được phép xóa thông qua File API (HTTP 422 `FILE_ALREADY_LINKED`), nhằm đảm bảo tính toàn vẹn của lịch sử nghiệp vụ.
+
+## D-031 Task Attachment Transaction
+
+- Danh sách định danh tệp đính kèm (`attachmentFileIds`) được xử lý và gắn kết nguyên tử trong cùng transaction lưu trữ bình luận công việc (`TaskComment`).
+- Tất cả các tệp đính kèm phải được kiểm tra hợp lệ trước khi thực hiện ghi dữ liệu: phải tồn tại, có trạng thái `ACTIVE`, mục đích `TASK_ATTACHMENT`, và người thực hiện phải là người tải lên tệp (hoặc Quản trị viên hệ thống).
+- Nếu bất kỳ một tệp đính kèm nào không hợp lệ, toàn bộ transaction của bình luận và đính kèm phải bị rollback, không tạo trạng thái dữ liệu dở dang.
+- Số lượng tệp đính kèm (`attachmentCount`) hiển thị trên Task Detail và Task List được tính toán thông qua truy vấn gom nhóm theo mẻ (`countByTaskIdIn`), loại bỏ hoàn toàn nguy cơ N+1 queries.
+
+## D-032 Filesystem Security Validation
+
+- Hệ thống tệp lưu trữ cục bộ phải chủ động ngăn chặn việc thoát khỏi thư mục gốc thông qua symbolic link hoặc NTFS junction/reparse point bằng cách kiểm tra toàn bộ cây thư mục tổ tiên với `LinkOption.NOFOLLOW_LINKS` và đối chiếu với đường dẫn thực `rootLocation.toRealPath()`.
+- Năng lực phòng vệ symlink escape đã được xác minh thành công trên hệ thống tệp Linux thực tế thông qua Docker container Java 21 (`TESTED_ON_LINUX_CONTAINER`), chứng minh cả ba thao tác `store`, `load`, và `delete` đi qua symlink đều bị từ chối và tệp ngoài thư mục lưu trữ được bảo vệ tuyệt đối.
+- Thao tác di chuyển tệp đích cuối cùng cấm sử dụng `StandardCopyOption.REPLACE_EXISTING`, kiểm tra sự tồn tại của tệp đích trước khi di chuyển để chống ghi đè dữ liệu tệp lưu trữ.
+- Trên môi trường production, thư mục lưu trữ phải được bảo vệ bằng phân quyền người dùng cấp hệ điều hành; hệ thống thừa nhận technical debt về mặt lý thuyết rằng Java NIO portable API không thể loại bỏ tuyệt đối TOCTOU trước người dùng đã có quyền can thiệp trực tiếp filesystem máy chủ.

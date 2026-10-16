@@ -4,34 +4,37 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Checkpoint HEAD: 6a72c01d8f6f6d9684d24d2699b6742c2a513e78
-- origin/main: 6a72c01d8f6f6d9684d24d2699b6742c2a513e78
-- Latest validated implementation: 6a72c01d8f6f6d9684d24d2699b6742c2a513e78 (feat(file): implement secure file storage module)
-- Implementation Base: 6a72c01d8f6f6d9684d24d2699b6742c2a513e78 (feat(file): implement secure file storage module)
+- Latest Validated Implementation: `ed2599d7f34644a7b03a29ffdb607b52d427e68f` (`fix(file): verify symlink and archive resource safety`)
+- Hardening Checkpoint: `3a8cdde8deeb447af97149b1d3885814897203e5` (`fix(file): harden storage security, zip bomb defense, and download authorization`)
+- Base Implementation: `6a72c01d8f6f6d9684d24d2699b6742c2a513e78` (`feat(file): implement secure file storage module`)
 - Operational Documentation Checkpoint: reports/PHASE_08_REPORT.md
 - Working tree: clean
 - Build status: BUILD SUCCESS (Maven 3.9.16, Java target 21, Checkstyle 0 violations)
 - Test status:
-  - Host Suite (Oracle JDK 27, Testcontainers PostgreSQL): 152/152 PASS
-  - Container Suite (Docker eclipse-temurin:21-jdk): Compile PASS, Checkstyle 0 violations, Unit tests 16/16 PASS, H2 context 1/1 PASS
+  - Host Suite (Oracle JDK 27, Testcontainers PostgreSQL): 170/170 PASS
+  - Container Suite (Docker eclipse-temurin:21-jdk): 33/33 PASS (Compile PASS, Checkstyle 0 violations, `LocalFileSystemStorageTest` 8/8 PASS, `FileValidationServiceTest` 25/25 PASS)
+  - Real Symlink Validation: PASS (`TESTED_ON_LINUX_CONTAINER`) for store, load, and delete traversal attacks
+  - ZIP Bomb / Archive Safety Validation: PASS for entry count, declared size/ratio, actual live streaming expansion, and path traversal variants
 
-## Phase 8 Status: COMPLETED
+## Phase 8 Status: COMPLETED, AUDITED, HARDENED, SECURITY VALIDATED
 
-Phase 8 (File Module & Task Attachment Integration) đã hoàn tất toàn diện, được kiểm toán và kiểm thử đầy đủ:
+Phase 8 (File Module & Task Attachment Integration) đã hoàn tất toàn diện, được kiểm toán, làm cứng bảo mật và kiểm thử độc lập thành công:
 
-- **Core File Module**: StoredFile entity, trạng thái, mục đích sử dụng (purpose); FileStorageService abstraction; LocalFileSystemStorageService với Java NIO, atomic move, thư mục tạm `.tmp/`, chống path traversal.
-- **Security & Validation**: Chuẩn hóa tên file an toàn (FilenameSanitizer, RFC 5987 UTF-8 Content-Disposition), giới hạn dung lượng (ảnh 10MB, tài liệu 20MB), xác thực magic bytes (JPEG/PNG/WEBP/PDF), kiểm tra cấu trúc ZIP trong bộ nhớ cho DOCX/XLSX an toàn chống Zip bomb mà không giải nén ra đĩa.
-- **Endpoints & Lifecycle**: `POST /api/v1/files` (201 Created), `GET /api/v1/files/{fileId}/download` (streaming Resource, nosniff, phân quyền uploader/Admin/Project Member), `DELETE /api/v1/files/{fileId}` (soft-delete retention, chặn xóa file đã gắn kết với mã lỗi 422). Cơ chế compensating cleanup tự động xóa file vật lý nếu metadata DB ghi thất bại.
-- **Task Attachment Integration**: `TaskAttachment` entity và repository, liên kết tệp đính kèm nguyên tử trong bình luận công việc (`attachmentFileIds`), tổng hợp `attachmentCount` cho Task Detail và Task List thông qua batch query tránh triệt để N+1 query.
-- **Web Runtime and Browser Automation Authorization**: Đã bổ sung chính sách D-026 và D-027 trong `reports/DECISIONS.md`, cấu hình Microsoft Edge và Edge WebDriver trong `reports/ENVIRONMENT_TOOL_REGISTRY.md`.
+- **Core File Module**: StoredFile domain entity, vòng đời trạng thái (`ACTIVE`, `QUARANTINED`, `DELETED`), mục đích sử dụng (`FilePurpose`); `FileStorageService` abstraction; `LocalFileSystemStorageService` với Java NIO, atomic move, thư mục tạm `.tmp/`, chống ghi đè tệp đích, và cơ chế phòng vệ symlink escape.
+- **Security & Validation**: Chuẩn hóa tên tệp an toàn (`FilenameSanitizer`, RFC 5987 UTF-8 `Content-Disposition`, loại bỏ null bytes và CRLF), giới hạn dung lượng (ảnh $\le$ 10MB, tài liệu $\le$ 20MB), xác thực chữ ký nhị phân magic bytes (JPEG/PNG/WEBP/PDF), kiểm tra cấu trúc ZIP trong bộ nhớ cho DOCX (`word/`) và XLSX (`xl/`) chống Zip bomb đa tầng (giới hạn 200 entries, 50MB uncompressed/entry, 100MB tổng uncompressed, compression ratio $\le$ 100 qua `CountingInputStream`, chặn tuyệt đối traversal `..`, `\`, `/`, `C:`).
+- **Endpoints & Lifecycle**: `POST /api/v1/files` (201 Created), `GET /api/v1/files/{fileId}/download` (streaming `Resource`, `X-Content-Type-Options: nosniff`, phân quyền truy cập chặt chẽ), `DELETE /api/v1/files/{fileId}` (soft-delete retention, chặn xóa tệp đã gắn kết với mã lỗi 422 `FILE_ALREADY_LINKED`). Cơ chế compensating cleanup tự động xóa tệp vật lý nếu metadata DB ghi thất bại, bảo toàn nguyên vẹn exception nghiệp vụ gốc.
+- **Task Attachment Integration**: `TaskAttachment` entity và repository, liên kết tệp đính kèm nguyên tử trong cùng transaction lưu trữ bình luận công việc (`attachmentFileIds`), tổng hợp `attachmentCount` cho Task Detail và Task List thông qua batch query tránh triệt để N+1 query.
+- **Service Request Module**: Chưa bắt đầu (Zero code, Zero table modification).
+- **Mobile Module**: Chưa bắt đầu (Zero mobile code).
 
 ## Deferred / Known Gaps
 
-- `TASK_DELETE_RULE_AMBIGUITY_DEFERRED`: Định nghĩa “Business history quan trọng” chưa đầy đủ trong canonical docs; giữ logic xét status history.
+- `FILE_ORPHAN_RECONCILIATION_GAP`: Nếu metadata persistence và compensating physical cleanup cùng thất bại, physical file có thể trở thành orphan. Exception gốc được giữ nguyên, failure được log an toàn bằng fileId mà không lộ physical path. Cần reconciliation worker hoặc operational process trước khi đưa vào production.
+- `FILE_STORAGE_TOCTOU_LOW`: Existing symlink escape đã được chặn và kiểm thử thành công trên Linux container. Java NIO portable API không loại bỏ tuyệt đối TOCTOU trước actor đã có quyền can thiệp trực tiếp filesystem lưu trữ. Môi trường production phải bảo vệ storage root bằng phân quyền hệ điều hành phù hợp.
 - `FILE_VIRUS_SCANNING_DEFERRED`: ClamAV daemon hoãn đến môi trường production; kiểm tra in-flight qua magic bytes và ZIP entry inspection.
-- `FILE_CLOUD_STORAGE_DEFERRED`: Amazon S3 / MinIO hoãn đến production; LocalFileSystemStorageService đáp ứng dev/test.
-- `FILE_PURGE_WORKER_DEFERRED`: Xóa vật lý các tệp đã xóa mềm hoãn đến khi có background scheduled purge job.
-- `TASK_DETAIL_ATTACHMENT_LIST_API_GAP`: Task Detail trả về `attachmentCount` theo đúng canonical contract; danh sách chi tiết từng file trong Task Detail chưa có trong docs/06_API_CONTRACT.md.
+- `CLOUD_STORAGE_PROVIDER_DEFERRED`: Production provider chưa được chọn. Local filesystem là provider Development/Test. FileStorageService abstraction cho phép bổ sung provider sau mà không ảnh hưởng controller/domain. Không mặc định chọn S3, MinIO hoặc Azure Blob.
+- `TASK_DETAIL_ATTACHMENT_ITEMS_API_GAP`: Canonical API trong docs/06_API_CONTRACT.md định nghĩa `attachmentCount`; schema chi tiết cho danh sách attachment items trong Task Detail chưa được định nghĩa. Hệ thống không tự ý phát minh response payload.
+- `TASK_DELETE_RULE_AMBIGUITY_DEFERRED`: Định nghĩa “Business history quan trọng” chưa đầy đủ trong canonical docs; giữ logic xét status history.
 - `TASK_FLYWAY_CONFIGURATION_MODULE_LOCATION_LOW`: TaskFlywayConfiguration hiện ở `task.infrastructure`.
 - `DATA_INTEGRITY_ERROR_MAPPING_FALLBACK_LOW`: Cải tiến kiểm tra mã lỗi `23505` trong refactor sau.
 - `TEMPORARY_PASSWORD_FLOW_GAP`: Luồng kích hoạt và endpoint thiết lập mật khẩu lần đầu tiếp tục hoãn.
