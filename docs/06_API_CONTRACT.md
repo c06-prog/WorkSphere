@@ -1875,6 +1875,27 @@ Request:
 }
 ```
 
+Lỗi:
+
+```text
+SERVICE_REQUEST_NOT_FOUND
+USER_NOT_FOUND
+USER_INACTIVE
+SERVICE_ASSIGNMENT_CONFLICT
+```
+
+Trường hợp lỗi `SERVICE_ASSIGNMENT_CONFLICT` (HTTP `409 Conflict`):
+- Thông điệp: "Yêu cầu dịch vụ đang được phân công đồng thời hoặc trạng thái phân công đã thay đổi. Vui lòng tải lại dữ liệu và thử lại."
+- Phát sinh khi:
+  - Partial unique index `uk_service_assignments_one_active` bị vi phạm.
+  - Hoặc transaction phát hiện assignment state đã thay đổi trong lúc phân công.
+- Không dùng khi:
+  - Assignee không tồn tại (`USER_NOT_FOUND`).
+  - Assignee inactive (`USER_INACTIVE`).
+  - Actor thiếu quyền (`ACCESS_DENIED` / `FORBIDDEN`).
+  - Request không tồn tại (`SERVICE_REQUEST_NOT_FOUND`).
+  - ServiceRequest version mismatch (vẫn sử dụng `OPTIMISTIC_LOCK_CONFLICT`).
+
 ### 13.7. Cập nhật trạng thái yêu cầu
 
 ```http
@@ -2901,6 +2922,7 @@ SERVICE_REQUEST_NOT_FOUND
 SERVICE_CATEGORY_NOT_FOUND
 SERVICE_STATUS_TRANSITION_INVALID
 SERVICE_ASSIGNEE_REQUIRED
+SERVICE_ASSIGNMENT_CONFLICT
 SERVICE_RESOLUTION_REQUIRED
 SERVICE_ALREADY_CLOSED
 SERVICE_RATING_ALREADY_EXISTS

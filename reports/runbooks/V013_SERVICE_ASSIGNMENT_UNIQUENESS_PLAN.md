@@ -117,10 +117,9 @@ ORDER BY active_count DESC, request_id;
      - *Khác với lỗi optimistic lock* (HTTP 409 `OPTIMISTIC_LOCK_CONFLICT`): Phát sinh do vi phạm unique index trên bảng con `service_assignments`, không phải do lệch version trên `service_requests`.
      - *Khác với lỗi assignee không tồn tại/không hoạt động*: Trả về `USER_NOT_FOUND` (404) hoặc `USER_INACTIVE` (400).
 3. **Quy tắc Governance & Trạng thái hiện tại**:
-   - Tài liệu [06_API_CONTRACT.md](file:///D:/WorkSphere/docs/06_API_CONTRACT.md) Section 13.6 và 20.6 hiện chưa có mã lỗi `SERVICE_ASSIGNMENT_CONFLICT`.
-   - Theo quy tắc `AGENTS.md` và [10_AI_AGENT_INSTRUCTIONS.md](file:///D:/WorkSphere/docs/10_AI_AGENT_INSTRUCTIONS.md), Agent không được tự ý phát minh mã lỗi mới trong production code khi chưa cập nhật canonical docs.
-   - Ghi nhận: **`CANONICAL_PATCH_REQUIRED`** và **`SERVICE_ASSIGNMENT_ERROR_CODE_GAP`**.
-   - Trong test plan và tài liệu thiết kế, ghi nhận HTTP 409 Conflict dưới dạng pending canonical decision.
+   - Tài liệu [06_API_CONTRACT.md](file:///D:/WorkSphere/docs/06_API_CONTRACT.md) Section 13.6 và 20.6 đã được cập nhật chính thức với mã lỗi `SERVICE_ASSIGNMENT_CONFLICT` (HTTP 409 Conflict).
+   - Theo quy tắc `AGENTS.md` và [10_AI_AGENT_INSTRUCTIONS.md](file:///D:/WorkSphere/docs/10_AI_AGENT_INSTRUCTIONS.md), mã lỗi này đã hoàn tất canonical patch và sẵn sàng sử dụng khi triển khai Phase 9.
+   - **`SERVICE_ASSIGNMENT_ERROR_CODE_GAP` ĐÃ ĐƯỢC GIẢI QUYẾT**.
 4. **Tách biệt phạm vi di trú (Migration Decoupling)**:
-   - Bản di trú `V013` chỉ phục vụ việc tạo partial unique index `uk_service_assignments_one_active`.
-   - Seed dữ liệu `role_permissions` được tách riêng sang bản di trú `V014__seed_role_permissions.sql` sau khi ma trận phân quyền canonical được hoàn tất và phê duyệt chính thức.
+   - Bản di trú `V013__add_service_request_assignment_invariants.sql` đã được tạo, phục vụ việc tạo partial unique index `uk_service_assignments_one_active`.
+   - Seed dữ liệu `role_permissions` được tách riêng sang bản di trú `V014__seed_role_permissions.sql` và đã được kiểm thử thành công trên clean database Testcontainers (74 canonical mappings).

@@ -363,7 +363,7 @@ Current operating mode:
     - Khác biệt với validation error (400 `VALIDATION_ERROR`): Định dạng UUID và thông tin assignee hợp lệ về mặt cú pháp.
     - Khác biệt với optimistic lock (409 `OPTIMISTIC_LOCK_CONFLICT`): Bị kích hoạt bởi partial unique index trên `service_assignments`, không phải do lệch `@Version` trên `service_requests`.
     - Khác biệt với assignee inactive/not found: Trả về `USER_NOT_FOUND` hoặc `USER_INACTIVE`.
-  - **Quy tắc Governance & Yêu cầu vá Canonical**: Theo quy định `AGENTS.md` và `docs/10_AI_AGENT_INSTRUCTIONS.md`, Agent không được tự ý đưa mã lỗi mới vào production code khi tài liệu canonical chưa cập nhật. Ghi nhận: **`CANONICAL_PATCH_REQUIRED`** và **`SERVICE_ASSIGNMENT_ERROR_CODE_GAP`**. Test plan ghi nhận kỳ vọng HTTP 409 dưới dạng pending decision.
+  - **Quy tắc Governance & Kết quả vá Canonical**: Mã lỗi `SERVICE_ASSIGNMENT_CONFLICT` (HTTP 409 Conflict, Message: "Yêu cầu dịch vụ đang được phân công đồng thời hoặc trạng thái phân công đã thay đổi. Vui lòng tải lại dữ liệu và thử lại.") đã được cập nhật chính thức vào [06_API_CONTRACT.md](file:///D:/WorkSphere/docs/06_API_CONTRACT.md) Section 13.6 và 20.6. `SERVICE_ASSIGNMENT_ERROR_CODE_GAP` đã được giải quyết triệt để.
 
 ## D-037 Request Number Concurrency, Two-Key Advisory Lock, and Non-Gapless Sequence
 
@@ -385,7 +385,9 @@ Current operating mode:
   6. Ràng buộc `uk_service_requests_request_number` (tạo từ `V010`) là hàng rào duy nhất cuối cùng ở mức database.
   7. Kiểm thử đồng thời (concurrent create test) bắt buộc chạy đa luồng thực tế với các transaction và EntityManager độc lập, không dùng chung context luồng.
   8. Kiểm thử kịch bản chuyển giao năm (year rollover) và kiểm thử transaction rollback.
-  9. **Tính chất Non-Gapless**: Hệ thống không tuyên bố chuỗi số là "gapless tuyệt đối". Khi một transaction sinh số bị rollback, số thứ tự đó có thể để lại khoảng trống (gap); định dạng nghiệp vụ không yêu cầu tính gapless tuyệt đối.
+  9. **Tính chất Non-Gapless và Tái sử dụng số**:
+     - MAX + 1 trong cùng transactional advisory lock thường có thể tái sử dụng số sau rollback vì row chưa commit ra khỏi transaction.
+     - Hệ thống không tuyên bố chuỗi số là "gapless tuyệt đối" và không coi rollback luôn làm mất số thứ tự.
   10. Nếu advisory lock query gặp database timeout: Sử dụng infrastructure error mapping hiện có, không phát minh mã lỗi nghiệp vụ mới.
 
 ## D-038 Service Category Hierarchy and Cycle Prevention
@@ -416,16 +418,36 @@ Current operating mode:
 - **Kết quả kiểm toán cơ sở dữ liệu và mã nguồn**:
   - `ROLE_PERMISSION_SEED_GAP_CONFIRMED`: Bản di trú `V011__seed_roles_and_permissions.sql` chỉ seed bảng `roles` (4 dòng) và `permissions` (29 dòng); bảng `role_permissions` có **0 dòng**.
   - `TEST_AUTHORITY_FIXTURE_MASKS_SEED_GAP`: Các test suite integration/MockMvc hiện tại (`AdminUserMockMvcTest`, `DepartmentMockMvcTest`, `ProjectMockMvcTest`, `TaskMockMvcTest`, `TaskAttachmentMockMvcTest`) đều tự động chạy lệnh `INSERT INTO role_permissions` trong `@BeforeEach`, che giấu khoảng trống dữ liệu seed của môi trường production.
-  - `ROLE_PERMISSION_CANONICAL_MATRIX_GAP`: Tài liệu canonical không có ma trận chính thức gán quyền cho 4 System Roles.
-  - `SERVICE_AUTHORIZATION_MAPPING_GAP`: Quyền `SERVICE_REQUEST_ASSIGN` được yêu cầu bởi endpoint nhưng không có vai trò nào được cấp theo canonical docs.
+  - `ROLE_PERMISSION_CANONICAL_MATRIX_GAP`: Đã được giải quyết bằng việc thiết lập bảng ma trận chính thức trong `02_USER_ROLES_AND_WORKFLOWS.md` Section 2.6.
+  - `SERVICE_AUTHORIZATION_MAPPING_GAP`: Đã giải quyết bằng việc cấp `SERVICE_REQUEST_ASSIGN` chính thức cho `ADMIN` trong MVP.
 - **Quy tắc phân quyền và Admin Bypass**:
   - Endpoint bảo vệ bởi `@PreAuthorize("hasAuthority('...')")`. Khi `role_permissions` trống, `authorities` chỉ có `ROLE_<ROLE_CODE>`, không có permission nào.
-  - Hệ thống không có cơ chế bypass cho Admin; do đó trên production, mọi user (kể cả Admin) sẽ bị HTTP 403 Forbidden trên các endpoint yêu cầu permission nghiệp vụ.
+  - Hệ thống không có cơ chế bypass cho Admin; do đó trên production, mọi user (kể cả Admin) sẽ bị HTTP 403 Forbidden nếu không có dữ liệu trong `role_permissions`.
   - Vai trò `TEAM_LEADER` chỉ quản lý công việc dự án/nhóm (`TASK_ASSIGN`), không có thẩm quyền phân công yêu cầu dịch vụ (`SERVICE_REQUEST_ASSIGN`). Tuyệt đối không suy diễn cấp quyền chỉ vì tên chức danh.
 - **Kế hoạch Migration Phase 9**:
   - Tách biệt hai bản migration (Phương án B):
     1. `V013__add_service_request_assignment_invariants.sql`: Chỉ tạo partial unique index `uk_service_assignments_one_active` trong domain Service Request.
     2. `V014__seed_role_permissions.sql`: Seed dữ liệu liên kết vai trò - quyền hạn sau khi tài liệu canonical hoàn tất phê duyệt ma trận phân quyền chính thức.
   - Sử dụng cú pháp idempotent `INSERT INTO role_permissions ... ON CONFLICT (role_id, permission_id) DO NOTHING`.
+
+## D-042 Canonical Role-Permission Matrix Resolution and Foundation Authorization Remediation
+
+- **Ma trận phân quyền Canonical chính thức**:
+  - Đã bổ sung Section 2.6 vào [02_USER_ROLES_AND_WORKFLOWS.md](file:///D:/WorkSphere/docs/02_USER_ROLES_AND_WORKFLOWS.md).
+  - Phân bổ 29 permissions cho 4 System Roles:
+    - `ADMIN`: 29 permissions (toàn bộ quyền hệ thống).
+    - `PROJECT_MANAGER`: 19 permissions (các quyền tự phục vụ, quản lý dự án phụ trách và quản lý công việc).
+    - `TEAM_LEADER`: 14 permissions (kế thừa tự phục vụ của nhân viên, bổ sung `TASK_CREATE`, `TASK_ASSIGN`, `TASK_UPDATE_STATUS`).
+    - `EMPLOYEE`: 12 permissions (chỉ gồm các quyền tự phục vụ cá nhân, cập nhật công việc được giao và các yêu cầu dịch vụ của chính mình).
+  - Bảng quyền hạn hệ thống chỉ đóng vai trò là "cổng kiểm tra toàn cục" (`hasAuthority(...)`); các Application Service bắt buộc tiếp tục kiểm tra các ràng buộc quan hệ nghiệp vụ cục bộ (`project membership`, `requester`, `active assignee`, `resource ownership`).
+- **Hiện thực di trú CSDL**:
+  - `V013__add_service_request_assignment_invariants.sql`: Tạo thành công partial unique index `uk_service_assignments_one_active` trên `service_assignments(request_id) WHERE is_active = TRUE`.
+  - `V014__seed_role_permissions.sql`: Seed 74 bản ghi liên kết quyền hạn chính thức vào `role_permissions` với cơ chế idempotent `ON CONFLICT (role_id, permission_id) DO NOTHING`.
+- **Kiểm thử xác thực sạch (Clean-Migration Auth Test)**:
+  - Bổ sung `RolePermissionSeedIntegrationTest.java` chạy trên PostgreSQL Testcontainers sạch.
+  - Kiểm thử đăng nhập thật qua `/api/v1/auth/login`, nhận JWT thật và gửi request tới các endpoint bảo vệ bằng `@PreAuthorize`.
+  - Tuyệt đối không có bất kỳ câu lệnh chèn fixture thủ công nào vào `role_permissions` trong test này. Toàn bộ quyền hạn được nạp 100% từ migration `V014`.
+  - Kiểm tra độc lập quyền `SERVICE_REQUEST_ASSIGN`: Admin được phép, Team Leader / PM / Employee bị từ chối với HTTP 403 Forbidden.
+  - Toàn bộ 177/177 bài kiểm thử của repository và 0 lỗi Checkstyle đều PASS với exit code 0.
 
 

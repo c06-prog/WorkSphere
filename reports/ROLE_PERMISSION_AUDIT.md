@@ -202,11 +202,25 @@ Chi tiết 6 quyền hạn liên quan đến Module Yêu cầu Dịch vụ:
 
 ## 11. Tổng Hợp Các Gaps Chặn Phase 9 Implementation
 
-1. **`ROLE_PERMISSION_SEED_GAP_CONFIRMED`**: Bảng `role_permissions` có 0 dòng trong migration sạch. Mọi endpoint `@PreAuthorize("hasAuthority(...)")` sẽ trả về 403 trên production.
-2. **`TEST_AUTHORITY_FIXTURE_MASKS_SEED_GAP`**: Các bài kiểm thử hiện tại tự chèn quyền trong `@BeforeEach`, che giấu khoảng trống seed trong production.
-3. **`ROLE_PERMISSION_CANONICAL_MATRIX_GAP`**: Tài liệu canonical chưa có ma trận gán quyền chính thức cho 4 System Roles.
-4. **`SERVICE_AUTHORIZATION_MAPPING_GAP`**: Quyền `SERVICE_REQUEST_ASSIGN` tồn tại nhưng chưa có vai trò nào được cấp theo canonical docs.
-5. **`SERVICE_ASSIGNMENT_ERROR_CODE_GAP`**: Mã lỗi `SERVICE_ASSIGNMENT_CONFLICT` (HTTP 409) cần được bổ sung vào `06_API_CONTRACT.md` (`CANONICAL_PATCH_REQUIRED`).
-6. **`SERVICE_ASSIGNMENT_CONCURRENCY_SCHEMA_GAP`**: Sẽ được giải quyết bằng migration `V013` khi triển khai Phase 9.
+1. **`ROLE_PERMISSION_SEED_GAP_CONFIRMED`**: Bảng `role_permissions` có 0 dòng trong migration sạch. Mọi endpoint `@PreAuthorize("hasAuthority(...)")` sẽ trả về 403 trên production. [ĐÃ KHẮC PHỤC QUA V014]
+2. **`TEST_AUTHORITY_FIXTURE_MASKS_SEED_GAP`**: Các bài kiểm thử trước đây tự chèn quyền trong `@BeforeEach`, che giấu khoảng trống seed trong production. [ĐÃ KHẮC PHỤC QUA RolePermissionSeedIntegrationTest]
+3. **`ROLE_PERMISSION_CANONICAL_MATRIX_GAP`**: Tài liệu canonical chưa có ma trận gán quyền chính thức cho 4 System Roles. [ĐÃ KHẮC PHỤC QUA Section 2.6 trong 02_USER_ROLES_AND_WORKFLOWS.md]
+4. **`SERVICE_AUTHORIZATION_MAPPING_GAP`**: Quyền `SERVICE_REQUEST_ASSIGN` tồn tại nhưng chưa có vai trò nào được cấp theo canonical docs. [ĐÃ KHẮC PHỤC QUA VIỆC CẤP CHO ADMIN TRONG MVP]
+5. **`SERVICE_ASSIGNMENT_ERROR_CODE_GAP`**: Mã lỗi `SERVICE_ASSIGNMENT_CONFLICT` (HTTP 409) cần được bổ sung vào `06_API_CONTRACT.md`. [ĐÃ KHẮC PHỤC QUA BẢN VÁ CANONICAL 06_API_CONTRACT.md]
+6. **`SERVICE_ASSIGNMENT_CONCURRENCY_SCHEMA_GAP`**: Đã giải quyết bằng migration `V013__add_service_request_assignment_invariants.sql`.
 
-**Kết luận chung**: Chưa đủ điều kiện để công bố `PHASE_09_IMPLEMENTATION_READY`. Hệ thống cần hoàn tất phê duyệt tài liệu canonical trước khi viết mã nguồn.
+---
+
+## 12. Kết Quả Khắc Phục Nền Tảng (Remediation Execution)
+
+1. **Vá tài liệu Canonical**:
+   - `02_USER_ROLES_AND_WORKFLOWS.md`: Bổ sung Section 2.6 (Canonical Role-Permission Matrix) cho 29 permissions và 4 roles (ADMIN=29, PM=19, LEADER=14, EMP=12).
+   - `06_API_CONTRACT.md`: Cập nhật Section 13.6 và Section 20.6 với mã lỗi chuẩn `SERVICE_ASSIGNMENT_CONFLICT` (HTTP 409 Conflict).
+2. **Hiện thực di trú CSDL Flyway**:
+   - `V013__add_service_request_assignment_invariants.sql`: Tạo partial unique index `uk_service_assignments_one_active` trên `service_assignments(request_id) WHERE is_active = TRUE`.
+   - `V014__seed_role_permissions.sql`: Chèn 74 bản ghi liên kết quyền hạn chính thức bằng cú pháp idempotent `ON CONFLICT (role_id, permission_id) DO NOTHING`.
+3. **Kiểm thử tích hợp phân quyền sạch**:
+   - Tạo bài test mới `RolePermissionSeedIntegrationTest.java` chạy trên PostgreSQL Testcontainers sạch.
+   - Luồng kiểm thử: người dùng đăng nhập qua `/api/v1/auth/login`, nhận JWT thật và gọi các endpoint bảo vệ bằng `@PreAuthorize` mà không dùng bất kỳ câu lệnh fixture chèn quyền nào.
+   - Kết quả: 7/7 kịch bản kiểm thử PASS, toàn bộ 177/177 bài test của repository PASS, 0 lỗi Checkstyle.
+4. **Kết luận**: Nền tảng phân quyền và các canonical blockers đã được giải quyết toàn diện, sẵn sàng cho nhiệm vụ lập kế hoạch và triển khai Phase 9.
