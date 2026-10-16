@@ -25,18 +25,27 @@ public interface ProjectRepository extends JpaRepository<Project, UUID> {
 
     boolean existsByCodeAndDeletedFalse(String code);
 
-    @Query("SELECT p FROM Project p WHERE p.deleted = false " +
+    @Query(value = "SELECT p FROM Project p WHERE p.deleted = false " +
             "AND (CAST(:search AS string) IS NULL OR LOWER(p.code) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')) OR LOWER(p.name) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))) " +
             "AND (:status IS NULL OR p.status = :status) " +
             "AND (:priority IS NULL OR p.priority = :priority) " +
             "AND (:managerId IS NULL OR p.managerId = :managerId) " +
-            "AND (:departmentId IS NULL OR p.departmentId = :departmentId)")
+            "AND (:departmentId IS NULL OR p.departmentId = :departmentId) " +
+            "AND (:memberUserId IS NULL OR EXISTS (SELECT 1 FROM ProjectMember pm WHERE pm.projectId = p.id AND pm.userId = :memberUserId AND pm.active = true))",
+           countQuery = "SELECT count(p) FROM Project p WHERE p.deleted = false " +
+            "AND (CAST(:search AS string) IS NULL OR LOWER(p.code) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')) OR LOWER(p.name) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))) " +
+            "AND (:status IS NULL OR p.status = :status) " +
+            "AND (:priority IS NULL OR p.priority = :priority) " +
+            "AND (:managerId IS NULL OR p.managerId = :managerId) " +
+            "AND (:departmentId IS NULL OR p.departmentId = :departmentId) " +
+            "AND (:memberUserId IS NULL OR EXISTS (SELECT 1 FROM ProjectMember pm WHERE pm.projectId = p.id AND pm.userId = :memberUserId AND pm.active = true))")
     Page<Project> searchProjects(
             @Param("search") String search,
             @Param("status") ProjectStatus status,
             @Param("priority") ProjectPriority priority,
             @Param("managerId") UUID managerId,
             @Param("departmentId") UUID departmentId,
+            @Param("memberUserId") UUID memberUserId,
             Pageable pageable
     );
 }

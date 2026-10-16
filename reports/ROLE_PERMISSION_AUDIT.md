@@ -224,3 +224,15 @@ Chi tiết 6 quyền hạn liên quan đến Module Yêu cầu Dịch vụ:
    - Luồng kiểm thử: người dùng đăng nhập qua `/api/v1/auth/login`, nhận JWT thật và gọi các endpoint bảo vệ bằng `@PreAuthorize` mà không dùng bất kỳ câu lệnh fixture chèn quyền nào.
    - Kết quả: 7/7 kịch bản kiểm thử PASS, toàn bộ 177/177 bài test của repository PASS, 0 lỗi Checkstyle.
 4. **Kết luận**: Nền tảng phân quyền và các canonical blockers đã được giải quyết toàn diện, sẵn sàng cho nhiệm vụ lập kế hoạch và triển khai Phase 9.
+
+---
+
+## 13. Kiểm Toán Cuối Cùng & Vá Phạm Vi Đọc Project (Project Read Scoping Remediation)
+
+- **Vấn đề phát hiện**: Global authority `PROJECT_READ` được cấp cho toàn bộ 4 roles (V015), nhưng tầng ứng dụng Project trước đó chưa kiểm tra quan hệ thành viên dự án (`project_members.is_active = true`), dẫn tới rò rỉ dữ liệu giữa các nhân viên không thuộc dự án.
+- **Biện pháp khắc phục**:
+  1. `ProjectRepository`: Bổ sung điều kiện JPQL `EXISTS` kiểm tra thành viên active ở cấp database (`WHERE (:memberUserId IS NULL OR EXISTS (SELECT 1 FROM ProjectMember pm WHERE pm.projectId = p.id AND pm.userId = :memberUserId AND pm.active = true))`) cho cả `searchProjects` và `countQuery`, bảo toàn phân trang, tìm kiếm và sắp xếp.
+  2. `ProjectApplicationService`, `ProjectMemberApplicationService`, `MilestoneApplicationService`: Kiểm tra quyền quản trị tối cao của `ADMIN` (xem toàn hệ thống theo canonical); đối với người dùng không phải ADMIN (kể cả PM, Leader, Employee), bắt buộc phải là active member (`pm.is_active = true`), nếu không từ chối truy cập với HTTP 403 `ACCESS_DENIED`.
+  3. `ProjectController`: Nhận `@AuthenticationPrincipal WorkSphereUserPrincipal` và truyền vào các service method.
+  4. Bổ sung 5 kịch bản kiểm thử tích hợp đầy đủ trong `RolePermissionSeedIntegrationTest.java` (đăng nhập thật, JWT thật, PostgreSQL Testcontainers) chứng minh: Active Employee/Leader xem được; Unrelated/Inactive member bị từ chối 403; Multi-project scoping chỉ trả project hợp lệ với count query chính xác; Admin xem toàn bộ, PM bị giới hạn theo membership.
+  5. Toàn bộ 183/183 test PASS, Checkstyle 0 lỗi.

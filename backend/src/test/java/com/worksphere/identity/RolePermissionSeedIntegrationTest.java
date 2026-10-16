@@ -140,6 +140,9 @@ public class RolePermissionSeedIntegrationTest {
 
         loginSessionRepository.deleteAll();
         refreshTokenRepository.deleteAll();
+        jdbcTemplate.update("DELETE FROM milestones");
+        jdbcTemplate.update("DELETE FROM project_members");
+        jdbcTemplate.update("DELETE FROM projects");
         jdbcTemplate.update("DELETE FROM user_roles");
         userRepository.deleteAll();
 
@@ -533,31 +536,40 @@ public class RolePermissionSeedIntegrationTest {
 
     @Test
     @Order(9)
-    @DisplayName("Project Member Access: EMPLOYEE and TEAM_LEADER active members can read project detail")
-    void projectMemberAccess_shouldSucceedForActiveMembers() throws Exception {
+    @DisplayName("Project Member Access: EMPLOYEE and TEAM_LEADER active members can read detail, members, milestones, and list")
+    void projectRead_activeMembers_shouldAccessDetailMembersMilestonesAndList() throws Exception {
         UUID projectId = UUID.randomUUID();
-        // Insert active project managed by pmUserId
         jdbcTemplate.update(
                 "INSERT INTO projects (id, code, name, description, manager_id, status, priority, is_deleted, created_by, created_at, updated_at, version) "
                         + "VALUES (?, 'PRJ-MEMBER-TEST', 'Project Member Test', 'Description', ?, 'ACTIVE', 'MEDIUM', false, ?, now(), now(), 0)",
                 projectId, pmUserId, pmUserId
         );
-
-        // Add PM as PROJECT_MANAGER in project_members
         jdbcTemplate.update(
                 "INSERT INTO project_members (id, project_id, user_id, project_role, is_active, joined_at, created_by, created_at, updated_at) "
                         + "VALUES (?, ?, ?, 'PROJECT_MANAGER', true, now(), ?, now(), now())",
                 UUID.randomUUID(), projectId, pmUserId, pmUserId
         );
-
         // Scenario A: EMPLOYEE active member
         jdbcTemplate.update(
                 "INSERT INTO project_members (id, project_id, user_id, project_role, is_active, joined_at, created_by, created_at, updated_at) "
                         + "VALUES (?, ?, ?, 'MEMBER', true, now(), ?, now(), now())",
                 UUID.randomUUID(), projectId, employeeUserId, pmUserId
         );
+        // Scenario B: TEAM_LEADER active member
+        jdbcTemplate.update(
+                "INSERT INTO project_members (id, project_id, user_id, project_role, is_active, joined_at, created_by, created_at, updated_at) "
+                        + "VALUES (?, ?, ?, 'TEAM_LEADER', true, now(), ?, now(), now())",
+                UUID.randomUUID(), projectId, leaderUserId, pmUserId
+        );
+        // Add milestone
+        UUID milestoneId = UUID.randomUUID();
+        jdbcTemplate.update(
+                "INSERT INTO milestones (id, project_id, name, description, due_date, status, created_by, created_at, updated_at) "
+                        + "VALUES (?, ?, 'Sprint 1 Target', 'Milestone Desc', CURRENT_DATE + 14, 'PLANNED', ?, now(), now())",
+                milestoneId, projectId, pmUserId
+        );
 
-        // Employee calls GET /api/v1/projects/{projectId}
+        // Employee access verification: detail, members, milestones, list
         mockMvc.perform(get("/api/v1/projects/" + projectId)
                         .header("Authorization", "Bearer " + employeeToken))
                 .andExpect(status().isOk())
@@ -565,19 +577,316 @@ public class RolePermissionSeedIntegrationTest {
                 .andExpect(jsonPath("$.data.id").value(projectId.toString()))
                 .andExpect(jsonPath("$.data.code").value("PRJ-MEMBER-TEST"));
 
-        // Scenario B: TEAM_LEADER active member
-        jdbcTemplate.update(
-                "INSERT INTO project_members (id, project_id, user_id, project_role, is_active, joined_at, created_by, created_at, updated_at) "
-                        + "VALUES (?, ?, ?, 'TEAM_LEADER', true, now(), ?, now(), now())",
-                UUID.randomUUID(), projectId, leaderUserId, pmUserId
-        );
+        mockMvc.perform(get("/api/v1/projects/" + projectId + "/members")
+                        .header("Authorization", "Bearer " + employeeToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.totalItems").value(3));
 
-        // Team Leader calls GET /api/v1/projects/{projectId}
+        mockMvc.perform(get("/api/v1/projects/" + projectId + "/milestones")
+                        .header("Authorization", "Bearer " + employeeToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data[0].id").value(milestoneId.toString()));
+
+        mockMvc.perform(get("/api/v1/projects")
+                        .header("Authorization", "Bearer " + employeeToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalItems").value(1))
+                .andExpect(jsonPath("$.data.items[0].id").value(projectId.toString()));
+
+        // Team Leader access verification: detail, members, milestones, list
         mockMvc.perform(get("/api/v1/projects/" + projectId)
                         .header("Authorization", "Bearer " + leaderToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.id").value(projectId.toString()))
-                .andExpect(jsonPath("$.data.code").value("PRJ-MEMBER-TEST"));
+                .andExpect(jsonPath("$.data.id").value(projectId.toString()));
+
+        mockMvc.perform(get("/api/v1/projects/" + projectId + "/members")
+                        .header("Authorization", "Bearer " + leaderToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        mockMvc.perform(get("/api/v1/projects/" + projectId + "/milestones")
+                        .header("Authorization", "Bearer " + leaderToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        mockMvc.perform(get("/api/v1/projects")
+                        .header("Authorization", "Bearer " + leaderToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalItems").value(1));
+    }
+
+    @Test
+    @Order(10)
+    @DisplayName("Project Member Access: Unrelated user with global PROJECT_READ is denied detail, members, milestones, and excluded from list")
+    void projectRead_unrelatedEmployee_shouldBeDenied() throws Exception {
+        UUID projectId = UUID.randomUUID();
+        jdbcTemplate.update(
+                "INSERT INTO projects (id, code, name, description, manager_id, status, priority, is_deleted, created_by, created_at, updated_at, version) "
+                        + "VALUES (?, 'PRJ-SECRET', 'Confidential Project', 'Secret Description', ?, 'ACTIVE', 'HIGH', false, ?, now(), now(), 0)",
+                projectId, pmUserId, pmUserId
+        );
+        jdbcTemplate.update(
+                "INSERT INTO project_members (id, project_id, user_id, project_role, is_active, joined_at, created_by, created_at, updated_at) "
+                        + "VALUES (?, ?, ?, 'PROJECT_MANAGER', true, now(), ?, now(), now())",
+                UUID.randomUUID(), projectId, pmUserId, pmUserId
+        );
+        jdbcTemplate.update(
+                "INSERT INTO milestones (id, project_id, name, description, due_date, status, created_by, created_at, updated_at) "
+                        + "VALUES (?, ?, 'Secret Milestone', 'Secret Milestone Desc', CURRENT_DATE + 30, 'PLANNED', ?, now(), now())",
+                UUID.randomUUID(), projectId, pmUserId
+        );
+
+        // Create unrelated employee user with EMPLOYEE role (holding global PROJECT_READ)
+        UUID unrelatedUserId = UUID.randomUUID();
+        insertUser(unrelatedUserId, "unrelated_emp", "unrelated@test.com", passwordEncoder.encode("Password123!"));
+        assignRole(unrelatedUserId, "EMPLOYEE");
+        String unrelatedToken = loginAndGetToken("unrelated_emp", "Password123!");
+
+        // Unrelated user calling detail is denied
+        mockMvc.perform(get("/api/v1/projects/" + projectId)
+                        .header("Authorization", "Bearer " + unrelatedToken))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+
+        // Unrelated user calling members is denied
+        mockMvc.perform(get("/api/v1/projects/" + projectId + "/members")
+                        .header("Authorization", "Bearer " + unrelatedToken))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+
+        // Unrelated user calling milestones is denied
+        mockMvc.perform(get("/api/v1/projects/" + projectId + "/milestones")
+                        .header("Authorization", "Bearer " + unrelatedToken))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+
+        // Project does not appear in unrelated user's project list
+        mockMvc.perform(get("/api/v1/projects")
+                        .header("Authorization", "Bearer " + unrelatedToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalItems").value(0))
+                .andExpect(jsonPath("$.data.items").isEmpty());
+    }
+
+    @Test
+    @Order(11)
+    @DisplayName("Project Member Access: Inactive member (is_active = false) is denied detail, members, milestones, and excluded from list")
+    void projectRead_inactiveMember_shouldBeDenied() throws Exception {
+        UUID projectId = UUID.randomUUID();
+        jdbcTemplate.update(
+                "INSERT INTO projects (id, code, name, description, manager_id, status, priority, is_deleted, created_by, created_at, updated_at, version) "
+                        + "VALUES (?, 'PRJ-DEACTIVATED', 'Deactivated Project', 'Desc', ?, 'ACTIVE', 'MEDIUM', false, ?, now(), now(), 0)",
+                projectId, pmUserId, pmUserId
+        );
+        jdbcTemplate.update(
+                "INSERT INTO project_members (id, project_id, user_id, project_role, is_active, joined_at, created_by, created_at, updated_at) "
+                        + "VALUES (?, ?, ?, 'PROJECT_MANAGER', true, now(), ?, now(), now())",
+                UUID.randomUUID(), projectId, pmUserId, pmUserId
+        );
+        // Create inactive employee member
+        UUID inactiveUserId = UUID.randomUUID();
+        insertUser(inactiveUserId, "inactive_emp", "inactive@test.com", passwordEncoder.encode("Password123!"));
+        assignRole(inactiveUserId, "EMPLOYEE");
+        String inactiveToken = loginAndGetToken("inactive_emp", "Password123!");
+
+        jdbcTemplate.update(
+                "INSERT INTO project_members (id, project_id, user_id, project_role, is_active, joined_at, left_at, created_by, created_at, updated_at) "
+                        + "VALUES (?, ?, ?, 'MEMBER', false, now() - INTERVAL '10 day', now(), ?, now(), now())",
+                UUID.randomUUID(), projectId, inactiveUserId, pmUserId
+        );
+
+        // Inactive member calling detail is denied
+        mockMvc.perform(get("/api/v1/projects/" + projectId)
+                        .header("Authorization", "Bearer " + inactiveToken))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+
+        // Inactive member calling members is denied
+        mockMvc.perform(get("/api/v1/projects/" + projectId + "/members")
+                        .header("Authorization", "Bearer " + inactiveToken))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+
+        // Inactive member calling milestones is denied
+        mockMvc.perform(get("/api/v1/projects/" + projectId + "/milestones")
+                        .header("Authorization", "Bearer " + inactiveToken))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+
+        // Inactive member project list excludes project
+        mockMvc.perform(get("/api/v1/projects")
+                        .header("Authorization", "Bearer " + inactiveToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalItems").value(0))
+                .andExpect(jsonPath("$.data.items").isEmpty());
+    }
+
+    @Test
+    @Order(12)
+    @DisplayName("Project List Scoping: Multi-project database returns only active member projects with correct pagination, search, and sort")
+    void projectRead_multiProjectListScoping_shouldOnlyReturnActiveProjects() throws Exception {
+        UUID projectA = UUID.randomUUID();
+        UUID projectB = UUID.randomUUID();
+        UUID projectC = UUID.randomUUID();
+
+        // Project A: user is active member
+        jdbcTemplate.update(
+                "INSERT INTO projects (id, code, name, description, manager_id, status, priority, is_deleted, created_by, created_at, updated_at, version) "
+                        + "VALUES (?, 'PRJ-SCOPING-A', 'Alpha Project', 'Alpha Desc', ?, 'ACTIVE', 'HIGH', false, ?, now(), now(), 0)",
+                projectA, pmUserId, pmUserId
+        );
+        jdbcTemplate.update(
+                "INSERT INTO project_members (id, project_id, user_id, project_role, is_active, joined_at, created_by, created_at, updated_at) "
+                        + "VALUES (?, ?, ?, 'MEMBER', true, now(), ?, now(), now())",
+                UUID.randomUUID(), projectA, employeeUserId, pmUserId
+        );
+
+        // Project B: user is unrelated
+        jdbcTemplate.update(
+                "INSERT INTO projects (id, code, name, description, manager_id, status, priority, is_deleted, created_by, created_at, updated_at, version) "
+                        + "VALUES (?, 'PRJ-SCOPING-B', 'Beta Project', 'Beta Desc', ?, 'ACTIVE', 'MEDIUM', false, ?, now(), now(), 0)",
+                projectB, pmUserId, pmUserId
+        );
+
+        // Project C: user is inactive member
+        jdbcTemplate.update(
+                "INSERT INTO projects (id, code, name, description, manager_id, status, priority, is_deleted, created_by, created_at, updated_at, version) "
+                        + "VALUES (?, 'PRJ-SCOPING-C', 'Gamma Project', 'Gamma Desc', ?, 'ACTIVE', 'LOW', false, ?, now(), now(), 0)",
+                projectC, pmUserId, pmUserId
+        );
+        jdbcTemplate.update(
+                "INSERT INTO project_members (id, project_id, user_id, project_role, is_active, joined_at, left_at, created_by, created_at, updated_at) "
+                        + "VALUES (?, ?, ?, 'MEMBER', false, now() - INTERVAL '5 day', now(), ?, now(), now())",
+                UUID.randomUUID(), projectC, employeeUserId, pmUserId
+        );
+
+        // 1. Employee query returns only Project A (totalItems = 1, page metadata exact)
+        mockMvc.perform(get("/api/v1/projects")
+                        .header("Authorization", "Bearer " + employeeToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalItems").value(1))
+                .andExpect(jsonPath("$.data.totalPages").value(1))
+                .andExpect(jsonPath("$.data.items[0].id").value(projectA.toString()))
+                .andExpect(jsonPath("$.data.items[0].code").value("PRJ-SCOPING-A"));
+
+        // 2. Search for Project B returns 0 items (never leaks out-of-scope project)
+        mockMvc.perform(get("/api/v1/projects?search=SCOPING-B")
+                        .header("Authorization", "Bearer " + employeeToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalItems").value(0))
+                .andExpect(jsonPath("$.data.items").isEmpty());
+
+        // 3. Search for Project A returns Project A
+        mockMvc.perform(get("/api/v1/projects?search=Alpha")
+                        .header("Authorization", "Bearer " + employeeToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalItems").value(1))
+                .andExpect(jsonPath("$.data.items[0].id").value(projectA.toString()));
+
+        // 4. Sort preserves scope (returns only Project A)
+        mockMvc.perform(get("/api/v1/projects?sort=name,asc")
+                        .header("Authorization", "Bearer " + employeeToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalItems").value(1))
+                .andExpect(jsonPath("$.data.items[0].id").value(projectA.toString()));
+    }
+
+    @Test
+    @Order(13)
+    @DisplayName("Admin vs Project Manager Scope: ADMIN has global scope; PROJECT_MANAGER is scoped to active membership")
+    void projectRead_adminAndProjectManagerScope_shouldComplyWithCanonical() throws Exception {
+        UUID project1 = UUID.randomUUID();
+        UUID project2 = UUID.randomUUID();
+
+        // Project 1: PM is manager & active member
+        jdbcTemplate.update(
+                "INSERT INTO projects (id, code, name, description, manager_id, status, priority, is_deleted, created_by, created_at, updated_at, version) "
+                        + "VALUES (?, 'PRJ-PM-1', 'Managed Project', 'Desc', ?, 'ACTIVE', 'HIGH', false, ?, now(), now(), 0)",
+                project1, pmUserId, pmUserId
+        );
+        jdbcTemplate.update(
+                "INSERT INTO project_members (id, project_id, user_id, project_role, is_active, joined_at, created_by, created_at, updated_at) "
+                        + "VALUES (?, ?, ?, 'PROJECT_MANAGER', true, now(), ?, now(), now())",
+                UUID.randomUUID(), project1, pmUserId, pmUserId
+        );
+        jdbcTemplate.update(
+                "INSERT INTO milestones (id, project_id, name, description, due_date, status, created_by, created_at, updated_at) "
+                        + "VALUES (?, ?, 'P1 Milestone', 'Desc', CURRENT_DATE + 10, 'PLANNED', ?, now(), now())",
+                UUID.randomUUID(), project1, pmUserId
+        );
+
+        // Project 2: PM is NOT a member (managed by someone else)
+        UUID otherPmId = UUID.randomUUID();
+        insertUser(otherPmId, "other_pm", "otherpm@test.com", passwordEncoder.encode("Password123!"));
+        assignRole(otherPmId, "PROJECT_MANAGER");
+
+        jdbcTemplate.update(
+                "INSERT INTO projects (id, code, name, description, manager_id, status, priority, is_deleted, created_by, created_at, updated_at, version) "
+                        + "VALUES (?, 'PRJ-PM-2', 'Other Project', 'Desc', ?, 'ACTIVE', 'MEDIUM', false, ?, now(), now(), 0)",
+                project2, otherPmId, otherPmId
+        );
+        jdbcTemplate.update(
+                "INSERT INTO project_members (id, project_id, user_id, project_role, is_active, joined_at, created_by, created_at, updated_at) "
+                        + "VALUES (?, ?, ?, 'PROJECT_MANAGER', true, now(), ?, now(), now())",
+                UUID.randomUUID(), project2, otherPmId, otherPmId
+        );
+        jdbcTemplate.update(
+                "INSERT INTO milestones (id, project_id, name, description, due_date, status, created_by, created_at, updated_at) "
+                        + "VALUES (?, ?, 'P2 Milestone', 'Desc', CURRENT_DATE + 15, 'PLANNED', ?, now(), now())",
+                UUID.randomUUID(), project2, otherPmId
+        );
+
+        // --- 1. ADMIN has global scope ---
+        mockMvc.perform(get("/api/v1/projects/" + project1)
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(project1.toString()));
+
+        mockMvc.perform(get("/api/v1/projects/" + project2)
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(project2.toString()));
+
+        mockMvc.perform(get("/api/v1/projects/" + project2 + "/members")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/v1/projects/" + project2 + "/milestones")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/v1/projects")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalItems").value(2));
+
+        // --- 2. PROJECT_MANAGER is scoped: access project1, denied project2 ---
+        mockMvc.perform(get("/api/v1/projects/" + project1)
+                        .header("Authorization", "Bearer " + pmToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(project1.toString()));
+
+        mockMvc.perform(get("/api/v1/projects/" + project2)
+                        .header("Authorization", "Bearer " + pmToken))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+
+        mockMvc.perform(get("/api/v1/projects/" + project2 + "/members")
+                        .header("Authorization", "Bearer " + pmToken))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/api/v1/projects/" + project2 + "/milestones")
+                        .header("Authorization", "Bearer " + pmToken))
+                .andExpect(status().isForbidden());
+
+        // PM list query only returns Project 1
+        mockMvc.perform(get("/api/v1/projects")
+                        .header("Authorization", "Bearer " + pmToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalItems").value(1))
+                .andExpect(jsonPath("$.data.items[0].id").value(project1.toString()));
     }
 }

@@ -25,11 +25,14 @@ import com.worksphere.project.infrastructure.persistence.ProjectStatusHistoryRep
 import com.worksphere.shared.exception.BusinessRuleException;
 import com.worksphere.shared.exception.ResourceNotFoundException;
 import com.worksphere.shared.response.PagedData;
+import com.worksphere.shared.security.WorkSphereUserPrincipal;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -79,12 +82,28 @@ public class ProjectApplicationService {
             UUID departmentId,
             Pageable pageable
     ) {
+        return searchProjects(search, status, priority, managerId, departmentId, pageable, null);
+    }
+
+    @Transactional(readOnly = true)
+    public PagedData<ProjectSummaryResponse> searchProjects(
+            String search,
+            ProjectStatus status,
+            ProjectPriority priority,
+            UUID managerId,
+            UUID departmentId,
+            Pageable pageable,
+            WorkSphereUserPrincipal principal
+    ) {
+        UUID memberUserId = hasSystemAdminRole(principal) ? null : (principal != null ? principal.userId() : null);
+
         Page<Project> page = projectRepository.searchProjects(
                 search,
                 status,
                 priority,
                 managerId,
                 departmentId,
+                memberUserId,
                 pageable
         );
 
@@ -169,10 +188,24 @@ public class ProjectApplicationService {
     }
 
     @Transactional(readOnly = true)
+    public ProjectDetailResponse getProjectDetail(UUID projectId, WorkSphereUserPrincipal principal) {
+        Project project = projectRepository.findActiveById(projectId)
+                .orElseThrow(() -> new ResourceNotFoundException("PROJECT_NOT_FOUND", "Dự án không tồn tại"));
+
+        verifyProjectReadAccess(project.getId(), principal);
+
+        return buildProjectDetailResponse(project, principal != null ? principal.userId() : null);
+    }
+
+    @Transactional(readOnly = true)
     public ProjectDetailResponse getProjectDetail(UUID projectId, UUID currentUserId) {
         Project project = projectRepository.findActiveById(projectId)
                 .orElseThrow(() -> new ResourceNotFoundException("PROJECT_NOT_FOUND", "Dự án không tồn tại"));
 
+        return buildProjectDetailResponse(project, currentUserId);
+    }
+
+    private ProjectDetailResponse buildProjectDetailResponse(Project project, UUID currentUserId) {
         User manager = userRepository.findActiveById(project.getManagerId()).orElse(null);
         String managerName = manager != null ? manager.getFullName() : "N/A";
 
@@ -182,7 +215,7 @@ public class ProjectApplicationService {
         }
 
         long memberCount = projectMemberRepository.countByProjectIdAndActiveTrue(project.getId());
-        List<MilestoneResponse> milestones = milestoneRepository.findAllByProjectIdOrderByDueDateAsc(projectId)
+        List<MilestoneResponse> milestones = milestoneRepository.findAllByProjectIdOrderByDueDateAsc(project.getId())
                 .stream()
                 .map(MilestoneResponse::from)
                 .toList();
@@ -272,5 +305,40 @@ public class ProjectApplicationService {
             }
         }
         return actions;
+    }
+
+    private void verifyProjectReadAccess(UUID projectId, WorkSphereUserPrincipal principal) {
+        if (principal == null) {
+            throw new AccessDeniedException("Yêu cầu xác thực");
+        }
+        if (hasSystemAdminRole(principal)) {
+            return;
+        }
+        boolean isMember = projectMemberRepository.existsByProjectIdAndUserIdAndActiveTrue(projectId, principal.userId());
+        if (!isMember) {
+            throw new AccessDeniedException("Bạn không có quyền truy cập dự án này");
+        }
+    }
+
+    private boolean hasSystemAdminRole(WorkSphereUserPrincipal principal) {
+        if (principal == null) {
+            return false;
+        }
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getAuthorities() != null) {
+            boolean hasAdminAuthority = auth.getAuthorities().stream()
+                    .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()) || "ADMIN".equals(a.getAuthority()));
+            if (hasAdminAuthority) {
+                return true;
+            }
+        }
+        if (principal.user() != null && principal.user().getRoles() != null) {
+            try {
+                return principal.user().getRoles().stream()
+                        .anyMatch(r -> "ADMIN".equalsIgnoreCase(r.getCode()));
+            } catch (Exception ignored) {
+            }
+        }
+        return false;
     }
 }

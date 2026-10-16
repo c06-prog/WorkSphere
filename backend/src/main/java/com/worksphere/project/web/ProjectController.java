@@ -76,7 +76,8 @@ public class ProjectController {
             @RequestParam(required = false) ProjectStatus status,
             @RequestParam(required = false) ProjectPriority priority,
             @RequestParam(required = false) UUID managerId,
-            @RequestParam(required = false) UUID departmentId
+            @RequestParam(required = false) UUID departmentId,
+            @AuthenticationPrincipal WorkSphereUserPrincipal principal
     ) {
         Sort sortObj = Sort.by(Sort.Direction.DESC, "createdAt");
         if (sort != null && sort.contains(",")) {
@@ -96,7 +97,8 @@ public class ProjectController {
                 priority,
                 managerId,
                 departmentId,
-                pageable
+                pageable,
+                principal
         );
         return ResponseEntity.ok(ApiResponse.success(result));
     }
@@ -125,7 +127,7 @@ public class ProjectController {
             @PathVariable UUID projectId,
             @AuthenticationPrincipal WorkSphereUserPrincipal principal
     ) {
-        ProjectDetailResponse response = projectApplicationService.getProjectDetail(projectId, principal.userId());
+        ProjectDetailResponse response = projectApplicationService.getProjectDetail(projectId, principal);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
@@ -170,10 +172,11 @@ public class ProjectController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) ProjectRole role,
-            @RequestParam(required = false) Boolean active
+            @RequestParam(required = false) Boolean active,
+            @AuthenticationPrincipal WorkSphereUserPrincipal principal
     ) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "joinedAt"));
-        PagedData<ProjectMemberResponse> result = projectMemberApplicationService.getMembers(projectId, role, active, pageable);
+        PagedData<ProjectMemberResponse> result = projectMemberApplicationService.getMembers(projectId, role, active, pageable, principal);
         return ResponseEntity.ok(ApiResponse.success(result));
     }
 
@@ -243,9 +246,10 @@ public class ProjectController {
     @GetMapping("/{projectId}/milestones")
     @PreAuthorize("hasAuthority('PROJECT_READ')")
     public ResponseEntity<ApiResponse<List<MilestoneResponse>>> getMilestones(
-            @PathVariable UUID projectId
+            @PathVariable UUID projectId,
+            @AuthenticationPrincipal WorkSphereUserPrincipal principal
     ) {
-        List<MilestoneResponse> response = milestoneApplicationService.getMilestones(projectId);
+        List<MilestoneResponse> response = milestoneApplicationService.getMilestones(projectId, principal);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 }

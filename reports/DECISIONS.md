@@ -476,5 +476,30 @@ Current operating mode:
   - Bổ sung kịch bản kiểm thử tích hợp truy cập chi tiết dự án (`GET /api/v1/projects/{projectId}`) cho `EMPLOYEE` và `TEAM_LEADER` là active project member, xác nhận trả về HTTP 200 OK thành công bằng JWT thật.
   - Cập nhật `ProjectMockMvcTest.java` để kiểm thử kiểm tra quyền truy cập dự án bằng token không có quyền (`unprivilegedToken`) thay cho `employeeToken`.
 
+## D-044 Project Read Member-Scoped Access Control and Query-Level Enforcement
+
+- **Bối cảnh & Phát hiện Kiểm toán**:
+  - Kiểm toán mã nguồn phát hiện dữ liệu dự án bị rò rỉ (data leak):
+    - `GET /api/v1/projects`: Trước đây không truyền thông tin người dùng xác thực xuống Application Service/Repository; câu lệnh query trả về toàn bộ dự án trong cơ sở dữ liệu mà không lọc theo quan hệ thành viên.
+    - `GET /api/v1/projects/{projectId}`, `GET /api/v1/projects/{projectId}/members`, `GET /api/v1/projects/{projectId}/milestones`: Không kiểm tra xem người gọi có phải là active project member hoặc Admin không; người dùng unrelated hoặc inactive member chỉ cần có global `PROJECT_READ` là đọc được toàn bộ chi tiết, thành viên và mốc tiến độ của dự án.
+- **Quy tắc Phân quyền Đọc Dự án theo Canonical**:
+  - `ADMIN`: Có phạm vi quản trị toàn hệ thống theo canonical; được quyền xem toàn bộ dự án, danh sách thành viên và mốc tiến độ mà không yêu cầu phải là thành viên trong bảng `project_members`.
+  - `EMPLOYEE`, `TEAM_LEADER`, `PROJECT_MANAGER`: Bắt buộc phải là thành viên đang hoạt động (`is_active = TRUE`) trong `project_members` của dự án đó mới được truy cập (`GET /projects/{projectId}`, `GET /projects/{projectId}/members`, `GET /projects/{projectId}/milestones`). Nếu không phải active member, trả về HTTP 403 Forbidden (`FORBIDDEN`).
+  - Phân vùng truy vấn danh sách (`GET /api/v1/projects`):
+    - Thực thi hoàn toàn tại tầng CSDL thông qua câu lệnh SQL JPQL:
+      `AND (:memberUserId IS NULL OR EXISTS (SELECT 1 FROM ProjectMember pm WHERE pm.projectId = p.id AND pm.userId = :memberUserId AND pm.active = true))`
+    - Tuyệt đối không tải toàn bộ vào Java rồi lọc in-memory sau phân trang.
+    - Cả truy vấn dữ liệu và truy vấn đếm (`countQuery`) đều áp dụng cùng điều kiện scope, đảm bảo metadata phân trang (`totalElements`, `totalPages`) hoàn toàn chính xác.
+    - Các tham số tìm kiếm (`search`), bộ lọc (`status`, `priority`, `managerId`, `departmentId`) và sắp xếp (`sort`) được kết hợp bằng `AND`, đảm bảo không bao giờ bị mất phạm vi (scope loss).
+- **Hiện thực & Kiểm thử**:
+  - Cập nhật `ProjectRepository.java`, `ProjectApplicationService.java`, `ProjectMemberApplicationService.java`, `MilestoneApplicationService.java`, `ProjectController.java`.
+  - Thêm 5 kịch bản kiểm thử tích hợp toàn diện trong `RolePermissionSeedIntegrationTest.java` (Test 9, 10, 11, 12, 13) sử dụng login thật và JWT thật từ V015 trên PostgreSQL Testcontainers sạch:
+    - Test 9: Active Employee & Team Leader đọc thành công detail, members, milestones và list (HTTP 200).
+    - Test 10: Unrelated Employee bị từ chối 403 Forbidden trên detail, members, milestones; dự án không xuất hiện trong list (`totalItems = 0`).
+    - Test 11: Inactive Member (`is_active = false`) bị từ chối 403 Forbidden trên detail, members, milestones; dự án không xuất hiện trong list.
+    - Test 12: Multi-project database scoping (A=active, B=unrelated, C=inactive) chỉ trả về Project A với totalElements=1; search và sort bảo toàn scope.
+    - Test 13: Admin truy cập toàn cục; Project Manager chỉ truy cập được dự án mình tham gia, bị từ chối 403 ở dự án không liên quan.
+  - Toàn bộ suite 183/183 PASS và 0 lỗi Checkstyle.
+
 
 

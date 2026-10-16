@@ -62,23 +62,22 @@
 
 - Backend Test Suite on Host (Oracle JDK 27, Testcontainers postgres:15-alpine):
   - Checkstyle: 0 violations
-  - Total tests: 170/170 PASS (100 regression + 70 File & Attachment module tests)
+  - Total tests: 183/183 PASS (full regression suite + seed tests + project read scoping tests)
   - Failures: 0 | Errors: 0 | Skipped: 0
   - Maven execution: BUILD SUCCESS (exit code 0)
-- Java 21 Targeted Validation Suite (Docker eclipse-temurin:21-jdk, runtime Temurin-21.0.12.1+1):
-  - Checkstyle: 0 violations PASS
-  - Targeted storage & validation tests: 33/33 PASS (`LocalFileSystemStorageTest` 8/8 PASS, `FileValidationServiceTest` 25/25 PASS)
-  - Real Linux filesystem symlink validation: store, load, and delete traversing symbolic links strictly rejected with outside directory completely preserved (`TESTED_ON_LINUX_CONTAINER`)
 - Database & Migrations:
-  - V001 to V012: unchanged 100%
-  - V012 applied and validated on PostgreSQL
-  - Zero schema drift, no V013 created
+  - V001 to V015 applied and validated on PostgreSQL Testcontainers
+  - Migrations 100% immutable and tracked
 - Canonical documents: unchanged 100% (10/10 canonical documents in docs/ preserved)
 - Working tree: clean
-- HEAD equals origin/main before memory update: verified (`ed2599d7f34644a7b03a29ffdb607b52d427e68f`)
+- Security / Scoping Validation:
+  - Project read access scoped to active project members for non-admins
+  - System Admin holds global project read scope as per canonical governance
+  - Query-level scoping via JPQL EXISTS with matching countQuery (zero in-memory post-filtering)
 
 ## Deferred Items & Known Gaps
 
+- [RESOLVED] PROJECT_READ_MEMBERSHIP_SCOPING_LEAK: Đã khắc phục theo Quyết định D-044. Triển khai lọc cấp CSDL qua JPQL EXISTS cho `GET /api/v1/projects` và kiểm tra active membership (`pm.is_active = true`) tại Application Service cho detail, members, và milestones. Toàn bộ kịch bản kiểm thử bảo mật độc lập đạt 183/183 PASS.
 - [RESOLVED] PROJECT_READ_PERMISSION_MATRIX_RISK: Đã khắc phục bằng bản di trú `V015__correct_project_read_permissions_and_validate_role_matrix.sql` cấp `PROJECT_READ` cho toàn bộ 4 System Roles (`ADMIN`, `PROJECT_MANAGER`, `TEAM_LEADER`, `EMPLOYEE`), cho phép active project members truy cập thông tin dự án qua cổng `@PreAuthorize("hasAuthority('PROJECT_READ')")`. Đã kiểm chứng qua integration test `projectMemberAccess_shouldSucceedForActiveMembers`.
 - [RESOLVED] ROLE_PERMISSION_SEED_SILENT_OMISSION_RISK: Đã khắc phục bằng strict validation guard (PostgreSQL `DO $$ ... END $$;`) trong V015, lập tức `RAISE EXCEPTION` nếu thiếu hụt hoặc sai lệch bất kỳ mapping nào.
 - [RESOLVED] ROLE_PERMISSION_MATRIX_EVIDENCE_GAP: Đã rà soát và điều chỉnh chính xác toàn bộ số section trong cột Canonical rationale tại `docs/02_USER_ROLES_AND_WORKFLOWS.md` Section 2.6 (Section 11 Project, Section 12 Task, Section 17 Admin, Section 18 Audit).

@@ -531,6 +531,9 @@ public class ProjectMockMvcTest {
                 null,
                 pmUserId
         ));
+        projectMemberRepository.save(ProjectMember.create(
+                UUID.randomUUID(), project.getId(), pmUserId, ProjectRole.PROJECT_MANAGER, pmUserId
+        ));
 
         CreateMilestoneRequest req = new CreateMilestoneRequest(
                 "Mốc 1 - Khởi động",

@@ -4,16 +4,35 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: VÁ PROJECT MEMBER ACCESS VÀ LÀM CỨNG ROLE-PERMISSION MATRIX
-- Latest Validated Checkpoint: Prior `176795161f337900388f976b8dd7c9c5d286bd7e`, updated in this remediation.
-- Operational Documentation Checkpoint: reports/DECISIONS.md (D-043)
+- Current Task: XÁC MINH CUỐI PROJECT READ SCOPING TRƯỚC PHASE 9
+- Latest Validated Checkpoint: Prior `3e05c7cd8e57592d01f819f893a9a92fca8dc25c`, updated in this patch.
+- Operational Documentation Checkpoint: reports/DECISIONS.md (D-044)
 - Working tree: clean
 - Build status: BUILD SUCCESS (Maven 3.9.16, Java target 21, Checkstyle 0 violations)
 - Test status:
-  - Host Suite (Oracle JDK 27, Testcontainers PostgreSQL): 179/179 PASS (0 failures, 0 errors, 0 skipped)
-  - V015 Canonical Project Read Permission & Strict Role Matrix Validation Verified: PASS (76 mappings: ADMIN=29, PM=19, LEADER=15, EMP=13)
-  - Project Member Access Verified: Active Employee & Team Leader project members access `GET /api/v1/projects/{projectId}` successfully with real JWT (200 OK)
-  - Exact Role-Permission Set Difference Verified: `EXPECTED EXCEPT ACTUAL = empty` and `ACTUAL EXCEPT EXPECTED = empty` on clean PostgreSQL
+  - Host Suite (Oracle JDK 27, Testcontainers PostgreSQL): 183/183 PASS (0 failures, 0 errors, 0 skipped)
+  - V015 Canonical Project Read Permission & Strict Role Matrix Validation: PASS (76 mappings)
+  - Active Employee & Team Leader Member Access (detail, members, milestones, list): PASS (200 OK)
+  - Unrelated User Access Denial (detail, members, milestones): PASS (403 Forbidden, 0 items in list, 0 data leakage)
+  - Inactive Member Access Denial (detail, members, milestones): PASS (403 Forbidden, 0 items in list)
+  - Multi-Project Database List Scoping (JPQL EXISTS subquery, exact countQuery, search/sort preservation): PASS (totalElements=1)
+  - Admin Global Governance Scope vs Project Manager Member-Scoped Access: PASS (Admin accesses all, PM scoped to active projects)
+
+## Project Read Member-Scoped Access Control & Scoping Remediation: RESOLVED
+
+Kiểm toán độc lập phát hiện rò rỉ dữ liệu (data leak) khi các endpoint đọc dự án không kiểm tra quyền thành viên và không phân vùng dữ liệu ở tầng truy vấn:
+
+- **Vá mã nguồn Production**:
+  - `ProjectRepository.java`: Cập nhật `searchProjects` và `countQuery` bổ sung điều kiện lọc SQL JPQL:
+    `AND (:memberUserId IS NULL OR EXISTS (SELECT 1 FROM ProjectMember pm WHERE pm.projectId = p.id AND pm.userId = :memberUserId AND pm.active = true))`
+    Đảm bảo phân vùng dữ liệu 100% tại CSDL, không lọc in-memory, metadata phân trang chính xác tuyệt đối.
+  - `ProjectApplicationService.java`: Thêm kiểm tra `verifyProjectReadAccess` trong `getProjectDetail`; truyền `memberUserId` (null nếu Admin, userId nếu non-admin) vào repository `searchProjects`.
+  - `ProjectMemberApplicationService.java`: Thêm kiểm tra `verifyProjectReadAccess` trong `getMembers`.
+  - `MilestoneApplicationService.java`: Thêm kiểm tra `verifyProjectReadAccess` trong `getMilestones`.
+  - `ProjectController.java`: Truyền `principal` xác thực vào cả 4 endpoint đọc: `getProjects`, `getProjectDetail`, `getProjectMembers`, `getMilestones`.
+- **Kiểm thử tích hợp**:
+  - Bổ sung 5 kịch bản tích hợp toàn diện trong `RolePermissionSeedIntegrationTest.java` (Test 9, 10, 11, 12, 13) sử dụng login và JWT thật từ V015 trên PostgreSQL Testcontainers sạch.
+  - Toàn bộ 183/183 test và Checkstyle 0 lỗi đều PASS.
 
 ## Foundation Authorization Remediation & Canonical Blockers: RESOLVED
 
