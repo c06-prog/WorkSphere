@@ -1,5 +1,8 @@
 package com.worksphere.service_request.application;
 
+import com.worksphere.asset.domain.AssetAssignmentStatus;
+import com.worksphere.asset.infrastructure.persistence.AssetAssignmentRepository;
+import com.worksphere.asset.infrastructure.persistence.AssetRepository;
 import com.worksphere.file.domain.StoredFile;
 import com.worksphere.file.domain.StoredFileStatus;
 import com.worksphere.file.infrastructure.persistence.StoredFileRepository;
@@ -87,6 +90,8 @@ public class ServiceRequestApplicationService {
     private final ServiceRatingRepository ratingRepository;
     private final UserRepository userRepository;
     private final StoredFileRepository storedFileRepository;
+    private final AssetRepository assetRepository;
+    private final AssetAssignmentRepository assetAssignmentRepository;
     private final Clock clock;
 
     public ServiceRequestApplicationService(
@@ -99,6 +104,8 @@ public class ServiceRequestApplicationService {
             ServiceRatingRepository ratingRepository,
             UserRepository userRepository,
             StoredFileRepository storedFileRepository,
+            AssetRepository assetRepository,
+            AssetAssignmentRepository assetAssignmentRepository,
             Clock clock
     ) {
         this.requestRepository = requestRepository;
@@ -110,6 +117,8 @@ public class ServiceRequestApplicationService {
         this.ratingRepository = ratingRepository;
         this.userRepository = userRepository;
         this.storedFileRepository = storedFileRepository;
+        this.assetRepository = assetRepository;
+        this.assetAssignmentRepository = assetAssignmentRepository;
         this.clock = clock;
     }
 
@@ -130,6 +139,10 @@ public class ServiceRequestApplicationService {
 
         UUID requestId = UUID.randomUUID();
         validateAttachmentFiles(request.attachmentFileIds(), principal);
+
+        if (request.assetId() != null) {
+            validateAssetForRequest(request.assetId(), principal);
+        }
 
         ServicePriority priority = request.priority() != null ? request.priority() : category.getDefaultPriority();
         ServiceRequest sr = ServiceRequest.create(
@@ -906,6 +919,25 @@ public class ServiceRequestApplicationService {
             cause = cause.getCause();
         }
         throw ex;
+    }
+
+    private void validateAssetForRequest(UUID assetId, WorkSphereUserPrincipal principal) {
+        if (!assetRepository.existsById(assetId)
+                || !assetRepository.findByIdAndDeletedFalse(assetId).isPresent()) {
+            throw new ResourceNotFoundException("ASSET_NOT_FOUND", "Không tìm thấy tài sản liên kết");
+        }
+
+        if (hasSystemAdminRole(principal)) {
+            return;
+        }
+
+        boolean isAssignedToCaller = assetAssignmentRepository.existsByAssetIdAndAssignedToAndStatus(
+                assetId, principal.userId(), AssetAssignmentStatus.ACTIVE
+        );
+        if (!isAssignedToCaller) {
+            throw new BusinessRuleException("ASSET_ACCESS_DENIED",
+                    "Bạn chỉ được gắn tài sản đang được cấp phát cho chính mình");
+        }
     }
 
     private boolean hasSystemAdminRole(WorkSphereUserPrincipal principal) {

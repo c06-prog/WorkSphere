@@ -61,25 +61,46 @@ public class GlobalExceptionHandler {
             case "FILE_TOO_LARGE" -> HttpStatus.PAYLOAD_TOO_LARGE;
             case "FILE_TYPE_NOT_ALLOWED" -> HttpStatus.UNSUPPORTED_MEDIA_TYPE;
             case "FILE_ACCESS_DENIED", "SERVICE_RESOLUTION_REJECTION_FORBIDDEN",
-                 "SERVICE_RATING_FORBIDDEN", "SERVICE_REQUEST_ACCESS_DENIED" -> HttpStatus.FORBIDDEN;
-            case "FILE_EMPTY", "FILE_EXTENSION_NOT_ALLOWED",
+                 "SERVICE_RATING_FORBIDDEN", "SERVICE_REQUEST_ACCESS_DENIED",
+                 "ASSET_ACCESS_DENIED" -> HttpStatus.FORBIDDEN;
+            case "FILE_EMPTY", "FILE_EXTENSION_NOT_ALLOWED", "BAD_REQUEST",
                  "SERVICE_CATEGORY_PARENT_INVALID", "SERVICE_CATEGORY_CYCLE_DETECTED",
                  "SERVICE_CATEGORY_ALREADY_INACTIVE", "SERVICE_CATEGORY_ALREADY_ACTIVE",
                  "SERVICE_CATEGORY_IN_USE", "SERVICE_STATUS_TRANSITION_INVALID",
                  "SERVICE_ASSIGNEE_REQUIRED", "SERVICE_RESOLUTION_REQUIRED",
                  "SERVICE_ALREADY_CLOSED", "SERVICE_ALREADY_CANCELLED",
-                 "SERVICE_NOT_RESOLVED", "SERVICE_NOT_CLOSED", "USER_INACTIVE",
-                 "INVALID_REQUEST_STATE" -> HttpStatus.BAD_REQUEST;
+                 "SERVICE_NOT_RESOLVED", "SERVICE_NOT_CLOSED", "USER_INACTIVE", "USER_NOT_ACTIVE",
+                 "INVALID_REQUEST_STATE",
+                 "ASSET_NOT_AVAILABLE", "ASSET_ALREADY_ASSIGNED",
+                 "ASSET_ASSIGNMENT_NOT_ACTIVE", "ASSET_STATUS_TRANSITION_INVALID",
+                 "ASSET_RETIRED", "ASSET_IN_MAINTENANCE", "ASSET_BROKEN",
+                 "ASSET_CATEGORY_IN_USE", "ASSET_CATEGORY_ALREADY_ACTIVE",
+                 "ASSET_CATEGORY_ALREADY_INACTIVE" -> HttpStatus.BAD_REQUEST;
             case "FILE_NOT_FOUND", "SERVICE_REQUEST_NOT_FOUND", "SERVICE_CATEGORY_NOT_FOUND",
-                 "USER_NOT_FOUND" -> HttpStatus.NOT_FOUND;
+                 "USER_NOT_FOUND", "ASSET_NOT_FOUND", "ASSET_CATEGORY_NOT_FOUND",
+                 "ASSET_ASSIGNMENT_NOT_FOUND", "ASSET_REPAIR_HISTORY_NOT_FOUND" -> HttpStatus.NOT_FOUND;
             case "SERVICE_CATEGORY_CODE_ALREADY_EXISTS", "SERVICE_ASSIGNMENT_CONFLICT",
-                 "SERVICE_RATING_ALREADY_EXISTS", "OPTIMISTIC_LOCK_CONFLICT" -> HttpStatus.CONFLICT;
+                 "SERVICE_RATING_ALREADY_EXISTS", "OPTIMISTIC_LOCK_CONFLICT",
+                 "ASSET_CODE_ALREADY_EXISTS", "ASSET_SERIAL_ALREADY_EXISTS",
+                 "ASSET_ASSIGNMENT_CONFLICT", "ASSET_CATEGORY_CODE_ALREADY_EXISTS" -> HttpStatus.CONFLICT;
             default -> HttpStatus.UNPROCESSABLE_ENTITY;
         };
         return ResponseEntity.status(status)
                 .body(ApiResponse.error(ex.getCode(), ex.getMessage()));
     }
 
+
+    @ExceptionHandler(org.springframework.web.HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMethodNotAllowed(org.springframework.web.HttpRequestMethodNotSupportedException ex) {
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
+                .body(ApiResponse.error("METHOD_NOT_ALLOWED", "Phương thức HTTP không được hỗ trợ"));
+    }
+
+    @ExceptionHandler(org.springframework.web.servlet.resource.NoResourceFoundException.class)
+    public ResponseEntity<ApiResponse<Void>> handleNoResourceFound(org.springframework.web.servlet.resource.NoResourceFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.error("RESOURCE_NOT_FOUND", "Không tìm thấy tài nguyên yêu cầu"));
+    }
 
     @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
     public ResponseEntity<ApiResponse<Void>> handleMaxUploadSizeExceeded(org.springframework.web.multipart.MaxUploadSizeExceededException ex) {
