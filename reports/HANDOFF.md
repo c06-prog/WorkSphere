@@ -24,7 +24,8 @@ Phase 8 (File Module & Task Attachment Integration) đã hoàn tất toàn diệ
 - **Security & Validation**: Chuẩn hóa tên tệp an toàn (`FilenameSanitizer`, RFC 5987 UTF-8 `Content-Disposition`, loại bỏ null bytes và CRLF), giới hạn dung lượng (ảnh $\le$ 10MB, tài liệu $\le$ 20MB), xác thực chữ ký nhị phân magic bytes (JPEG/PNG/WEBP/PDF), kiểm tra cấu trúc ZIP trong bộ nhớ cho DOCX (`word/`) và XLSX (`xl/`) chống Zip bomb đa tầng (giới hạn 200 entries, 50MB uncompressed/entry, 100MB tổng uncompressed, compression ratio $\le$ 100 qua `CountingInputStream`, chặn tuyệt đối traversal `..`, `\`, `/`, `C:`).
 - **Endpoints & Lifecycle**: `POST /api/v1/files` (201 Created), `GET /api/v1/files/{fileId}/download` (streaming `Resource`, `X-Content-Type-Options: nosniff`, phân quyền truy cập chặt chẽ), `DELETE /api/v1/files/{fileId}` (soft-delete retention, chặn xóa tệp đã gắn kết với mã lỗi 422 `FILE_ALREADY_LINKED`). Cơ chế compensating cleanup tự động xóa tệp vật lý nếu metadata DB ghi thất bại, bảo toàn nguyên vẹn exception nghiệp vụ gốc.
 - **Task Attachment Integration**: `TaskAttachment` entity và repository, liên kết tệp đính kèm nguyên tử trong cùng transaction lưu trữ bình luận công việc (`attachmentFileIds`), tổng hợp `attachmentCount` cho Task Detail và Task List thông qua batch query tránh triệt để N+1 query.
-- **Service Request Module**: Chưa bắt đầu (Zero code, Zero table modification).
+- **IDE Extension Authorization**: Quyền phát hiện, cài đặt và tự động hóa extension trong Antigravity IDE được kích hoạt (D-033, D-034, kiểm kê 10 extension suite tại `C:\Users\dienm\.antigravity-ide\extensions`, PostgreSQL được ưu tiên, cấm sử dụng mssql cho WorkSphere).
+- **Service Request Module**: Đã hoàn thành audit phạm vi (phát hiện `SERVICE_ATTACHMENT_RESPONSE_SCHEMA_GAP`, chuẩn bị task graph triển khai).
 - **Mobile Module**: Chưa bắt đầu (Zero mobile code).
 
 ## Deferred / Known Gaps

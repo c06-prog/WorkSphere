@@ -633,3 +633,196 @@ Ngày xác minh: 15/10/2026.
 - **Ghi chú an toàn**: Không commit `msedgedriver.exe` vào Git repository; không tải WebDriver từ nguồn thứ ba không chính thức
 - **Ngày xác minh**: 15/10/2026
 - **Cách tìm lại**: `Test-Path "D:\AI\Tools\EdgeWebDriver"`
+
+---
+
+## 3. ANTIGRAVITY IDE EXTENSIONS INVENTORY & AUTHORIZATION
+
+Vị trí lưu trữ extensions Antigravity IDE:
+`C:\Users\dienm\.antigravity-ide\extensions`
+File manifest:
+`C:\Users\dienm\.antigravity-ide\extensions\extensions.json`
+
+---
+
+### 3.1. markdownlint
+- **Extension Name**: markdownlint
+- **Extension ID**: `davidanson.vscode-markdownlint`
+- **Publisher**: DavidAnson
+- **Phiên bản**: `0.62.1`
+- **Trạng thái**: `INSTALLED` / `ENABLED`
+- **Marketplace / Nguồn**: Antigravity / VS Code Marketplace (Gallery)
+- **License**: MIT License
+- **Install Location**: `C:\Users\dienm\.antigravity-ide\extensions\davidanson.vscode-markdownlint-0.62.1-universal`
+- **Mục đích trong WorkSphere**: Phát hiện lỗi định dạng Markdown, kiểm tra quy chuẩn tài liệu kỹ thuật, báo cáo và tài liệu dự án.
+- **Command / Feature được dùng**: Linter hiển thị diagnostics trong editor; `markdownlint.fixAll`.
+- **Dữ liệu / Quyền truy cập**: Chỉ đọc file Markdown đang mở hoặc trong workspace; không gửi dữ liệu ra ngoài.
+- **Ghi chú an toàn**: Không tự động sửa nội dung các tài liệu canonical ngoài phạm vi task được phân công.
+- **Cách kiểm tra lại**: `Test-Path "C:\Users\dienm\.antigravity-ide\extensions\davidanson.vscode-markdownlint-0.62.1-universal"`
+- **Ngày xác minh**: 16/10/2026
+
+---
+
+### 3.2. SQL Server (mssql)
+- **Extension Name**: SQL Server (mssql)
+- **Extension ID**: `ms-mssql.mssql`
+- **Publisher**: Microsoft (`ms-mssql`)
+- **Phiên bản**: `1.46.0`
+- **Trạng thái**: `INSTALLED` / `STANDBY` (Không dùng làm công cụ chính cho WorkSphere)
+- **Marketplace / Nguồn**: Antigravity / VS Code Marketplace (Gallery)
+- **License**: Microsoft Software License Terms
+- **Install Location**: `C:\Users\dienm\.antigravity-ide\extensions\ms-mssql.mssql-1.46.0-universal`
+- **Mục đích trong WorkSphere**: Giữ nguyên phục vụ các dự án khác nếu người dùng cần.
+- **Chính sách WorkSphere**: **BỊ CẤM CHO WORKSPHERE**. WorkSphere sử dụng PostgreSQL. Không tạo connection SQL Server cho WorkSphere, không chuyển schema WorkSphere sang SQL Server, không sửa Flyway migrations PostgreSQL vì mssql.
+- **Dữ liệu / Quyền truy cập**: Kết nối database theo connection profile.
+- **Ghi chú an toàn**: Tuyệt đối không lưu mật khẩu SQL Server vào repository hoặc workspace settings được Git theo dõi.
+- **Cách kiểm tra lại**: `Test-Path "C:\Users\dienm\.antigravity-ide\extensions\ms-mssql.mssql-1.46.0-universal"`
+- **Ngày xác minh**: 16/10/2026
+
+---
+
+### 3.3. SQLTools
+- **Extension Name**: SQLTools - Database management for VSCode
+- **Extension ID**: `mtxr.sqltools`
+- **Publisher**: Matheus Teixeira (`mtxr`)
+- **Phiên bản**: `0.28.6`
+- **Trạng thái**: `INSTALLED` / `ENABLED`
+- **Marketplace / Nguồn**: Antigravity / VS Code Marketplace (Gallery)
+- **License**: MIT License
+- **Install Location**: `C:\Users\dienm\.antigravity-ide\extensions\mtxr.sqltools-0.28.6-universal`
+- **Mục đích trong WorkSphere**: Khảo sát, truy vấn kiểm tra dữ liệu PostgreSQL dev/test (`worksphere-dev-pg` hoặc Testcontainers) thông qua PostgreSQL driver phù hợp (`@sqltools/driver-pg` nếu được cài đặt).
+- **Command / Feature được dùng**: SQL query execution, connection manager, schema viewer.
+- **Dữ liệu / Quyền truy cập**: Truy vấn cơ sở dữ liệu được cấu hình.
+- **Ghi chú an toàn**: Chỉ chạy query chỉ đọc khi khảo sát/audit; chỉ ghi vào database test/dev được chỉ định; tuyệt đối không lưu credentials vào repository, Git-tracked settings hay connection export.
+- **Cách kiểm tra lại**: `Test-Path "C:\Users\dienm\.antigravity-ide\extensions\mtxr.sqltools-0.28.6-universal"`
+- **Ngày xác minh**: 16/10/2026
+
+---
+
+### 3.4. XML Tools
+- **Extension Name**: XML Tools
+- **Extension ID**: `dotjoshjohnson.xml`
+- **Publisher**: Josh Johnson (`DotJoshJohnson`)
+- **Phiên bản**: `2.5.1`
+- **Trạng thái**: `INSTALLED` / `ENABLED`
+- **Marketplace / Nguồn**: Antigravity / VS Code Marketplace (Gallery)
+- **License**: MIT License
+- **Install Location**: `C:\Users\dienm\.antigravity-ide\extensions\dotjoshjohnson.xml-2.5.1-universal`
+- **Mục đích trong WorkSphere**: Xem, format, kiểm tra cấu trúc file XML (Maven `pom.xml`, checkstyle config, Android manifest).
+- **Command / Feature được dùng**: `xmlTools.formatXml`, XML Tree View, XPath evaluation.
+- **Dữ liệu / Quyền truy cập**: Đọc/ghi file XML trong workspace.
+- **Ghi chú an toàn**: Chỉ format file thuộc phạm vi task; không thay đổi cấu hình ngoài chỉ định.
+- **Cách kiểm tra lại**: `Test-Path "C:\Users\dienm\.antigravity-ide\extensions\dotjoshjohnson.xml-2.5.1-universal"`
+- **Ngày xác minh**: 16/10/2026
+
+---
+
+### 3.5. Docker & Containers
+- **Extension Name**: Docker / Containers
+- **Extension ID**: `ms-azuretools.vscode-docker` / `ms-azuretools.vscode-containers`
+- **Publisher**: Microsoft (`ms-azuretools`)
+- **Phiên bản**: Docker `2.0.0`, Containers `2.4.5`
+- **Trạng thái**: `INSTALLED` / `ENABLED`
+- **Marketplace / Nguồn**: Antigravity / VS Code Marketplace (Gallery)
+- **License**: MIT License
+- **Install Location**:
+  - `C:\Users\dienm\.antigravity-ide\extensions\ms-azuretools.vscode-docker-2.0.0-universal`
+  - `C:\Users\dienm\.antigravity-ide\extensions\ms-azuretools.vscode-containers-2.4.5-universal`
+- **Mục đích trong WorkSphere**: Bổ trợ theo dõi container, images, volumes của PostgreSQL, Jenkins, và Testcontainers.
+- **Command / Feature được dùng**: Container view, container logs, inspect container.
+- **Dữ liệu / Quyền truy cập**: Tương tác với Docker daemon cục bộ.
+- **Ghi chú an toàn**: Là công cụ quan sát bổ trợ; không dùng trạng thái hiển thị của extension để thay thế các lệnh kiểm tra và validation bắt buộc bằng Docker CLI (`docker ps`, `docker inspect`).
+- **Cách kiểm tra lại**: `Test-Path "C:\Users\dienm\.antigravity-ide\extensions\ms-azuretools.vscode-docker-2.0.0-universal"`
+- **Ngày xác minh**: 16/10/2026
+
+---
+
+### 3.6. Git History
+- **Extension Name**: Git History
+- **Extension ID**: `donjayamanne.githistory`
+- **Publisher**: Don Jayamanne (`donjayamanne`)
+- **Phiên bản**: `0.6.20`
+- **Trạng thái**: `INSTALLED` / `ENABLED`
+- **Marketplace / Nguồn**: Antigravity / VS Code Marketplace (Gallery)
+- **License**: MIT License
+- **Install Location**: `C:\Users\dienm\.antigravity-ide\extensions\donjayamanne.githistory-0.6.20-universal`
+- **Mục đích trong WorkSphere**: Xem log commit và lịch sử file trực quan.
+- **Command / Feature được dùng**: `git.viewHistory`, file history comparison.
+- **Dữ liệu / Quyền truy cập**: Đọc Git repository cục bộ.
+- **Ghi chú an toàn**: Có chức năng chồng lấn với GitLens. Khi cần so sánh commit/blame sâu, GitLens được ưu tiên sử dụng.
+- **Cách kiểm tra lại**: `Test-Path "C:\Users\dienm\.antigravity-ide\extensions\donjayamanne.githistory-0.6.20-universal"`
+- **Ngày xác minh**: 16/10/2026
+
+---
+
+### 3.7. GitLens — Git supercharged
+- **Extension Name**: GitLens — Git supercharged
+- **Extension ID**: `eamodio.gitlens`
+- **Publisher**: GitKraken (`GitKraken` / `eamodio`)
+- **Phiên bản**: `19.4.0`
+- **Trạng thái**: `INSTALLED` / `ENABLED` (Được ưu tiên hàng đầu cho Git inspection)
+- **Marketplace / Nguồn**: Antigravity / VS Code Marketplace (Gallery)
+- **License**: GitKraken End User License Agreement / Open Core
+- **Install Location**: `C:\Users\dienm\.antigravity-ide\extensions\eamodio.gitlens-19.4.0-universal`
+- **Mục đích trong WorkSphere**: Kiểm tra Git history, file blame thời gian thực, revision navigation, commit comparison, inspect stashes và branches.
+- **Command / Feature được dùng**: Current line blame, file history, revision comparison, GitLens sidebar.
+- **Dữ liệu / Quyền truy cập**: Đọc cấu trúc Git repository `D:\WorkSphere`.
+- **Ghi chú an toàn**: Được ưu tiên hơn Git History. Không đăng nhập tài khoản đám mây của bên thứ ba nếu có yêu cầu; không upload source lên dịch vụ ngoài.
+- **Cách kiểm tra lại**: `Test-Path "C:\Users\dienm\.antigravity-ide\extensions\eamodio.gitlens-19.4.0-universal"`
+- **Ngày xác minh**: 16/10/2026
+
+---
+
+### 3.8. Microsoft Edge Tools for VS Code
+- **Extension Name**: Microsoft Edge Tools for VS Code
+- **Extension ID**: `ms-edgedevtools.vscode-edge-devtools`
+- **Publisher**: Microsoft (`ms-edgedevtools`)
+- **Phiên bản**: `2.1.10`
+- **Trạng thái**: `INSTALLED` / `ENABLED` (Được ưu tiên cho Web/Prototype/UI debugging)
+- **Marketplace / Nguồn**: Antigravity / VS Code Marketplace (Gallery)
+- **License**: MIT License
+- **Install Location**: `C:\Users\dienm\.antigravity-ide\extensions\ms-edgedevtools.vscode-edge-devtools-2.1.10-universal`
+- **Mục đích trong WorkSphere**: Debug giao diện web prototype, tài liệu web, Jenkins UI, kiểm tra DOM, CSS, console log, network requests, và responsive viewport trực tiếp trong IDE.
+- **Command / Feature được dùng**: Edge DevTools panel, screencast, element inspection, network inspection, console.
+- **Dữ liệu / Quyền truy cập**: Tương tác với instance Edge được khởi chạy phục vụ kiểm thử (gắn với profile riêng `D:\AI\Profiles\Edge\WorkSphere`).
+- **Ghi chú an toàn**: Nghiêm cấm kết nối vào cửa sổ Edge cá nhân của người dùng; chỉ kết nối instance Edge test do Agent hoặc extension khởi chạy; không thu thập cookie/token cá nhân.
+- **Cách kiểm tra lại**: `Test-Path "C:\Users\dienm\.antigravity-ide\extensions\ms-edgedevtools.vscode-edge-devtools-2.1.10-universal"`
+- **Ngày xác minh**: 16/10/2026
+
+---
+
+### 3.9. PowerShell
+- **Extension Name**: PowerShell
+- **Extension ID**: `ms-vscode.powershell`
+- **Publisher**: Microsoft (`ms-vscode`)
+- **Phiên bản**: `2025.4.0`
+- **Trạng thái**: `INSTALLED` / `ENABLED`
+- **Marketplace / Nguồn**: Antigravity / VS Code Marketplace (Gallery)
+- **License**: MIT License
+- **Install Location**: `C:\Users\dienm\.antigravity-ide\extensions\ms-vscode.powershell-2025.4.0-universal`
+- **Mục đích trong WorkSphere**: Hỗ trợ cú pháp, intellisense, linting cho các script PowerShell automation (`scratch/*.ps1`, preflight scripts).
+- **Command / Feature được dùng**: PowerShell Integrated Console, PSScriptAnalyzer integration.
+- **Dữ liệu / Quyền truy cập**: Đọc/ghi các file script PowerShell.
+- **Ghi chú an toàn**: Tuân thủ chính sách bảo vệ workspace; không chạy script không rõ nguồn gốc.
+- **Cách kiểm tra lại**: `Test-Path "C:\Users\dienm\.antigravity-ide\extensions\ms-vscode.powershell-2025.4.0-universal"`
+- **Ngày xác minh**: 16/10/2026
+
+---
+
+### 3.10. Java Extension Suite
+- **Gồm các extensions chính thức**:
+  - `redhat.java` (Language Support for Java by Red Hat, v1.57.0)
+  - `vscjava.vscode-java-pack` (Extension Pack for Java, v0.31.2)
+  - `vscjava.vscode-java-debug` (Debugger for Java, v0.60.0)
+  - `vscjava.vscode-java-dependency` (Project Manager for Java, v0.27.6)
+  - `vscjava.vscode-java-test` (Test Runner for Java, v0.47.0)
+  - `vscjava.vscode-maven` (Maven for Java, v0.45.3)
+  - `vscjava.vscode-gradle` (Gradle for Java, v3.18.0)
+- **Publisher**: Red Hat / Microsoft (`vscjava`)
+- **Trạng thái**: `INSTALLED` / `ENABLED`
+- **Install Location**: `C:\Users\dienm\.antigravity-ide\extensions\vscjava.*`, `redhat.java-*`
+- **Mục đích trong WorkSphere**: Cung cấp Language Server, navigation, test runner, và debug hỗ trợ backend Spring Boot Java 21.
+- **Ghi chú an toàn**: Là công cụ hỗ trợ phát triển; chất lượng mã nguồn cuối cùng (quality gates) vẫn bắt buộc kiểm chứng bằng CLI (`./mvnw clean test`, `mvnw checkstyle:check`).
+- **Cách kiểm tra lại**: `Test-Path "C:\Users\dienm\.antigravity-ide\extensions\redhat.java-1.57.0-win32-x64"`
+- **Ngày xác minh**: 16/10/2026
+

@@ -289,3 +289,25 @@ Current operating mode:
 - Năng lực phòng vệ symlink escape đã được xác minh thành công trên hệ thống tệp Linux thực tế thông qua Docker container Java 21 (`TESTED_ON_LINUX_CONTAINER`), chứng minh cả ba thao tác `store`, `load`, và `delete` đi qua symlink đều bị từ chối và tệp ngoài thư mục lưu trữ được bảo vệ tuyệt đối.
 - Thao tác di chuyển tệp đích cuối cùng cấm sử dụng `StandardCopyOption.REPLACE_EXISTING`, kiểm tra sự tồn tại của tệp đích trước khi di chuyển để chống ghi đè dữ liệu tệp lưu trữ.
 - Trên môi trường production, thư mục lưu trữ phải được bảo vệ bằng phân quyền người dùng cấp hệ điều hành; hệ thống thừa nhận technical debt về mặt lý thuyết rằng Java NIO portable API không thể loại bỏ tuyệt đối TOCTOU trước người dùng đã có quyền can thiệp trực tiếp filesystem máy chủ.
+
+## D-033 IDE Extension Discovery, Installation and Automation Policy
+
+- Mở rộng năng lực thực thi của Agent trong Antigravity IDE, không giới hạn các quyền đang có, hiệu lực lâu dài cho mọi nhiệm vụ tiếp theo.
+- Agent được chủ động: phát hiện extension đã cài; kiểm tra enabled/disabled, version, publisher, location; sử dụng command, view, task, debugger, language server, API của extension; enable extension khi cần; disable tạm extension xung đột; cài extension còn thiếu từ nguồn chính thức; nâng cấp extension; reload window khi cần; cập nhật reports/ENVIRONMENT_TOOL_REGISTRY.md.
+- Nguyên tắc ưu tiên:
+  1. Tính năng có sẵn trong Antigravity.
+  2. Extension đã cài nhưng chưa enable.
+  3. Khả năng hoàn thành nhiệm vụ của extension hiện có.
+  4. Chỉ cài mới khi không có giải pháp tương đương, từ publisher chính thức/uy tín, tương thích license/bảo mật.
+  5. Tránh cài extension trùng lặp chức năng. GitLens được ưu tiên hơn Git History khi đã bao quát đủ lịch sử/blame/diff. Microsoft Edge Tools ưu tiên cho web/prototype debug. Docker extension bổ trợ Docker CLI nhưng không thay thế lệnh CLI bắt buộc. Markdownlint dùng phát hiện lỗi cú pháp Markdown nhưng không tự sửa nội dung canonical ngoài phạm vi task.
+- Không cần xin phép riêng cho thao tác không đặc quyền, có thể đảo ngược và chỉ ảnh hưởng môi trường WorkSphere.
+- Chỉ báo `BLOCKED_FOR_USER_ACTION` khi gặp: đăng nhập Marketplace/Microsoft/GitHub/Google; xác nhận publisher không tin cậy; EULA/license thương mại; Windows UAC/Admin; hoặc extension đòi gửi source WorkSphere ra ngoài.
+
+## D-034 Database Extension and Development Safety Policy
+
+- WorkSphere sử dụng PostgreSQL. Agent ưu tiên: PostgreSQL CLI/psql, Testcontainers PostgreSQL, SQLTools với PostgreSQL driver phù hợp.
+- SQL Server (mssql) có thể giữ nếu phục vụ dự án khác, nhưng cấm dùng làm công cụ chính cho WorkSphere, cấm tạo connection SQL Server cho WorkSphere, cấm đổi schema hoặc sửa migration PostgreSQL để tương thích mssql.
+- Tuyệt đối không lưu database password/credentials vào repository, workspace settings được Git theo dõi, screenshot, raw logs hay extension connection export.
+- Workspace settings (`.vscode/settings.json`, `.vscode/extensions.json`, `.vscode/launch.json`, `.vscode/tasks.json`): chỉ tạo/sửa khi được phép, cấm chứa machine-specific path hoặc secret.
+- Cấm commit: extension binaries, VSIX, cache, token, profile, cookie, settings cá nhân, credentials.
+

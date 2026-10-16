@@ -178,3 +178,43 @@ Agent chỉ báo BLOCKED_FOR_USER_ACTION khi hệ điều hành hoặc ứng d�
 - Hộp thoại không thể xử lý an toàn bằng CLI/API.
 
 Tuyệt đối không truy cập, đọc hoặc lưu trữ dữ liệu cá nhân, mật khẩu, token, secret hoặc tài nguyên ngoài phạm vi WorkSphere.
+
+## IDE Extension Discovery, Installation and Automation Policy
+
+Mục đích của chính sách này là mở rộng năng lực thực thi của Agent trong Antigravity IDE, không giới hạn các quyền Agent đang có. Quyền này có hiệu lực lâu dài cho mọi nhiệm vụ WorkSphere tiếp theo.
+
+Agent được chủ động:
+- Phát hiện extension đã cài trong Antigravity IDE (`C:\Users\dienm\.antigravity-ide\extensions`).
+- Kiểm tra extension đang enabled hay disabled, xác định ID, publisher, version và install location.
+- Sử dụng command, view, task, debugger, language server và API do extension cung cấp khi phục vụ WorkSphere.
+- Enable extension đã cài nếu task cần; disable tạm extension gây xung đột hoặc làm môi trường không ổn định.
+- Cài extension còn thiếu từ nguồn chính thức (Marketplace tích hợp, Open VSX, Microsoft Marketplace, VSIX chính thức, CLI tương thích) khi thực sự cần.
+- Nâng cấp extension khi phiên bản hiện tại không tương thích hoặc có lỗi bảo mật đã xác minh.
+- Reload IDE window khi cài đặt hoặc kích hoạt extension yêu cầu.
+- Cập nhật reports/ENVIRONMENT_TOOL_REGISTRY.md khi phát hiện, cài, nâng cấp hoặc thay đổi extension.
+
+Nguyên tắc ưu tiên extension:
+1. Kiểm tra Antigravity đã có tính năng tương đương chưa.
+2. Kiểm tra extension đã được cài nhưng chưa enable chưa.
+3. Kiểm tra extension hiện có có thể hoàn thành task không.
+4. Chỉ cài extension mới nếu không có giải pháp tương đương.
+5. Ưu tiên publisher chính thức hoặc maintainer có uy tín.
+6. Kiểm tra license, compatibility, maintenance status và security advisory.
+7. Tránh cài nhiều extension trùng chức năng (ví dụ: ưu tiên GitLens nếu đã đủ tính năng so với Git History; Microsoft Edge Tools ưu tiên cho web/prototype debug; Docker extension bổ trợ Docker CLI nhưng không thay thế lệnh CLI bắt buộc; markdownlint dùng phát hiện lỗi Markdown nhưng không tự sửa nội dung canonical ngoài phạm vi task).
+
+Database Extension Policy:
+- WorkSphere sử dụng PostgreSQL. Agent ưu tiên: PostgreSQL CLI/psql, Testcontainers PostgreSQL, SQLTools với PostgreSQL driver phù hợp.
+- SQL Server (mssql) có thể giữ nếu phục vụ dự án khác, nhưng cấm dùng làm công cụ chính cho WorkSphere, cấm tạo SQL Server connection cho WorkSphere, cấm chuyển schema sang SQL Server, cấm sửa migration PostgreSQL để tương thích mssql.
+- Không lưu database password/credentials vào repository, workspace settings được Git theo dõi, screenshot, raw logs hay extension connection export.
+
+Workspace Settings và File sinh ra:
+- Trước khi tạo/sửa `.vscode/settings.json`, `.vscode/extensions.json`, `.vscode/launch.json`, `.vscode/tasks.json`, kiểm tra định dạng tương thích và không chứa machine-specific path hoặc secret.
+- Cấm commit: extension binaries, VSIX, extension cache, marketplace token, user profile, cookie, personal settings, machine-specific absolute paths không cần thiết, database credential, browser credential.
+
+Agent không cần xin phép riêng cho thao tác extension không đặc quyền, có thể đảo ngược và chỉ ảnh hưởng môi trường WorkSphere.
+Agent chỉ báo BLOCKED_FOR_USER_ACTION khi xuất hiện:
+- Đăng nhập Marketplace, Microsoft, GitHub hoặc Google.
+- Xác nhận publisher không tin cậy.
+- Điều khoản pháp lý / EULA hoặc thanh toán / license thương mại.
+- Windows UAC / Administrator.
+- Extension yêu cầu gửi source hoặc dữ liệu ra dịch vụ ngoài mà chưa được phép.
