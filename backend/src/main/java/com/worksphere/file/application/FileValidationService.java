@@ -148,10 +148,41 @@ public class FileValidationService {
         }
     }
 
-    public static final int MAX_ZIP_ENTRIES = 200;
-    public static final long MAX_ENTRY_UNCOMPRESSED_SIZE = 50L * 1024 * 1024; // 50 MB
-    public static final long MAX_TOTAL_UNCOMPRESSED_SIZE = 100L * 1024 * 1024; // 100 MB
-    public static final double MAX_COMPRESSION_RATIO = 100.0;
+    public static final int DEFAULT_MAX_ZIP_ENTRIES = 200;
+    public static final long DEFAULT_MAX_ENTRY_UNCOMPRESSED_SIZE = 50L * 1024 * 1024; // 50 MB
+    public static final long DEFAULT_MAX_TOTAL_UNCOMPRESSED_SIZE = 100L * 1024 * 1024; // 100 MB
+    public static final double DEFAULT_MAX_COMPRESSION_RATIO = 100.0;
+
+    public static final int MAX_ZIP_ENTRIES = DEFAULT_MAX_ZIP_ENTRIES;
+    public static final long MAX_ENTRY_UNCOMPRESSED_SIZE = DEFAULT_MAX_ENTRY_UNCOMPRESSED_SIZE;
+    public static final long MAX_TOTAL_UNCOMPRESSED_SIZE = DEFAULT_MAX_TOTAL_UNCOMPRESSED_SIZE;
+    public static final double MAX_COMPRESSION_RATIO = DEFAULT_MAX_COMPRESSION_RATIO;
+
+    private final int maxZipEntries;
+    private final long maxEntryUncompressedSize;
+    private final long maxTotalUncompressedSize;
+    private final double maxCompressionRatio;
+
+    public FileValidationService() {
+        this(
+                DEFAULT_MAX_ZIP_ENTRIES,
+                DEFAULT_MAX_ENTRY_UNCOMPRESSED_SIZE,
+                DEFAULT_MAX_TOTAL_UNCOMPRESSED_SIZE,
+                DEFAULT_MAX_COMPRESSION_RATIO
+        );
+    }
+
+    public FileValidationService(
+            int maxZipEntries,
+            long maxEntryUncompressedSize,
+            long maxTotalUncompressedSize,
+            double maxCompressionRatio
+    ) {
+        this.maxZipEntries = maxZipEntries;
+        this.maxEntryUncompressedSize = maxEntryUncompressedSize;
+        this.maxTotalUncompressedSize = maxTotalUncompressedSize;
+        this.maxCompressionRatio = maxCompressionRatio;
+    }
 
     private void verifyOfficeZipStructure(String canonicalMime, InputStream stream) {
         if (stream == null) {
@@ -173,48 +204,68 @@ public class FileValidationService {
 
             while ((entry = zis.getNextEntry()) != null) {
                 entriesCount++;
-                if (entriesCount > MAX_ZIP_ENTRIES) {
-                    throw new BusinessRuleException("FILE_TYPE_NOT_ALLOWED", "Số lượng entry trong tệp nén vượt quá giới hạn an toàn");
+                if (entriesCount > this.maxZipEntries) {
+                    throw new BusinessRuleException(
+                            "FILE_TYPE_NOT_ALLOWED",
+                            "Số lượng entry trong tệp nén vượt quá giới hạn an toàn"
+                    );
                 }
 
                 String entryName = entry.getName();
-                if (entryName == null || entryName.contains("..")) {
-                    throw new BusinessRuleException("FILE_TYPE_NOT_ALLOWED", "Tệp nén chứa đường dẫn nguy hiểm");
-                }
+                validateZipEntryName(entryName);
 
-                // Check declared size & compression ratio if available in header
+                // 1. Check declared size & compression ratio if available in header
                 long declaredSize = entry.getSize();
                 long compSize = entry.getCompressedSize();
 
-                if (declaredSize > MAX_ENTRY_UNCOMPRESSED_SIZE) {
-                    throw new BusinessRuleException("FILE_TYPE_NOT_ALLOWED", "Kích thước giải nén của entry vượt quá giới hạn an toàn (zip bomb)");
+                if (declaredSize > this.maxEntryUncompressedSize) {
+                    throw new BusinessRuleException(
+                            "FILE_TYPE_NOT_ALLOWED",
+                            "Kích thước giải nén khai báo của entry vượt quá giới hạn an toàn (zip bomb)"
+                    );
                 }
 
-                if (compSize > 0 && declaredSize > 1024 * 1024 && ((double) declaredSize / compSize) > MAX_COMPRESSION_RATIO) {
-                    throw new BusinessRuleException("FILE_TYPE_NOT_ALLOWED", "Tỷ lệ nén của tệp vượt ngưỡng an toàn (zip bomb)");
+                if (declaredSize >= 0 && compSize > 0) {
+                    double declaredRatio = (double) declaredSize / compSize;
+                    if (declaredRatio > this.maxCompressionRatio) {
+                        throw new BusinessRuleException(
+                            "FILE_TYPE_NOT_ALLOWED",
+                            "Tỷ lệ nén khai báo của tệp vượt ngưỡng an toàn (zip bomb)"
+                        );
+                    }
                 }
 
-                // Read and count actual uncompressed bytes, tracking live compression ratio
+                // 2. Read and count actual uncompressed bytes, tracking live compression ratio
                 long startCompressed = countingIn.getCount();
                 long entryBytesRead = 0;
+                long ratioCheckThreshold = Math.min(64L * 1024, this.maxEntryUncompressedSize / 2);
                 int r;
                 while ((r = zis.read(readBuffer)) != -1) {
                     entryBytesRead += r;
-                    if (entryBytesRead > MAX_ENTRY_UNCOMPRESSED_SIZE) {
-                        throw new BusinessRuleException("FILE_TYPE_NOT_ALLOWED", "Kích thước giải nén của entry vượt quá giới hạn an toàn (zip bomb)");
+                    if (entryBytesRead > this.maxEntryUncompressedSize) {
+                        throw new BusinessRuleException(
+                                "FILE_TYPE_NOT_ALLOWED",
+                                "Kích thước giải nén thực tế của entry vượt quá giới hạn an toàn (zip bomb)"
+                        );
                     }
                     long compressedConsumed = countingIn.getCount() - startCompressed;
-                    if (compressedConsumed > 0 && entryBytesRead > 1024 * 1024) {
+                    if (compressedConsumed > 0 && entryBytesRead > ratioCheckThreshold) {
                         double liveRatio = (double) entryBytesRead / compressedConsumed;
-                        if (liveRatio > MAX_COMPRESSION_RATIO) {
-                            throw new BusinessRuleException("FILE_TYPE_NOT_ALLOWED", "Tỷ lệ nén của tệp vượt ngưỡng an toàn (zip bomb)");
+                        if (liveRatio > this.maxCompressionRatio) {
+                            throw new BusinessRuleException(
+                                    "FILE_TYPE_NOT_ALLOWED",
+                                    "Tỷ lệ nén thực tế của tệp vượt ngưỡng an toàn (zip bomb)"
+                            );
                         }
                     }
                 }
 
                 totalUncompressedBytes += entryBytesRead;
-                if (totalUncompressedBytes > MAX_TOTAL_UNCOMPRESSED_SIZE) {
-                    throw new BusinessRuleException("FILE_TYPE_NOT_ALLOWED", "Tổng kích thước giải nén của tệp vượt quá giới hạn an toàn (zip bomb)");
+                if (totalUncompressedBytes > this.maxTotalUncompressedSize) {
+                    throw new BusinessRuleException(
+                            "FILE_TYPE_NOT_ALLOWED",
+                            "Tổng kích thước giải nén của tệp vượt quá giới hạn an toàn (zip bomb)"
+                    );
                 }
 
                 if ("[Content_Types].xml".equalsIgnoreCase(entryName)) {
@@ -225,19 +276,60 @@ public class FileValidationService {
                     hasSpecificFolder = true;
                 }
                 if (lowerName.startsWith(forbiddenPrefix)) {
-                    throw new BusinessRuleException("FILE_TYPE_NOT_ALLOWED", "Cấu trúc tệp không khớp định dạng tài liệu được khai báo");
+                    throw new BusinessRuleException(
+                            "FILE_TYPE_NOT_ALLOWED",
+                            "Cấu trúc tệp không khớp định dạng tài liệu được khai báo"
+                    );
                 }
             }
         } catch (BusinessRuleException e) {
             throw e;
         } catch (IOException e) {
             log.warn("Failed to inspect Office ZIP structure: {}", e.getMessage());
-            throw new BusinessRuleException("FILE_TYPE_NOT_ALLOWED", "Tệp tài liệu Office bị hỏng hoặc không hợp lệ");
+            throw new BusinessRuleException(
+                    "FILE_TYPE_NOT_ALLOWED",
+                    "Tệp tài liệu Office bị hỏng hoặc không hợp lệ"
+            );
         }
 
         if (!hasContentTypes || !hasSpecificFolder) {
-            throw new BusinessRuleException("FILE_TYPE_NOT_ALLOWED",
-                    "Tệp tài liệu Office thiếu cấu trúc nội dung bắt buộc của OpenXML");
+            throw new BusinessRuleException(
+                    "FILE_TYPE_NOT_ALLOWED",
+                    "Tệp tài liệu Office thiếu cấu trúc nội dung bắt buộc của OpenXML"
+            );
+        }
+    }
+
+    private void validateZipEntryName(String entryName) {
+        if (entryName == null || entryName.trim().isEmpty()) {
+            throw new BusinessRuleException(
+                    "FILE_TYPE_NOT_ALLOWED",
+                    "Tệp nén chứa đường dẫn nguy hiểm: tên entry rỗng"
+            );
+        }
+        if (entryName.contains("..")) {
+            throw new BusinessRuleException(
+                    "FILE_TYPE_NOT_ALLOWED",
+                    "Tệp nén chứa đường dẫn nguy hiểm: directory traversal (..)"
+            );
+        }
+        if (entryName.contains("\\")) {
+            throw new BusinessRuleException(
+                    "FILE_TYPE_NOT_ALLOWED",
+                    "Tệp nén chứa đường dẫn nguy hiểm: ký tự backslash (\\)"
+            );
+        }
+        if (entryName.startsWith("/")) {
+            throw new BusinessRuleException(
+                    "FILE_TYPE_NOT_ALLOWED",
+                    "Tệp nén chứa đường dẫn nguy hiểm: đường dẫn tuyệt đối (/)"
+            );
+        }
+        if (entryName.length() >= 2 && Character.isLetter(entryName.charAt(0)) && entryName.charAt(1) == ':') {
+            throw new BusinessRuleException(
+                    "FILE_TYPE_NOT_ALLOWED",
+                    "Tệp nén chứa đường dẫn nguy hiểm: ký hiệu ổ đĩa"
+            );
         }
     }
 

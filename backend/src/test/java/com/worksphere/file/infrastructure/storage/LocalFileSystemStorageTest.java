@@ -150,6 +150,9 @@ class LocalFileSystemStorageTest {
     @DisplayName("Rejects store/load/delete traversing symbolic link or junction pointing outside root")
     void shouldRejectSymlinkEscape() throws IOException {
         Path outsideDir = Files.createTempDirectory("worksphere-outside-");
+        Path outsideFile = outsideDir.resolve("sensitive.txt");
+        Files.writeString(outsideFile, "top-secret-content", StandardCharsets.UTF_8);
+
         try {
             Path symlinkInsideRoot = tempStorageDir.resolve("escapelink");
             boolean linkCreated = false;
@@ -160,25 +163,68 @@ class LocalFileSystemStorageTest {
                 // Symbolic link creation not permitted without Administrator privileges on Windows host
             }
 
-            if (linkCreated) {
-                String attackPath = "escapelink/attack.txt";
-                ByteArrayInputStream stream = new ByteArrayInputStream("payload".getBytes(StandardCharsets.UTF_8));
+            boolean isWindows = System.getProperty("os.name").toLowerCase().contains("win");
+            if (!isWindows) {
+                assertThat(linkCreated)
+                        .as("Symbolic link creation must succeed in Linux container environment")
+                        .isTrue();
+            }
 
-                assertThatThrownBy(() -> storageService.store(stream, attackPath))
+            if (linkCreated) {
+                // 1. Attempt STORE traversing symbolic link directory
+                String storeAttackPath = "escapelink/attack.txt";
+                ByteArrayInputStream stream = new ByteArrayInputStream(
+                        "malicious-payload".getBytes(StandardCharsets.UTF_8)
+                );
+
+                assertThatThrownBy(() -> storageService.store(stream, storeAttackPath))
                         .isInstanceOf(BusinessRuleException.class)
                         .hasMessageContaining("Đường dẫn tệp không hợp lệ");
 
-                assertThatThrownBy(() -> storageService.loadAsResource(attackPath))
-                        .isInstanceOf(BusinessRuleException.class);
+                // Verify outside directory was NOT created/written to
+                assertThat(Files.exists(outsideDir.resolve("attack.txt"))).isFalse();
 
-                // Verify nothing was written to outsideDir
-                try (var list = Files.list(outsideDir)) {
-                    assertThat(list).isEmpty();
+                // 2. Attempt LOAD traversing symbolic link directory
+                String loadAttackPath = "escapelink/sensitive.txt";
+                assertThatThrownBy(() -> storageService.loadAsResource(loadAttackPath))
+                        .isInstanceOf(BusinessRuleException.class)
+                        .hasMessageContaining("Đường dẫn tệp không hợp lệ");
+
+                // 3. Attempt DELETE traversing symbolic link directory
+                String deleteAttackPath = "escapelink/sensitive.txt";
+                assertThatThrownBy(() -> storageService.delete(deleteAttackPath))
+                        .isInstanceOf(BusinessRuleException.class)
+                        .hasMessageContaining("Đường dẫn tệp không hợp lệ");
+
+                // Verify outside file was NOT deleted or modified
+                assertThat(Files.exists(outsideFile)).isTrue();
+                assertThat(Files.readString(outsideFile, StandardCharsets.UTF_8)).isEqualTo("top-secret-content");
+
+                // 4. Test direct symbolic link to outside file
+                Path fileSymlink = tempStorageDir.resolve("filelink.txt");
+                boolean fileLinkCreated = false;
+                try {
+                    Files.createSymbolicLink(fileSymlink, outsideFile);
+                    fileLinkCreated = true;
+                } catch (Exception ignored) {
+                }
+
+                if (fileLinkCreated) {
+                    try {
+                        assertThatThrownBy(() -> storageService.loadAsResource("filelink.txt"))
+                                .isInstanceOf(BusinessRuleException.class);
+                        assertThatThrownBy(() -> storageService.delete("filelink.txt"))
+                                .isInstanceOf(BusinessRuleException.class);
+                        assertThat(Files.exists(outsideFile)).isTrue();
+                    } finally {
+                        Files.deleteIfExists(fileSymlink);
+                    }
                 }
             }
         } finally {
             try {
                 Files.deleteIfExists(tempStorageDir.resolve("escapelink"));
+                Files.deleteIfExists(outsideFile);
                 Files.deleteIfExists(outsideDir);
             } catch (Exception ignored) {
             }

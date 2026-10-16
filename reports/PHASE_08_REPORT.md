@@ -136,24 +136,60 @@ Key achievements:
 ## 6. Verification & Test Evidence
 
 ### Test Execution Summary
-- **Total Tests Run**: 163
-- **Failures**: 0
-- **Errors**: 0
-- **Skipped**: 0
-- **Build Result**: `BUILD SUCCESS` (Apache Maven 3.9.16, Spring Boot parent 4.1.1, Java Target 21, Host JDK 27)
+- **Windows Host Tests Run**: 170 (170 PASS, 0 Failures, 0 Errors, 0 Skipped)
+- **Linux Container Targeted Tests**: 33 (33 PASS, 0 Failures, 0 Errors, 0 Skipped, executed in `eclipse-temurin:21-jdk`)
 - **Checkstyle Violations**: 0 (`You have 0 Checkstyle violations`)
+- **Build Result**: `BUILD SUCCESS` (Apache Maven 3.9.16, Spring Boot parent 4.1.1, Java Target 21, Host JDK 27, Linux Container JDK 21.0.12.1 LTS)
+
+### Security Verification & Coverage Audit
+
+1. **Symlink Escape Defense**:
+   - Status: `TESTED_ON_LINUX_CONTAINER`
+   - Windows Status: `WINDOWS_HOST_TEST_SKIPPED_PRIVILEGE_REQUIRED`
+   - Linux Container Evidence: Executed within `eclipse-temurin:21-jdk` where `Files.createSymbolicLink` succeeds.
+     - Store traversing symlink: REJECTED with `BusinessRuleException` ("Đường dẫn tệp không hợp lệ"); outside directory untouched.
+     - Load traversing symlink: REJECTED with `BusinessRuleException`; outside file protected.
+     - Delete traversing symlink: REJECTED with `BusinessRuleException`; outside file not deleted or altered.
+     - Direct file symlink: Load & Delete REJECTED; outside file protected.
+   - Technical Debt Note: Standard Java NIO cannot completely eliminate TOCTOU race conditions if an attacker possesses concurrent local OS filesystem write access to the storage directory.
+
+2. **ZIP Bomb & Archive Safety Defense**:
+   - Status: `TESTED`
+   - Entry Count Test: 201+ entries rejected with `"Số lượng entry trong tệp nén vượt quá giới hạn an toàn"`.
+   - Declared Oversized Entry Test: Entry declaring > 50MB uncompressed rejected before inflation.
+   - Actual Per-Entry Expansion Test: Bounded counter halts decompress immediately when uncompressed bytes exceed threshold with `"Kích thước giải nén thực tế của entry vượt quá giới hạn an toàn"`.
+   - Actual Total Expansion Test: Archive with multiple valid entries exceeding cumulative total limit halts with `"Tổng kích thước giải nén của tệp vượt quá giới hạn an toàn"`.
+   - Compression Ratio Tests:
+     - Declared Ratio Test: Header declaring ratio > 100 rejected with `"Tỷ lệ nén khai báo của tệp vượt ngưỡng an toàn"`.
+     - Live Ratio Test: Stream decompressing data exceeding live ratio > 100 halted with `"Tỷ lệ nén thực tế của tệp vượt ngưỡng an toàn"`.
+   - Traversal Tests:
+     - Relative traversal (`..`): REJECTED.
+     - Backslash traversal (`\`): REJECTED.
+     - Absolute path (`/`): REJECTED.
+     - Drive letter (`C:`): REJECTED.
+   - Office Validity & Cross-Detection Tests:
+     - Valid DOCX (`[Content_Types].xml` and `word/`): PASS.
+     - Valid XLSX (`[Content_Types].xml` and `xl/`): PASS.
+     - DOCX containing `xl/`: REJECTED with `"Cấu trúc tệp không khớp định dạng tài liệu được khai báo"`.
+     - XLSX containing `word/`: REJECTED with `"Cấu trúc tệp không khớp định dạng tài liệu được khai báo"`.
+     - Corrupt ZIP payload: REJECTED with `"Tệp tài liệu Office bị hỏng hoặc không hợp lệ"`.
+
+3. **Cleanup Failure Exception Preservation**:
+   - Status: `TESTED_FOR_EXCEPTION_PRESERVATION`
+   - Verified that storage deletion failure during compensating transaction rollback does not obscure the primary persistence exception.
+   - Status: `FILE_ORPHAN_RECONCILIATION_GAP` (orphans are not automatically reconciled; requires future reconciliation daemon).
 
 ### Suite Breakdown
 1. **File Core Unit Tests**:
-   - `StoredFileTest`: 4 tests PASS (Creation, status transitions, soft delete).
-   - `FilenameSanitizerTest`: 10 tests PASS (Traversal, CRLF injection, Unicode, null bytes, long names, empty names).
-   - `LocalFileSystemStorageTest`: 8 tests PASS (Store, load, exists, delete, traversal attack defense, atomic move, destination overwrite prevention, symlink escape defense).
-   - `FileValidationServiceTest`: 18 tests PASS (Valid JPEG, PNG, WEBP, PDF, DOCX, XLSX, size limits, spoofed MIME, invalid ZIP structure, traversal inside ZIP, entry count limit, oversized entry, compression ratio threshold, corrupt archive, format mismatch).
-   - `FileApplicationServiceTest`: 1 test PASS (Compensating storage delete failure does not mask original persistence exception; safe orphan logging).
+   - `StoredFileTest`: 4 tests PASS.
+   - `FilenameSanitizerTest`: 10 tests PASS.
+   - `LocalFileSystemStorageTest`: 8 tests PASS on Windows host; 8 tests PASS in Linux container (`SYMLINK_ESCAPE_VERIFIED_ON_LINUX`).
+   - `FileValidationServiceTest`: 25 tests PASS on Windows host and Linux container.
+   - `FileApplicationServiceTest`: 1 test PASS (`TESTED_FOR_EXCEPTION_PRESERVATION`).
 2. **File Integration & Security Tests (PostgreSQL Testcontainers)**:
-   - `FileMockMvcTest`: 16 tests PASS (Upload JPEG/PNG/PDF, download uploader/admin, non-uploader 403, missing file 404, soft delete non-uploader 403, soft delete uploader 204, delete task-linked file 422, delete service-linked file 422, oversized 413, unsupported MIME 415, failure compensating cleanup, cross-project download 403, inactive member download 403).
+   - `FileMockMvcTest`: 16 tests PASS.
 3. **Task Attachment Integration Tests (PostgreSQL Testcontainers)**:
-   - `TaskAttachmentMockMvcTest`: 6 tests PASS (Comment with single attachment, comment with multiple attachments, duplicate file IDs 422, missing file 404, other user's file 403, wrong purpose 422).
+   - `TaskAttachmentMockMvcTest`: 6 tests PASS.
 4. **Regression Suites**:
    - `BackendApplicationTests`: 1 test PASS.
    - `AuthMockMvcTest`: 16 tests PASS.
@@ -178,37 +214,11 @@ Key achievements:
 
 ## 7. Artifacts Created & Modified
 
-### Modified Files
-- `backend/src/main/resources/application.yml`
-- `backend/src/main/resources/application-test.yml`
-- `backend/src/main/java/com/worksphere/shared/exception/GlobalExceptionHandler.java`
-- `backend/src/main/java/com/worksphere/task/application/TaskCommentApplicationService.java`
-- `backend/src/main/java/com/worksphere/task/application/TaskApplicationService.java`
-- `backend/src/main/java/com/worksphere/file/infrastructure/storage/LocalFileSystemStorageService.java`
+### Modified Files in Hardening Verification
 - `backend/src/main/java/com/worksphere/file/application/FileValidationService.java`
-- `backend/src/main/java/com/worksphere/file/application/FileApplicationService.java`
-- `backend/src/test/java/com/worksphere/file/infrastructure/storage/LocalFileSystemStorageTest.java`
 - `backend/src/test/java/com/worksphere/file/application/FileValidationServiceTest.java`
-- `backend/src/test/java/com/worksphere/file/FileMockMvcTest.java`
+- `backend/src/test/java/com/worksphere/file/infrastructure/storage/LocalFileSystemStorageTest.java`
 - `reports/PHASE_08_REPORT.md`
-
-### Created Files (File Module)
-- `backend/src/main/java/com/worksphere/file/domain/StoredFileStatus.java`
-- `backend/src/main/java/com/worksphere/file/domain/FilePurpose.java`
-- `backend/src/main/java/com/worksphere/file/domain/StoredFile.java`
-- `backend/src/main/java/com/worksphere/file/domain/FileStorageService.java`
-- `backend/src/main/java/com/worksphere/file/infrastructure/persistence/StoredFileRepository.java`
-- `backend/src/main/java/com/worksphere/file/application/FilenameSanitizer.java`
-- `backend/src/main/java/com/worksphere/file/api/response/FileUploadResponse.java`
-- `backend/src/main/java/com/worksphere/file/web/FileController.java`
-- `backend/src/test/java/com/worksphere/file/domain/StoredFileTest.java`
-- `backend/src/test/java/com/worksphere/file/application/FilenameSanitizerTest.java`
-- `backend/src/test/java/com/worksphere/file/application/FileApplicationServiceTest.java`
-
-### Created Files (Task Attachment)
-- `backend/src/main/java/com/worksphere/task/domain/TaskAttachment.java`
-- `backend/src/main/java/com/worksphere/task/infrastructure/persistence/TaskAttachmentRepository.java`
-- `backend/src/test/java/com/worksphere/task/TaskAttachmentMockMvcTest.java`
 
 ---
 
@@ -217,6 +227,6 @@ Key achievements:
 1. **Virus Scanning (Deferred)**: As specified in instructions, ClamAV daemon is deferred to production infrastructure setup; in-flight file validation is performed via strict magic-byte and ZIP structure verification.
 2. **Cloud Storage Provider (Deferred)**: S3/MinIO provider integration is deferred to future cloud production phases. `FileStorageService` abstraction is prepared for seamless drop-in replacement.
 3. **Physical File Purge Worker**: Soft-deleted files remain in local storage for audit retention. A scheduled background purge job for permanently removing expired deleted files will be required before production.
-4. **FILE_ORPHAN_RECONCILIATION_GAP**: When database persistence fails and compensating storage cleanup also encounters an unexpected failure (e.g., storage disk unmounted during delete), a physical file may be orphaned. A background reconciliation job comparing physical storage files with active `stored_files` database records is recommended before production go-live.
-5. **SYMLINK_ESCAPE_TEST_GAP**: On Windows development hosts without Administrator privileges or Developer Mode, creating symbolic links requires elevated privileges (`SYMLINK_PRIVILEGE_REQUIRED`). The production code defensively resolves and validates all existing path ancestors against `rootLocation.toRealPath()`, while the unit test conditionally validates symlinks when platform privileges permit.
+4. **FILE_ORPHAN_RECONCILIATION_GAP**: When database persistence fails and compensating storage cleanup also encounters an unexpected failure, physical file orphans are not automatically reconciled. A background reconciliation job comparing physical storage files with active `stored_files` database records is recommended before production go-live.
+5. **SYMLINK_ESCAPE_TEST_GAP**: On Windows development hosts without Administrator privileges or Developer Mode, creating symbolic links requires elevated privileges (`WINDOWS_HOST_TEST_SKIPPED_PRIVILEGE_REQUIRED`). Full verification was completed on Linux container (`TESTED_ON_LINUX_CONTAINER`). Additionally, portable Java NIO APIs cannot eliminate TOCTOU if an attacker has concurrent local filesystem write access to the host storage directory.
 6. **Task Detail Attachment Items List (`API_CONTRACT_GAP`)**: As documented in Section 5, `attachmentCount` is implemented in Task Detail response according to canonical contract. If mobile or web requires an inline list of attachment metadata inside Task Detail in future phases, `docs/06_API_CONTRACT.md` should be amended first.

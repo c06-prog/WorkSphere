@@ -175,7 +175,7 @@ class FileValidationServiceTest {
     }
 
     @Test
-    @DisplayName("Rejects Office ZIP with path traversal entry")
+    @DisplayName("Rejects Office ZIP with relative directory traversal entry (..)")
     void shouldRejectOfficeZipWithPathTraversal() throws IOException {
         byte[] evilZip = createOfficeZip("[Content_Types].xml", "word/../evil.txt");
         byte[] header = new byte[32];
@@ -189,7 +189,61 @@ class FileValidationServiceTest {
                 new ByteArrayInputStream(evilZip)
         ))
                 .isInstanceOf(BusinessRuleException.class)
-                .hasMessageContaining("Tệp nén chứa đường dẫn nguy hiểm");
+                .hasMessageContaining("directory traversal (..)");
+    }
+
+    @Test
+    @DisplayName("Rejects Office ZIP with backslash path traversal entry")
+    void shouldRejectOfficeZipWithBackslashTraversal() throws IOException {
+        byte[] evilZip = createOfficeZip("[Content_Types].xml", "word\\document.xml");
+        byte[] header = new byte[32];
+        System.arraycopy(evilZip, 0, header, 0, Math.min(evilZip.length, 32));
+
+        assertThatThrownBy(() -> validationService.validate(
+                "backslash.docx",
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                evilZip.length,
+                header,
+                new ByteArrayInputStream(evilZip)
+        ))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("ký tự backslash (\\)");
+    }
+
+    @Test
+    @DisplayName("Rejects Office ZIP with absolute path entry (leading /)")
+    void shouldRejectOfficeZipWithAbsolutePath() throws IOException {
+        byte[] evilZip = createOfficeZip("[Content_Types].xml", "/word/document.xml");
+        byte[] header = new byte[32];
+        System.arraycopy(evilZip, 0, header, 0, Math.min(evilZip.length, 32));
+
+        assertThatThrownBy(() -> validationService.validate(
+                "absolute.docx",
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                evilZip.length,
+                header,
+                new ByteArrayInputStream(evilZip)
+        ))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("đường dẫn tuyệt đối (/)");
+    }
+
+    @Test
+    @DisplayName("Rejects Office ZIP with drive letter path entry (C:)")
+    void shouldRejectOfficeZipWithDriveLetter() throws IOException {
+        byte[] evilZip = createOfficeZip("[Content_Types].xml", "C:/word/document.xml");
+        byte[] header = new byte[32];
+        System.arraycopy(evilZip, 0, header, 0, Math.min(evilZip.length, 32));
+
+        assertThatThrownBy(() -> validationService.validate(
+                "drive.docx",
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                evilZip.length,
+                header,
+                new ByteArrayInputStream(evilZip)
+        ))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("ký hiệu ổ đĩa");
     }
 
     @Test
@@ -232,7 +286,7 @@ class FileValidationServiceTest {
 
     @Test
     @DisplayName("Rejects Office ZIP with entry declaring excessive uncompressed size")
-    void shouldRejectOfficeZipWithOversizedEntry() {
+    void shouldRejectOfficeZipWithDeclaredOversizedEntry() {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         byte[] filename = "word/document.xml".getBytes(StandardCharsets.UTF_8);
         byte[] header = new byte[]{
@@ -263,11 +317,127 @@ class FileValidationServiceTest {
                 new ByteArrayInputStream(zipBytes)
         ))
                 .isInstanceOf(BusinessRuleException.class)
-                .hasMessageContaining("Kích thước giải nén của entry vượt quá giới hạn an toàn");
+                .hasMessageContaining("Kích thước giải nén khai báo của entry vượt quá giới hạn an toàn");
     }
 
     @Test
-    @DisplayName("Rejects Office ZIP with suspicious compression ratio")
+    @DisplayName("Rejects Office ZIP when actual uncompressed entry exceeds limit (bounded counter)")
+    void shouldRejectOfficeZipWithActualOversizedEntry() throws IOException {
+        // Use test instance with 10 KB entry limit to verify actual expansion without 50MB allocation
+        FileValidationService testService = new FileValidationService(200, 10 * 1024L, 100 * 1024L, 100.0);
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try (ZipOutputStream zos = new ZipOutputStream(baos)) {
+            ZipEntry ct = new ZipEntry("[Content_Types].xml");
+            zos.putNextEntry(ct);
+            zos.write("<Types/>".getBytes(StandardCharsets.UTF_8));
+            zos.closeEntry();
+
+            ZipEntry wd = new ZipEntry("word/document.xml");
+            zos.putNextEntry(wd);
+            // Write 15 KB uncompressed bytes (> 10 KB limit)
+            byte[] chunk = new byte[1024];
+            for (int i = 0; i < 15; i++) {
+                zos.write(chunk);
+            }
+            zos.closeEntry();
+        }
+
+        byte[] zipBytes = baos.toByteArray();
+        byte[] header = new byte[32];
+        System.arraycopy(zipBytes, 0, header, 0, 32);
+
+        assertThatThrownBy(() -> testService.validate(
+                "oversized-actual.docx",
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                zipBytes.length,
+                header,
+                new ByteArrayInputStream(zipBytes)
+        ))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("Kích thước giải nén thực tế của entry vượt quá giới hạn an toàn");
+    }
+
+    @Test
+    @DisplayName("Rejects Office ZIP when total actual uncompressed size exceeds limit across multiple entries")
+    void shouldRejectOfficeZipWithTotalUncompressedSizeExceedingLimit() throws IOException {
+        // 10 KB per-entry limit, 20 KB total limit
+        FileValidationService testService = new FileValidationService(200, 10 * 1024L, 20 * 1024L, 100.0);
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try (ZipOutputStream zos = new ZipOutputStream(baos)) {
+            ZipEntry ct = new ZipEntry("[Content_Types].xml");
+            zos.putNextEntry(ct);
+            zos.write("<Types/>".getBytes(StandardCharsets.UTF_8));
+            zos.closeEntry();
+
+            // 3 entries each with 8 KB uncompressed random bytes (ratio ~1.0, total 24 KB > 20 KB limit)
+            java.util.Random rnd = new java.util.Random(42);
+            for (int i = 1; i <= 3; i++) {
+                ZipEntry entry = new ZipEntry("word/section" + i + ".xml");
+                zos.putNextEntry(entry);
+                byte[] chunk = new byte[1024];
+                for (int j = 0; j < 8; j++) {
+                    rnd.nextBytes(chunk);
+                    zos.write(chunk);
+                }
+                zos.closeEntry();
+            }
+        }
+
+        byte[] zipBytes = baos.toByteArray();
+        byte[] header = new byte[32];
+        System.arraycopy(zipBytes, 0, header, 0, 32);
+
+        assertThatThrownBy(() -> testService.validate(
+                "total-oversized.docx",
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                zipBytes.length,
+                header,
+                new ByteArrayInputStream(zipBytes)
+        ))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("Tổng kích thước giải nén của tệp vượt quá giới hạn an toàn");
+    }
+
+    @Test
+    @DisplayName("Rejects Office ZIP with declared compression ratio exceeding limit (> 100)")
+    void shouldRejectOfficeZipWithDeclaredSuspiciousCompressionRatio() {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        byte[] filename = "word/document.xml".getBytes(StandardCharsets.UTF_8);
+        byte[] header = new byte[]{
+                0x50, 0x4B, 0x03, 0x04, // signature
+                0x14, 0x00,             // version 20
+                0x00, 0x00,             // flags (no data descriptor)
+                0x08, 0x00,             // method DEFLATE
+                0x00, 0x00, 0x00, 0x00, // time
+                0x12, 0x34, 0x56, 0x78, // crc
+                0x64, 0x00, 0x00, 0x00, // compressed size = 100 bytes
+                0x50, (byte) 0xC3, 0x00, 0x00, // uncompressed size = 50,000 bytes (ratio = 500 > 100)
+                (byte) filename.length, 0x00, // filename length
+                0x00, 0x00              // extra length
+        };
+        baos.writeBytes(header);
+        baos.writeBytes(filename);
+        baos.writeBytes(new byte[100]); // dummy compressed payload
+
+        byte[] zipBytes = baos.toByteArray();
+        byte[] first32 = new byte[32];
+        System.arraycopy(zipBytes, 0, first32, 0, 32);
+
+        assertThatThrownBy(() -> validationService.validate(
+                "declared-ratio.docx",
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                zipBytes.length,
+                first32,
+                new ByteArrayInputStream(zipBytes)
+        ))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("Tỷ lệ nén khai báo của tệp vượt ngưỡng an toàn");
+    }
+
+    @Test
+    @DisplayName("Rejects Office ZIP with live suspicious compression ratio (live zip bomb)")
     void shouldRejectOfficeZipWithSuspiciousCompressionRatio() throws IOException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         try (ZipOutputStream zos = new ZipOutputStream(baos)) {
@@ -296,25 +466,52 @@ class FileValidationServiceTest {
                 new ByteArrayInputStream(zipBytes)
         ))
                 .isInstanceOf(BusinessRuleException.class)
-                .hasMessageContaining("Tỷ lệ nén của tệp vượt ngưỡng an toàn");
+                .hasMessageContaining("Tỷ lệ nén thực tế của tệp vượt ngưỡng an toàn");
     }
 
     @Test
     @DisplayName("Rejects corrupt Office ZIP archive")
     void shouldRejectCorruptOfficeZip() {
-        byte[] corruptZip = new byte[]{0x50, 0x4B, 0x03, 0x04, 0x00, 0x00, 0x08, 0x00, (byte) 0xFF, (byte) 0xFF, 0x12, 0x34};
-        byte[] header = new byte[corruptZip.length];
-        System.arraycopy(corruptZip, 0, header, 0, corruptZip.length);
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        byte[] filename = "word/document.xml".getBytes(StandardCharsets.UTF_8);
+        byte[] header = new byte[]{
+                0x50, 0x4B, 0x03, 0x04, // signature
+                0x14, 0x00,             // version 20
+                0x00, 0x00,             // flags (no data descriptor)
+                0x08, 0x00,             // method DEFLATE
+                0x00, 0x00, 0x00, 0x00, // time
+                0x12, 0x34, 0x56, 0x78, // crc
+                0x20, 0x00, 0x00, 0x00, // compressed size = 32 bytes
+                0x20, 0x00, 0x00, 0x00, // uncompressed size = 32 bytes
+                (byte) filename.length, 0x00, // filename length
+                0x00, 0x00              // extra length
+        };
+        baos.writeBytes(header);
+        baos.writeBytes(filename);
+        baos.writeBytes(new byte[]{
+                (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF,
+                (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF,
+                (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF,
+                (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF,
+                (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF,
+                (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF,
+                (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF,
+                (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF
+        }); // Invalid DEFLATE payload causing ZipException on decompress
+
+        byte[] corruptZip = baos.toByteArray();
+        byte[] first32 = new byte[32];
+        System.arraycopy(corruptZip, 0, first32, 0, 32);
 
         assertThatThrownBy(() -> validationService.validate(
                 "corrupt.docx",
                 "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                 corruptZip.length,
-                header,
+                first32,
                 new ByteArrayInputStream(corruptZip)
         ))
                 .isInstanceOf(BusinessRuleException.class)
-                .hasMessageContaining("Tệp tài liệu Office");
+                .hasMessageContaining("Tệp tài liệu Office bị hỏng hoặc không hợp lệ");
     }
 
     @Test
@@ -327,6 +524,24 @@ class FileValidationServiceTest {
         assertThatThrownBy(() -> validationService.validate(
                 "mixed.docx",
                 "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                mixedZip.length,
+                header,
+                new ByteArrayInputStream(mixedZip)
+        ))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("Cấu trúc tệp không khớp định dạng tài liệu được khai báo");
+    }
+
+    @Test
+    @DisplayName("Rejects XLSX archive that contains DOCX entries (word/)")
+    void shouldRejectXlsxWithDocxEntries() throws IOException {
+        byte[] mixedZip = createOfficeZip("[Content_Types].xml", "xl/workbook.xml", "word/document.xml");
+        byte[] header = new byte[32];
+        System.arraycopy(mixedZip, 0, header, 0, 32);
+
+        assertThatThrownBy(() -> validationService.validate(
+                "mixed.xlsx",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 mixedZip.length,
                 header,
                 new ByteArrayInputStream(mixedZip)
