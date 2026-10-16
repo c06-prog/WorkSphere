@@ -56,24 +56,36 @@
   - Compensating cleanup: storage cleanup failure on rollback preserves primary persistence exception: verified.
   - Task Attachment integration: `TaskAttachment` entity, comment attachment integration (`attachmentFileIds`), atomic transaction, and N+1 safe `attachmentCount` batch query: verified.
   - Comprehensive report at reports/PHASE_08_REPORT.md.
-- Phase 9 Pre-Implementation Decisions, Locking & Error Semantics: COMPLETED, HARDENED & AUDITED (D-035 Attachment projection semantics with service_attachments.created_at, D-036 Single active assignment database invariant via partial unique index `uk_service_assignments_one_active` and ServiceRequest pessimistic row lock protocol, V013 runbook at `reports/runbooks/V013_SERVICE_ASSIGNMENT_UNIQUENESS_PLAN.md`, D-037 Request number concurrency with two-key advisory lock `(1301, year)` verified on PostgreSQL 15, D-038 Category hierarchy, D-039 File delete 200 OK correction, D-040 Category canonical error codes verified without gap, D-041 Authorization role-permission audit identifying `SERVICE_AUTHORIZATION_MAPPING_GAP`).
+- Phase 9 (Service Request Module): COMPLETED, AUDITED, SECURITY VALIDATED
+  - Service Category: tree hierarchy, arbitrary depth (> 50 levels verified), cycle detection with Set<UUID> (`SERVICE_CATEGORY_CYCLE_DETECTED`), normalized code uniqueness, parent validation, activate/deactivate lifecycle, in-use guard.
+  - Request Number: format `SR-YYYY-NNNNNN` via PostgreSQL two-key advisory lock `(1301, year)` and sequence reset on new calendar year.
+  - Service Request Core: status workflow (7 states, 8 transitions), status history recorded in same transaction, pessimistic write locking, optimistic locking concurrency control.
+  - Service Assignment: single active assignee invariant (`0..1`), idempotent same-user assign, atomic reassign with unassigned_at timestamp, partial unique index `uk_service_assignments_one_active` final DB guard mapped to `SERVICE_ASSIGNMENT_CONFLICT` (HTTP 409).
+  - Reject Resolution: dedicated endpoint `POST /service-requests/{requestId}/reject-resolution` restricted to original requester, transitions `RESOLVED -> IN_PROGRESS`, retains active assignee, logs reason in status history.
+  - Comments: public vs internal notes, query-level visibility scoping (requesters cannot create or view internal notes).
+  - Attachments: validation for purpose `SERVICE_ATTACHMENT`, `ACTIVE` file status, uploader ownership, zero cross-request reuse, download access control, and D-035 projection.
+  - Rating: requester-only, request status `CLOSED`, score 1..5, guarded by `service_ratings.request_id` unique constraint (`SERVICE_RATING_ALREADY_EXISTS`, 409).
+  - Query-level Scoping: Spring Data JPA `Specification<ServiceRequest>` enforcing DB query scoping for Admins vs Non-Admins with matching count queries.
+  - Deferred Side Effects: `NOTIFICATION_SIDE_EFFECT_DEFERRED` logged cleanly without external broker dependencies.
+  - Comprehensive report at `reports/PHASE_09_REPORT.md`.
 
 ## Latest Evidence
 
 - Backend Test Suite on Host (Oracle JDK 27, Testcontainers postgres:15-alpine):
   - Checkstyle: 0 violations
-  - Total tests: 183/183 PASS (full regression suite + seed tests + project read scoping tests)
+  - Total tests: 205/205 PASS (183 regression suite + 22 Phase 9 tests)
   - Failures: 0 | Errors: 0 | Skipped: 0
   - Maven execution: BUILD SUCCESS (exit code 0)
 - Database & Migrations:
   - V001 to V015 applied and validated on PostgreSQL Testcontainers
-  - Migrations 100% immutable and tracked
+  - Migrations 100% immutable and tracked (no V016 needed)
 - Canonical documents: unchanged 100% (10/10 canonical documents in docs/ preserved)
 - Working tree: clean
 - Security / Scoping Validation:
   - Project read access scoped to active project members for non-admins
-  - System Admin holds global project read scope as per canonical governance
-  - Query-level scoping via JPQL EXISTS with matching countQuery (zero in-memory post-filtering)
+  - Service request read access scoped to requester or active assignee for non-admins
+  - System Admin holds global service request and project read scope
+  - Query-level scoping via Specification with matching countQuery
 
 ## Deferred Items & Known Gaps
 
@@ -105,8 +117,8 @@
 
 ## Next Permitted Phase
 
-- **Giai đoạn 9: Service Request Module** (theo đúng docs/08_DEVELOPMENT_ROADMAP.md Section 13, P0).
-- Phải bắt đầu bằng nhiệm vụ khảo sát phạm vi (Audit/Plan) của Giai đoạn 9 trước khi viết mã nguồn.
+- **Giai đoạn 10: Asset Management Module** (theo đúng docs/08_DEVELOPMENT_ROADMAP.md Section 14, P0).
+- Không bắt đầu triển khai Phase 10 trong phiên hiện tại.
 - Không bắt đầu triển khai React Native / mobile source trong giai đoạn này.
 
 ## Trust Rules

@@ -4,21 +4,29 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: XÁC MINH CUỐI PROJECT READ SCOPING TRƯỚC PHASE 9
-- Latest Validated Checkpoint: Prior `3e05c7cd8e57592d01f819f893a9a92fca8dc25c`, updated in this patch.
-- Operational Documentation Checkpoint: reports/DECISIONS.md (D-044)
+- Current Task: TRIỂN KHAI PHASE 9 - SERVICE REQUEST MODULE
+- Latest Validated Checkpoint: Prior `fb8f41b03b110e069cb2639a39ab6981463c0294`
+- Operational Documentation Checkpoint: reports/DECISIONS.md (D-045), reports/PHASE_09_REPORT.md
 - Working tree: clean
 - Build status: BUILD SUCCESS (Maven 3.9.16, Java target 21, Checkstyle 0 violations)
 - Test status:
-  - Host Suite (Oracle JDK 27, Testcontainers PostgreSQL): 183/183 PASS (0 failures, 0 errors, 0 skipped)
-  - V015 Canonical Project Read Permission & Strict Role Matrix Validation: PASS (76 mappings)
-  - Active Employee & Team Leader Member Access (detail, members, milestones, list): PASS (200 OK)
-  - Unrelated User Access Denial (detail, members, milestones): PASS (403 Forbidden, 0 items in list, 0 data leakage)
-  - Inactive Member Access Denial (detail, members, milestones): PASS (403 Forbidden, 0 items in list)
-  - Multi-Project Database List Scoping (JPQL EXISTS subquery, exact countQuery, search/sort preservation): PASS (totalElements=1)
-  - Admin Global Governance Scope vs Project Manager Member-Scoped Access: PASS (Admin accesses all, PM scoped to active projects)
+  - Host Suite (Oracle JDK 27, Testcontainers PostgreSQL): 205/205 PASS (0 failures, 0 errors, 0 skipped)
+  - Existing Regression Suite (Phase 0 - Phase 8): 183/183 PASS
+  - Phase 9 Service Category Tests (`ServiceCategoryMockMvcTest`): 10/10 PASS
+  - Phase 9 Service Request Core / Workflow / Assignment / Attachment / Rating / Scoping Tests (`ServiceRequestMockMvcTest`): 12/12 PASS
 
-## Project Read Member-Scoped Access Control & Scoping Remediation: RESOLVED
+## Phase 9 Service Request Module: COMPLETED & VERIFIED
+
+- **Service Category**: Hierarchy, cycle detection with Set<UUID>, normalized code uniqueness, active public list, admin list, activate/deactivate, in-use protection.
+- **Request Number**: Sequence format `SR-YYYY-NNNNNN` via PostgreSQL two-key advisory lock `(1301, year)` and year rollover handling.
+- **Service Request Core**: Status workflow (7 states, 8 transitions), history audit logging in same transaction, optimistic locking, soft-delete predicate.
+- **Service Assignment**: Single active assignee invariant (`0..1`), idempotent assignment, atomic reassignment with `unassigned_at`, partial unique index `uk_service_assignments_one_active` final DB guard with 409 conflict mapping.
+- **Reject Resolution**: Dedicated endpoint `POST /service-requests/{requestId}/reject-resolution` restricted to original requester, transitions `RESOLVED -> IN_PROGRESS`, preserves active assignee, logs reason in status history.
+- **Comments**: Public and internal notes, query-level visibility scoping.
+- **Attachments**: Linkage to `StoredFile` (purpose `SERVICE_ATTACHMENT`, `ACTIVE` status, uploader/Admin check, zero cross-request reuse, download access control, D-035 projection).
+- **Rating**: Requester-only, `CLOSED` status only, score 1..5, guarded by `service_ratings.request_id` unique constraint (409 conflict).
+- **Query Scoping**: Enforced in PostgreSQL via Spring Data JPA `Specification<ServiceRequest>` for non-admins vs admins.
+- **Report**: Comprehensive report written to `reports/PHASE_09_REPORT.md`.
 
 Kiểm toán độc lập phát hiện rò rỉ dữ liệu (data leak) khi các endpoint đọc dự án không kiểm tra quyền thành viên và không phân vùng dữ liệu ở tầng truy vấn:
 
@@ -91,8 +99,8 @@ Nhiệm vụ vá lỗi truy cập thành viên dự án và làm cứng ma trậ
 
 ## Next Permitted Phase
 
-- **Giai đoạn 9: Service Request Module** (theo đúng `docs/08_DEVELOPMENT_ROADMAP.md` Section 13, P0).
-- Phải bắt đầu bằng nhiệm vụ khảo sát phạm vi (Audit/Plan) của Giai đoạn 9 trước khi viết mã nguồn.
+- **Giai đoạn 10: Asset Management Module** (theo đúng `docs/08_DEVELOPMENT_ROADMAP.md` Section 14, P0).
+- Không bắt đầu triển khai Phase 10 trong phiên hiện tại.
 - Không bắt đầu triển khai React Native / mobile source.
 
 ## New Session Procedure

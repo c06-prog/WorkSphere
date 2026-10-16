@@ -60,14 +60,26 @@ public class GlobalExceptionHandler {
         HttpStatus status = switch (ex.getCode()) {
             case "FILE_TOO_LARGE" -> HttpStatus.PAYLOAD_TOO_LARGE;
             case "FILE_TYPE_NOT_ALLOWED" -> HttpStatus.UNSUPPORTED_MEDIA_TYPE;
-            case "FILE_ACCESS_DENIED" -> HttpStatus.FORBIDDEN;
-            case "FILE_EMPTY", "FILE_EXTENSION_NOT_ALLOWED" -> HttpStatus.BAD_REQUEST;
-            case "FILE_NOT_FOUND" -> HttpStatus.NOT_FOUND;
+            case "FILE_ACCESS_DENIED", "SERVICE_RESOLUTION_REJECTION_FORBIDDEN",
+                 "SERVICE_RATING_FORBIDDEN", "SERVICE_REQUEST_ACCESS_DENIED" -> HttpStatus.FORBIDDEN;
+            case "FILE_EMPTY", "FILE_EXTENSION_NOT_ALLOWED",
+                 "SERVICE_CATEGORY_PARENT_INVALID", "SERVICE_CATEGORY_CYCLE_DETECTED",
+                 "SERVICE_CATEGORY_ALREADY_INACTIVE", "SERVICE_CATEGORY_ALREADY_ACTIVE",
+                 "SERVICE_CATEGORY_IN_USE", "SERVICE_STATUS_TRANSITION_INVALID",
+                 "SERVICE_ASSIGNEE_REQUIRED", "SERVICE_RESOLUTION_REQUIRED",
+                 "SERVICE_ALREADY_CLOSED", "SERVICE_ALREADY_CANCELLED",
+                 "SERVICE_NOT_RESOLVED", "SERVICE_NOT_CLOSED", "USER_INACTIVE",
+                 "INVALID_REQUEST_STATE" -> HttpStatus.BAD_REQUEST;
+            case "FILE_NOT_FOUND", "SERVICE_REQUEST_NOT_FOUND", "SERVICE_CATEGORY_NOT_FOUND",
+                 "USER_NOT_FOUND" -> HttpStatus.NOT_FOUND;
+            case "SERVICE_CATEGORY_CODE_ALREADY_EXISTS", "SERVICE_ASSIGNMENT_CONFLICT",
+                 "SERVICE_RATING_ALREADY_EXISTS", "OPTIMISTIC_LOCK_CONFLICT" -> HttpStatus.CONFLICT;
             default -> HttpStatus.UNPROCESSABLE_ENTITY;
         };
         return ResponseEntity.status(status)
                 .body(ApiResponse.error(ex.getCode(), ex.getMessage()));
     }
+
 
     @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
     public ResponseEntity<ApiResponse<Void>> handleMaxUploadSizeExceeded(org.springframework.web.multipart.MaxUploadSizeExceededException ex) {
