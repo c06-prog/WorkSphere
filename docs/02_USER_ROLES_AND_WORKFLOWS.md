@@ -678,32 +678,75 @@ Tài sản RETIRED không được cấp phát lại.
 - **Mô hình phân phối**: Hệ thống thông báo nội bộ trong ứng dụng (In-app Database Notification Center).
 - Không triển khai Push Notification thực tế (FCM/APNs), Email delivery, WebSocket/SSE hay message broker ngoài trong MVP.
 - Tùy chọn thông báo (`notification_preferences`): Thuộc tính `inAppEnabled` được thực thi trực tiếp tại backend khi tạo thông báo; các thuộc tính `pushEnabled` và `emailEnabled` được lưu trữ/cập nhật qua API nhưng không tạo side effect phân phối trong Phase 11.
-- **Mô hình giao dịch**: Bản ghi thông báo được tạo và ghi vào CSDL trong cùng transaction với sự kiện nghiệp vụ gốc. Nếu thao tác ghi thông báo thất bại, toàn bộ transaction nghiệp vụ sẽ rollback để bảo đảm tính toàn vẹn dữ liệu.
+- **Quy tắc khi tùy chọn bị tắt (`inAppEnabled = false`)**:
+  - Nếu tại thời điểm phát sinh sự kiện, người nhận có `inAppEnabled = false` cho loại thông báo tương ứng, hệ thống sẽ bỏ qua và không tạo bản ghi trong bảng `notifications`.
+  - Sự kiện được coi là đã xử lý xong theo cấu hình hiện tại của người dùng.
+  - Hệ thống không lưu trạng thái chờ (pending event) và không thực hiện backfill thông báo khi người dùng bật lại tùy chọn sau này.
+- **Mô hình giao dịch**: Bản ghi thông báo được tạo và ghi vào CSDL trong cùng transaction với sự kiện nghiệp vụ gốc. Nếu thao tác ghi thông báo thất bại do lỗi hệ thống nghiêm trọng, toàn bộ transaction nghiệp vụ sẽ rollback để bảo đảm tính toàn vẹn dữ liệu.
 
 ### 8.2. Ma trận sự kiện và người nhận thông báo (Event & Recipient Matrix)
 
-| Sự kiện nghiệp vụ | Thao tác nguồn | Người nhận (Recipient) | Loại trừ Actor | Loại thông báo (`type`) | `referenceType` | `referenceId` | Mẫu tiêu đề | Mẫu nội dung | Định dạng `eventKey` | Thời điểm kích hoạt |
+| Sự kiện nghiệp vụ | Thao tác nguồn thực tế | Người nhận (Recipient) | Loại trừ Actor | Loại thông báo (`type`) | `referenceType` | `referenceId` | Mẫu tiêu đề | Mẫu nội dung | Định dạng `eventKey` | Thời điểm kích hoạt |
 |---|---|---|---|---|---|---|---|---|---|---|
-| Thêm thành viên dự án | `POST /projects/{id}/members` | Thành viên vừa được thêm (`userId`) | Loại trừ nếu actor == recipient | `PROJECT_MEMBER_ADDED` | `PROJECT` | `projectId` | Bạn đã được thêm vào dự án | Bạn đã được thêm vào dự án {projectName} | `PROJECT_MEMBER_ADDED:{projectId}:{memberId}` | Cùng transaction thêm member |
-| Giao công việc | `POST /tasks` hoặc `PUT /tasks/{id}/assign` | Người được giao việc (`assigneeId`) | Loại trừ nếu actor tự giao việc cho chính mình | `TASK_ASSIGNED` | `TASK` | `taskId` | Bạn được giao công việc mới | Bạn đã được phân công công việc: {taskTitle} | `TASK_ASSIGNED:{taskId}:{assigneeId}:{version}` | Cùng transaction giao task |
-| Thay đổi trạng thái công việc | `PUT /tasks/{id}/status` | Assignee, Task creator (reporter), PM/Leader dự án có quyền review (deduplicated) | Loại trừ actor thực hiện thao tác | `TASK_STATUS_CHANGED` | `TASK` | `taskId` | Công việc thay đổi trạng thái | Công việc {taskTitle} đã chuyển sang trạng thái {status} | `TASK_STATUS_CHANGED:{taskId}:{status}:{version}` | Cùng transaction đổi trạng thái |
-| Công việc sắp đến hạn | Quét định kỳ (Scheduler) | Người được giao việc (`assigneeId`) | Không áp dụng (hệ thống) | `TASK_DUE_SOON` | `TASK` | `taskId` | Công việc sắp đến hạn | Công việc {taskTitle} sẽ đến hạn vào {dueDate} | `TASK_DUE_SOON:{taskId}:{dueDateEpochDay}` | Batch scheduler (chỉ gửi 1 lần/cửa sổ 72h) |
-| Công việc quá hạn | Quét định kỳ (Scheduler) | Người được giao việc (`assigneeId`) | Không áp dụng (hệ thống) | `TASK_OVERDUE` | `TASK` | `taskId` | Công việc quá hạn | Công việc {taskTitle} đã quá hạn hoàn thành | `TASK_OVERDUE:{taskId}:{dueDateEpochDay}` | Batch scheduler (chỉ gửi 1 lần khi quá hạn) |
-| Phân công yêu cầu dịch vụ | `PUT /service-requests/{id}/assign` | Kỹ thuật viên được phân công (`assignedTo`) | Loại trừ nếu actor == recipient | `SERVICE_REQUEST_UPDATED` | `SERVICE_REQUEST` | `requestId` | Bạn được phân công yêu cầu dịch vụ | Bạn được phân công xử lý yêu cầu: {requestTitle} | `SERVICE_REQUEST_UPDATED:{requestId}:ASSIGNED:{version}` | Cùng transaction phân công |
-| Cập nhật trạng thái yêu cầu dịch vụ | `PUT /service-requests/{id}/status` (RESOLVED, v.v.) | Người tạo yêu cầu (`requesterId`) | Loại trừ nếu actor == recipient | `SERVICE_REQUEST_UPDATED` | `SERVICE_REQUEST` | `requestId` | Yêu cầu dịch vụ được cập nhật | Yêu cầu {requestTitle} đã chuyển sang trạng thái {status} | `SERVICE_REQUEST_UPDATED:{requestId}:{status}:{version}` | Cùng transaction đổi trạng thái |
-| Cấp phát tài sản | `POST /assets/{id}/assignments` | Nhân viên nhận tài sản (`assignedTo`) | Loại trừ nếu actor == recipient | `ASSET_ASSIGNED` | `ASSET` | `assetId` | Bạn được cấp phát tài sản | Bạn đã được cấp phát tài sản: {assetName} ({assetCode}) | `ASSET_ASSIGNED:{assetId}:{assignmentId}` | Cùng transaction cấp phát tài sản |
-| Bình luận công khai | Tạo bình luận trên Task hoặc Service Request | Bên liên quan (Assignee, Reporter/Requester phía đối diện) | Loại trừ actor tạo bình luận | `COMMENT_ADDED` | `TASK` hoặc `SERVICE_REQUEST` | `referenceId` | Có bình luận mới | {actorName} đã bình luận trên {title} | `COMMENT_ADDED:{referenceType}:{commentId}` | Cùng transaction tạo bình luận |
+| Thêm thành viên dự án | `POST /api/v1/projects/{projectId}/members` | Thành viên vừa được thêm (`userId`) | Loại trừ nếu actor == recipient | `PROJECT_MEMBER_ADDED` | `PROJECT` | `projectId` | Bạn đã được thêm vào dự án | Bạn đã được thêm vào dự án {projectName} | `PROJECT_MEMBER_ADDED:{projectId}:{memberId}` | Cùng transaction thêm member |
+| Giao công việc | `POST /api/v1/tasks` (kèm assignee) hoặc `POST /api/v1/tasks/{taskId}/assignments` | Người được giao việc (`assigneeId`) | Loại trừ nếu actor tự giao việc cho chính mình | `TASK_ASSIGNED` | `TASK` | `taskId` | Bạn được giao công việc mới | Bạn đã được phân công công việc: {taskTitle} | `TASK_ASSIGNED:{taskId}:{assignmentId}` | Cùng transaction giao task |
+| Thay đổi trạng thái công việc | `PUT /api/v1/tasks/{taskId}/status` | Active assignee, Reporter, PM/Leader dự án đang hoạt động (deduplicated) | Loại trừ actor thực hiện thao tác | `TASK_STATUS_CHANGED` | `TASK` | `taskId` | Công việc thay đổi trạng thái | Công việc {taskTitle} đã chuyển sang trạng thái {status} | `TASK_STATUS_CHANGED:{taskId}:{statusHistoryId}` | Cùng transaction đổi trạng thái |
+| Công việc sắp đến hạn | Quét định kỳ (Scheduler Scanner) | Người được giao việc (`assigneeId`) | Không áp dụng (hệ thống) | `TASK_DUE_SOON` | `TASK` | `taskId` | Công việc sắp đến hạn | Công việc {taskTitle} sẽ đến hạn vào {dueDate} | `TASK_DUE_SOON:{taskId}:{dueAtEpochMilli}` | Batch scheduler (chỉ gửi 1 lần/cửa sổ 72h) |
+| Công việc quá hạn | Quét định kỳ (Scheduler Scanner) | Người được giao việc (`assigneeId`) | Không áp dụng (hệ thống) | `TASK_OVERDUE` | `TASK` | `taskId` | Công việc quá hạn | Công việc {taskTitle} đã quá hạn hoàn thành | `TASK_OVERDUE:{taskId}:{dueAtEpochMilli}` | Batch scheduler (chỉ gửi 1 lần khi quá hạn) |
+| Phân công yêu cầu dịch vụ | `POST /api/v1/service-requests/{requestId}/assignments` | Kỹ thuật viên được phân công (`assigneeId`) | Loại trừ nếu actor == recipient | `SERVICE_REQUEST_UPDATED` | `SERVICE_REQUEST` | `requestId` | Bạn được phân công yêu cầu dịch vụ | Bạn được phân công xử lý yêu cầu: {requestTitle} | `SERVICE_REQUEST_UPDATED:{requestId}:ASSIGNED:{assignmentId}` | Cùng transaction phân công |
+| Cập nhật trạng thái yêu cầu dịch vụ | `PUT /api/v1/service-requests/{requestId}/status` (RESOLVED, v.v.) | Người tạo yêu cầu (`requesterId`) | Loại trừ nếu actor == recipient | `SERVICE_REQUEST_UPDATED` | `SERVICE_REQUEST` | `requestId` | Yêu cầu dịch vụ được cập nhật | Yêu cầu {requestTitle} đã chuyển sang trạng thái {status} | `SERVICE_REQUEST_UPDATED:{requestId}:{statusHistoryId}` | Cùng transaction đổi trạng thái |
+| Cấp phát tài sản | `POST /api/v1/assets/{assetId}/assignments` | Nhân viên nhận tài sản (`assignedTo`) | Loại trừ nếu actor == recipient | `ASSET_ASSIGNED` | `ASSET` | `assetId` | Bạn được cấp phát tài sản | Bạn đã được cấp phát tài sản: {assetName} ({assetCode}) | `ASSET_ASSIGNED:{assetId}:{assignmentId}` | Cùng transaction cấp phát tài sản |
+| Bình luận công khai Task | `POST /api/v1/tasks/{taskId}/comments` | Active assignee, Reporter, PM/Leader dự án hoạt động (deduplicated) | Loại trừ actor tạo bình luận | `COMMENT_ADDED` | `TASK` | `taskId` | Có bình luận mới | {actorName} đã bình luận trên công việc: {taskTitle} | `COMMENT_ADDED:TASK:{commentId}` | Cùng transaction tạo bình luận |
+| Bình luận công khai Service Request | `POST /api/v1/service-requests/{requestId}/comments` (`isInternal=false`) | Phía đối diện (Requester hoặc Active Assignee; nếu Admin thì gửi cả hai) | Loại trừ actor tạo bình luận | `COMMENT_ADDED` | `SERVICE_REQUEST` | `requestId` | Có bình luận mới | {actorName} đã bình luận trên yêu cầu: {requestTitle} | `COMMENT_ADDED:SERVICE_REQUEST:{commentId}` | Cùng transaction tạo bình luận |
 
-*Ghi chú*:
-- Ghi chú nội bộ (Internal Notes) của Service Request tuyệt đối không gửi thông báo cho requester.
-- Không phát tán thông báo tới toàn bộ thành viên dự án khi chỉ có thay đổi trạng thái của 1 task cá nhân.
+*Quy tắc nghiệp vụ chi tiết*:
+- **Ghi chú nội bộ (Internal Notes) của Service Request (`isInternal=true`)**: Tuyệt đối không gửi thông báo cho requester. Trong Phase 11, thông báo nội bộ cho kỹ thuật viên được hoãn lại.
+- **Không phát tán toàn bộ thành viên dự án**: Thay đổi trạng thái task hoặc bình luận task không gửi broadcast cho toàn bộ thành viên dự án mà chỉ gửi cho nhóm có liên quan mật thiết (active assignee, reporter, PM/Leader có quyền review).
+- **Độ dài eventKey**: Mọi chuỗi `eventKey` đều sử dụng UUID hoặc Long timestamp, bảo đảm độ dài luôn $\le 255$ ký tự.
 
-### 8.3. Tính lũy đẳng (Idempotency)
+### 8.3. Thuật toán xác định người nhận khi đổi trạng thái công việc (Task Status Recipient Resolution)
 
-- Mỗi thông báo được bảo vệ bằng cặp duy nhất `(recipient_id, event_key)`.
-- Khi xảy ra retry hoặc gửi lại request từ client, việc chèn bản ghi trùng `(recipient_id, event_key)` được xử lý là thành công lũy đẳng (idempotent success), không sinh thêm thông báo và không trả lỗi nghiệp vụ cho client.
+1. Thu thập danh sách `recipientIds`:
+   - Active assignee từ `task_assignments` (`task_id = :taskId AND is_active = TRUE`).
+   - Task reporter từ `tasks.reporter_id`.
+   - Các thành viên dự án đang hoạt động (`project_members.project_id = :projectId AND is_active = TRUE`) có vai trò dự án `project_role IN ('PROJECT_MANAGER', 'TEAM_LEADER')`.
+2. Loại bỏ các giá trị trùng lặp (Deduplicate Set).
+3. Loại trừ actor thực hiện thao tác (`principal.userId()`).
+4. Với từng recipient, kiểm tra tùy chọn `inAppEnabled` cho loại `TASK_STATUS_CHANGED`. Nếu `false`, bỏ qua.
+5. Chèn thông báo cho các recipient còn lại bằng câu lệnh chèn lũy đẳng an toàn.
 
-### 8.4. Thao tác và quyền truy cập
+### 8.4. Cơ chế chèn lũy đẳng an toàn (Idempotent Native Insert Semantics)
+
+- Tuyệt đối **không** dùng cơ chế bắt ngoại lệ vi phạm ràng buộc duy nhất (`PSQLException: duplicate key`) làm luồng điều khiển trong transaction nghiệp vụ, vì điều này có thể đánh dấu transaction là `rollback-only`.
+- Sử dụng câu lệnh chèn native an toàn của PostgreSQL:
+  ```sql
+  INSERT INTO notifications (
+      id, recipient_id, event_key, type, title, message,
+      reference_type, reference_id, is_read, created_at
+  )
+  VALUES (...)
+  ON CONFLICT (recipient_id, event_key) DO NOTHING;
+  ```
+- Phương thức repository trả về số dòng bị ảnh hưởng (`affected rows`):
+  - `1`: Thông báo mới được tạo thành công.
+  - `0`: Sự kiện đã tồn tại trước đó; hệ thống ghi nhận là thành công lũy đẳng (`idempotent success`), không ném lỗi và không rollback nghiệp vụ gốc.
+- Các lỗi CSDL thực sự khác (mất kết nối, lỗi kiểu dữ liệu) vẫn làm rollback transaction nghiệp vụ gốc theo đúng chính sách D-049.
+
+### 8.5. Chính sách quét hạn định kỳ (Scheduler Scanner Policy)
+
+- **Các loại thông báo xử lý**: `TASK_DUE_SOON` và `TASK_OVERDUE`.
+- **Cấu hình chu kỳ quét**: `worksphere.notification.task-deadline-scan-delay` (mặc định: `PT15M` - 15 phút).
+- **Cấu hình kích thước lô**: `worksphere.notification.task-deadline-batch-size` (mặc định: `100`).
+- **Thứ tự xử lý ổn định**: `ORDER BY t.due_date ASC, t.id ASC`.
+- **Điều phối đa thực thể (Multi-Instance Coordination)**:
+  - Sử dụng PostgreSQL transaction advisory lock với module key riêng biệt `1101`:
+    ```sql
+    SELECT pg_try_advisory_xact_lock(1101, 1);
+    ```
+  - Nếu không lấy được khóa (do một instance khác đang thực thi vòng quét), instance hiện tại lập tức bỏ qua vòng quét mà không phát sinh lỗi.
+- **Môi trường kiểm thử**: Vô hiệu hóa scheduler tự động (`@Scheduled`). Kiểm thử tích hợp gọi trực tiếp scanner service với bean `Clock` cố định.
+
+### 8.6. Thao tác và quyền truy cập
 
 - **Xem danh sách**: Người dùng chỉ xem được danh sách thông báo của chính mình qua `GET /notifications` (`recipient_id = principal.userId`).
 - **Xem chi tiết (Deep Link Navigation)**: Ứng dụng mobile sử dụng `referenceType` và `referenceId` trong payload thông báo để điều hướng trực tiếp đến màn hình chi tiết của đối tượng nghiệp vụ tương ứng (Project, Task, Service Request, Asset). Hệ thống không mở endpoint riêng `GET /notifications/{id}`.
@@ -712,7 +755,7 @@ Tài sản RETIRED không được cấp phát lại.
 - **Đếm số lượng chưa đọc**: `GET /notifications/unread-count` đếm các thông báo có `is_read = false` của chính principal.
 - **Tùy chọn thông báo**: Quản lý tùy chọn nhận thông báo qua `GET` và `PUT /notification-preferences`.
 
-### 8.5. Chính sách lưu trữ (Retention Policy)
+### 8.7. Chính sách lưu trữ (Retention Policy)
 
 - Trong Phase 11, thông báo đã đọc được lưu trữ vô thời hạn. Không tự động xóa vật lý, không có endpoint lưu trữ/archive, và không có scheduler dọn dẹp (`NOTIFICATION_RETENTION_CLEANUP_DEFERRED`).
 

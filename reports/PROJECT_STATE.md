@@ -3,11 +3,11 @@
 ## Git Checkpoint
 
 - Branch: main
-- Current Checkpoint: `cd9c972cb18c0158807c47a260e21ddfca019427` (với memory checkpoint commit sắp tới)
+- Current Checkpoint: `12100a9292da398a00b4a71837615a20757650ca` (với phase 11 decision hardening commit sắp tới)
 - Base Phase 10 Implementation: `46b3b5ca7023f4b1c5e4633def1f0f8e16816602`
 - First Hardening Commit: `af165119efa9d2ed7c062a53eb10da2df757bc1a`
 - Latest Validated Phase 10 Implementation: `cd9c972cb18c0158807c47a260e21ddfca019427`
-- Phase 10 Implementation Base: `41b7a175394d41c8f39ff41615121f0f42a7a823`
+- Phase 11 Design Finalization Checkpoint: `12100a9292da398a00b4a71837615a20757650ca`
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening
@@ -15,7 +15,8 @@
 - Latest Validated Implementation Commit: `cd9c972cb18c0158807c47a260e21ddfca019427`
 - Commit message: `fix(asset): align assignment contract and error semantics`
 - Phase 10 Status: COMPLETED, AUDITED, HARDENED, AUTHORIZATION, CONCURRENCY AND TRANSACTION VALIDATED
-- Operational Documentation Checkpoint: reports/DECISIONS.md (D-046, D-047, D-048), reports/PHASE_10_REPORT.md, reports/PROJECT_STATE.md, reports/HANDOFF.md
+- Phase 11 Design Status: FINALIZED AND HARDENED (Decisions D-049, D-050)
+- Operational Documentation Checkpoint: reports/DECISIONS.md (D-046, D-047, D-048, D-049, D-050), reports/PHASE_10_REPORT.md, reports/PROJECT_STATE.md, reports/HANDOFF.md, reports/runbooks/V017_NOTIFICATION_IDEMPOTENCY_PLAN.md
 
 ## Validated Progress
 
@@ -231,18 +232,19 @@
 - DATA_INTEGRITY_ERROR_MAPPING_FALLBACK_LOW: Exception mapping cho task_assignments có thể nâng cấp sang trích xuất constraint PostgreSQL driver tương tự Asset module.
 - TEMPORARY_PASSWORD_FLOW_GAP: Luồng kích hoạt và endpoint thiết lập mật khẩu lần đầu tiếp tục hoãn.
 - TEAM_API_CONTRACT_GAP: Team REST controllers hoãn vì `06_API_CONTRACT.md` chưa định nghĩa endpoints.
-- DASHBOARD_AGGREGATED_API_GAP: DESIGN RESOLVED via Decision D-049 & docs/06_API_CONTRACT.md (Top 5 upcomingTasks & recentNotifications schema finalized; Project Dashboard deferred as PROJECT_DASHBOARD_PROJECTION_DEFERRED). Implementation pending Phase 11.
-- NOTIFICATION_IDEMPOTENCY_GAP: DESIGN RESOLVED via Decision D-049 (event_key VARCHAR(255) NOT NULL & uk_notifications_recipient_event; preflight runbook V017_NOTIFICATION_IDEMPOTENCY_PLAN.md created). Implementation pending V017 migration.
-- NOTIFICATION_EVENT_MATRIX_GAP: DESIGN RESOLVED via Decision D-049 & docs/02_USER_ROLES_AND_WORKFLOWS.md Section 8 (canonical matrix finalized).
+- DASHBOARD_AGGREGATED_API_GAP: DESIGN HARDENED via Decisions D-049 & D-050 & docs/06_API_CONTRACT.md (Top 5 upcomingTasks & recentNotifications schema finalized; aggregates strictly scoped to junction tables; Project Dashboard deferred as PROJECT_DASHBOARD_PROJECTION_DEFERRED). Implementation pending Phase 11.
+- NOTIFICATION_IDEMPOTENCY_GAP: DESIGN HARDENED via Decisions D-049 & D-050 (event_key VARCHAR(255) NOT NULL & uk_notifications_recipient_event; native INSERT ON CONFLICT DO NOTHING semantics; affected rows 1=created, 0=idempotent; preflight runbook V017_NOTIFICATION_IDEMPOTENCY_PLAN.md hardened with CONTROLLED DETERMINISTIC DATA BACKFILL). Implementation pending V017 migration.
+- NOTIFICATION_EVENT_MATRIX_GAP: DESIGN HARDENED via Decisions D-049 & D-050 & docs/02_USER_ROLES_AND_WORKFLOWS.md Section 8 (canonical matrix finalized with real endpoints, stable event keys, and recipient resolution algorithms).
+- NOTIFICATION_SCHEDULER_POLICY_GAP: DESIGN HARDENED via Decision D-050 (worksphere.notification.task-deadline-scan-delay PT15M, batch size 100, PostgreSQL advisory xact lock module key 1101, fixed Clock test harness).
 - NOTIFICATION_RETENTION_CLEANUP_DEFERRED: Phase 11 retains read notifications; auto-delete/cleanup scheduler deferred.
-- DASHBOARD_METRIC_SCOPE_GAP: DESIGN RESOLVED via Decision D-049 & docs/06_API_CONTRACT.md (personal dashboard strictly scoped to principal active assignment, requester/assignee SR, active project membership).
-- DASHBOARD_TIME_POLICY_GAP: DESIGN RESOLVED via Decision D-049 (overdue: due_date < now; dueSoon: now <= due_date < now + 72 hours, mutually exclusive, Clock injected).
+- DASHBOARD_METRIC_SCOPE_GAP: DESIGN HARDENED via Decisions D-049 & D-050 & docs/06_API_CONTRACT.md (personal dashboard strictly scoped to principal active assignment via task_assignments, requester/assignee SR via service_assignments, active project membership via project_members).
+- DASHBOARD_TIME_POLICY_GAP: DESIGN HARDENED via Decisions D-049 & D-050 (overdue: due_date < now; dueSoon: now <= due_date < now + 72 hours, mutually exclusive, Clock injected).
 - PUT_ME_PASSWORD_TEST_GAP: Test coverage cho luồng đổi mật khẩu người dùng hiện tại tiếp tục hoãn.
 
 ## Next Permitted Phase
 
 - **Giai đoạn 11: Notification và Dashboard** (theo đúng `docs/08_DEVELOPMENT_ROADMAP.md` Section 15, P1).
-- Canonical decisions, event matrix, dashboard projections and V017 plan finalized (Decision D-049).
+- Canonical decisions, event matrix, dashboard projections, query scopes, idempotent insert semantics, and V017 plan finalized and hardened (Decisions D-049, D-050).
 - Không bắt đầu triển khai Phase 11 source trong task quyết định hiện tại.
 - Không bắt đầu triển khai React Native / mobile source trong giai đoạn này.
 
@@ -255,11 +257,8 @@
 
 ## Recent Git Log
 
+- 12100a9 docs(design): finalize phase 11 notification and dashboard policies
+- 5558df8 docs(agent): checkpoint phase 10 completion
 - cd9c972 fix(asset): align assignment contract and error semantics
 - af16511 fix(asset): harden assignment and return consistency
 - 46b3b5c feat(asset): implement asset module
-- 41b7a17 docs(design): finalize phase 10 asset policies
-- f04e5be docs(agent): checkpoint phase 9 completion
-- 2034c4a fix(service-request): harden concurrency and rollback behavior
-- e189306 feat(service-request): implement service request module
-- fb8f41b fix(project): enforce member-scoped project reads

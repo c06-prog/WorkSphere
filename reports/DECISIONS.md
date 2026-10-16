@@ -774,3 +774,52 @@ Current operating mode:
       - `NOTIFICATION_NOT_FOUND` (HTTP 404)
       - `NOTIFICATION_TYPE_INVALID` (HTTP 400)
       - `NOTIFICATION_PREFERENCE_DUPLICATE_TYPE` (HTTP 400)
+
+## D-050: Làm cứng các quyết định kiến trúc, quy tắc phân vùng CSDL và ma trận sự kiện Notification/Dashboard trước triển khai Phase 11 (Phase 11 Pre-Implementation Hardening)
+
+- **Ngày quyết định**: 2026-10-16.
+- **Phạm vi**: Backend Module Notification và Reporting/Dashboard (Phase 11) - Kiểm toán và làm cứng các quyết định kiến trúc trước khi triển khai mã nguồn.
+- **Tình trạng**: APPROVED / CANONICAL HARDENED.
+- **Bối cảnh**: Sau khi chốt các chính sách sơ bộ tại D-049, đợt kiểm toán làm cứng đối chiếu trực tiếp mã nguồn controller và CSDL thực tế nhằm loại trừ tuyệt đối các giả định sai về endpoint, tên cột, cơ chế xử lý ngoại lệ và điều phối scheduler.
+- **Nội dung quyết định**:
+  1. **Đồng bộ hóa 100% Endpoint thực tế trong Event Matrix**:
+     - Phân công Task: `POST /api/v1/tasks/{taskId}/assignments` (hoặc `POST /api/v1/tasks` khi tạo task kèm assignee). Không dùng `PUT /tasks/{id}/assign`.
+     - Phân công Service Request: `POST /api/v1/service-requests/{requestId}/assignments`. Không dùng `PUT /service-requests/{id}/assign`.
+     - Bình luận Task: `POST /api/v1/tasks/{taskId}/comments`.
+     - Bình luận Service Request: `POST /api/v1/service-requests/{requestId}/comments`.
+     - Cập nhật trạng thái Task: `PUT /api/v1/tasks/{taskId}/status`.
+     - Cập nhật trạng thái Service Request: `PUT /api/v1/service-requests/{requestId}/status`.
+  2. **Chuẩn hóa định dạng eventKey dựa trên bản ghi bất biến (Event Key Stability)**:
+     - `TASK_ASSIGNED:{taskId}:{assignmentId}`
+     - `TASK_STATUS_CHANGED:{taskId}:{statusHistoryId}` (sử dụng ID bản ghi từ bảng `task_status_histories`)
+     - `TASK_DUE_SOON:{taskId}:{dueAtEpochMilli}` (sử dụng epoch milliseconds của `due_date`)
+     - `TASK_OVERDUE:{taskId}:{dueAtEpochMilli}` (sử dụng epoch milliseconds của `due_date`)
+     - `SERVICE_REQUEST_UPDATED:{requestId}:ASSIGNED:{assignmentId}`
+     - `SERVICE_REQUEST_UPDATED:{requestId}:{statusHistoryId}` (sử dụng ID bản ghi từ bảng `service_status_histories`)
+     - `ASSET_ASSIGNED:{assetId}:{assignmentId}`
+     - `COMMENT_ADDED:{referenceType}:{commentId}`
+     - `PROJECT_MEMBER_ADDED:{projectId}:{memberId}`
+     - Mọi eventKey đều có độ dài $\le 255$ ký tự.
+  3. **Cơ chế chèn CSDL lũy đẳng an toàn (Idempotent Native Insert Semantics)**:
+     - Nghiêm cấm dùng việc bắt ngoại lệ vi phạm unique constraint (`PSQLException: 23505`) làm control flow trong transaction nghiệp vụ.
+     - Sử dụng native SQL: `INSERT INTO notifications (...) VALUES (...) ON CONFLICT (recipient_id, event_key) DO NOTHING;`.
+     - Repository method trả về affected rows: `1` (thành công), `0` (duplicate success - không ném lỗi và không rollback nghiệp vụ gốc).
+  4. **Quy tắc khi tùy chọn thông báo bị tắt (Preference-Disabled Semantics)**:
+     - Nếu `inAppEnabled = false` tại thời điểm phát sinh sự kiện, không tạo row trong `notifications`. Sự kiện được coi là đã xử lý xong; không giữ hàng đợi pending và không backfill khi bật lại tùy chọn.
+  5. **Chính sách điều phối Scheduler định kỳ (Scheduler Policy)**:
+     - Quét `TASK_DUE_SOON` và `TASK_OVERDUE`.
+     - Cấu hình: scan delay `worksphere.notification.task-deadline-scan-delay` (default: `PT15M`), batch size `worksphere.notification.task-deadline-batch-size` (default: `100`).
+     - Sắp xếp ổn định: `ORDER BY t.due_date ASC, t.id ASC`.
+     - Điều phối đa instance: Sử dụng PostgreSQL transaction advisory lock với module key riêng biệt `1101` (`SELECT pg_try_advisory_xact_lock(1101, 1)`). Nếu không lấy được khóa, instance bỏ qua vòng quét.
+     - Profile kiểm thử: Tắt scheduler tự động; integration test gọi trực tiếp scanner với mock `Clock`.
+  6. **Thuật toán xác định người nhận khi đổi trạng thái Task**:
+     - Danh sách gồm: Active assignee (`task_assignments.is_active = TRUE`), Task reporter (`tasks.reporter_id`), và các thành viên dự án đang hoạt động (`project_members.is_active = TRUE`) có `project_role IN ('PROJECT_MANAGER', 'TEAM_LEADER')`.
+     - Deduplicate tập UUID; loại trừ actor (`principal.userId()`); kiểm tra `inAppEnabled` trước khi chèn thông báo.
+  7. **Phân vùng truy vấn Dashboard chuẩn xác theo CSDL thực tế**:
+     - Task Scope: `EXISTS (SELECT 1 FROM task_assignments ta WHERE ta.task_id = t.id AND ta.assignee_id = :principalId AND ta.is_active = TRUE)` và `t.is_deleted = false`. Task summary và `upcomingTasks` dùng chung scope này.
+     - Service Request Scope: `sr.requester_id = :principalId OR EXISTS (SELECT 1 FROM service_assignments sa WHERE sa.request_id = sr.id AND sa.assignee_id = :principalId AND sa.is_active = TRUE)` và `sr.is_deleted = false`. Sử dụng `COUNT(DISTINCT sr.id)` tránh đếm trùng.
+     - Project Scope: `pm.user_id = :principalId AND pm.is_active = TRUE` trên các dự án không soft-deleted. ADMIN tại `/dashboard/me` không bypass membership.
+  8. **Quy trình di trú V017**:
+     - Được định danh chính xác là: `CONTROLLED DETERMINISTIC DATA BACKFILL`.
+     - Sử dụng deterministic legacy key: `LEGACY_MIGRATION:{notificationId}` bảo đảm zero collision.
+     - Giữ nguyên toàn bộ 3 index hiện hữu (`idx_notifications_recipient_id`, `idx_notifications_recipient_read`, `idx_notifications_created_at`). Bổ sung `uk_notifications_recipient_event` và `idx_notifications_recipient_created_at`.

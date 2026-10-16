@@ -1421,6 +1421,11 @@ uk_notifications_recipient_event (recipient_id, event_key) [Bổ sung qua V017]
 idx_notifications_recipient_created_at (recipient_id, created_at DESC) [Bổ sung qua V017]
 ```
 
+*Đánh giá chỉ mục Phase 11*:
+- Giữ nguyên toàn bộ 3 chỉ mục hiện hữu từ V010 (`idx_notifications_recipient_id`, `idx_notifications_recipient_read`, `idx_notifications_created_at`).
+- V017 bổ sung `uk_notifications_recipient_event` và `idx_notifications_recipient_created_at`.
+- Chưa bổ sung index phức hợp `(recipient_id, is_read, created_at DESC)` trong Phase 11 để tránh tối ưu hóa phỏng đoán trước khi có dữ liệu đo đạc query plan thực tế.
+
 ### 11.2. Bảng `notification_preferences`
 
 Mục đích:
@@ -1445,9 +1450,10 @@ Ràng buộc:
 UNIQUE (user_id, notification_type)
 ```
 
-*Ghi chú về phân phối và lưu trữ Phase 11*:
+*Ghi chú về phân phối, cơ chế chèn và lưu trữ Phase 11*:
 - Phase 11 sử dụng In-app Database Notification Center.
-- `in_app_enabled` được kiểm tra trước khi ghi nhận thông báo.
+- Cơ chế chèn CSDL: Sử dụng PostgreSQL native `INSERT ... ON CONFLICT (recipient_id, event_key) DO NOTHING`. Trả về `1` (thành công) hoặc `0` (lũy đẳng/duplicate success), không dùng bắt lỗi unique violation làm control flow.
+- Nếu `in_app_enabled = false` tại thời điểm sự kiện, hệ thống bỏ qua và không tạo bản ghi thông báo; không giữ hàng đợi pending và không backfill khi bật lại tùy chọn.
 - `push_enabled` và `email_enabled` lưu trữ tùy chọn người dùng cho các pha tương lai; chưa tạo side-effect gửi push/email ở Phase 11.
 - Không tự động xóa hoặc lập lịch dọn dẹp thông báo trong Phase 11 (`NOTIFICATION_RETENTION_CLEANUP_DEFERRED`).
 

@@ -33,10 +33,11 @@ Trong kiến trúc hệ thống WorkSphere ([02_USER_ROLES_AND_WORKFLOWS.md](fil
 
 ---
 
-## B. Đánh giá rủi ro & Chính sách Backfill an toàn (Fail-Safe)
+## B. Đánh giá rủi ro & Cơ chế Backfill dữ liệu có kiểm soát (Controlled Deterministic Data Backfill)
 
 1. **Rủi ro khi thêm cột `NOT NULL`**:
-   - Nếu bảng `notifications` đã có dữ liệu hiện hữu, câu lệnh `ALTER TABLE notifications ADD COLUMN event_key VARCHAR(255) NOT NULL;` sẽ lập tức thất bại nếu không có default hoặc backfill.
+   - Nếu bảng `notifications` đã có dữ liệu hiện hữu, câu lệnh `ALTER TABLE notifications ADD COLUMN event_key VARCHAR(255) NOT NULL;` sẽ lập tức thất bại.
+   - Do đó, quy trình di trú V017 được phân loại chính xác là: **`CONTROLLED DETERMINISTIC DATA BACKFILL`** (thực hiện cập nhật dữ liệu xác định có kiểm soát, không tuyên bố là zero data modification).
 2. **Quy trình di trú an toàn nhiều bước (Multi-Step Safe Migration)**:
    - **Bước 1**: Thêm cột `event_key VARCHAR(255) NULL` (cho phép NULL ban đầu).
    - **Bước 2**: Thực hiện backfill xác định (deterministic backfill) cho các dòng dữ liệu cũ nếu có:
@@ -45,41 +46,56 @@ Trong kiến trúc hệ thống WorkSphere ([02_USER_ROLES_AND_WORKFLOWS.md](fil
      SET event_key = 'LEGACY_MIGRATION:' || id::text
      WHERE event_key IS NULL;
      ```
+     Do `id` là khóa chính UUID duy nhất toàn cục, tiền tố `LEGACY_MIGRATION:` kết hợp với `id` bảo đảm 100% không bao giờ xảy ra va chạm (zero collision).
    - **Bước 3**: Ép buộc ràng buộc `NOT NULL`:
      ```sql
      ALTER TABLE notifications ALTER COLUMN event_key SET NOT NULL;
      ```
-   - **Bước 4**: Tạo Unique Index `uk_notifications_recipient_event`.
-   - **Bước 5**: Tạo Composite Index `idx_notifications_recipient_created_at`.
+   - **Bước 4**: Tạo Unique Index `uk_notifications_recipient_event` trên `(recipient_id, event_key)`.
+   - **Bước 5**: Tạo Composite Index `idx_notifications_recipient_created_at` trên `(recipient_id, created_at DESC)`.
 3. **Cơ chế rollback an toàn của Flyway**:
-   - Toàn bộ script migration V017 được thực thi trong một transaction duy nhất. Nếu có lỗi, transaction tự động rollback, bảo đảm dữ liệu hiện tại nguyên vẹn.
+   - PostgreSQL hỗ trợ transactional DDL/DML. Toàn bộ kịch bản migration V017 được bao bọc trong một transaction duy nhất. Nếu bất kỳ bước nào gặp lỗi, toàn bộ thay đổi sẽ rollback tức thì, giữ nguyên hiện trạng CSDL trước V017.
 
 ---
 
-## C. Truy vấn tiền kiểm chỉ đọc (Read-Only Pre-Flight Queries)
+## C. Truy vấn tiền kiểm và hậu kiểm chỉ đọc (Read-Only Verification Queries)
 
-Trước khi chạy Flyway migration V017, DBA/DevOps bắt buộc thực thi các truy vấn sau:
+Trước và trong khi chạy Flyway migration V017, DBA/DevOps bắt buộc thực thi các truy vấn sau:
 
-### 1. Tiền kiểm số lượng bản ghi hiện hữu:
+### 1. Tiền kiểm số lượng bản ghi tổng thể:
 ```sql
 SELECT COUNT(*) AS total_notifications FROM notifications;
 ```
-*(Nếu kết quả = 0: Môi trường hoàn toàn sạch, việc áp dụng migration diễn ra tức thì).*
+*(Nếu kết quả = 0: Môi trường hoàn toàn sạch, migration áp dụng tức thời).*
 
-### 2. Tiền kiểm dữ liệu trùng lặp nếu bảng đã có cột `event_key`:
+### 2. Tiền kiểm số lượng bản ghi chưa có `event_key`:
+```sql
+SELECT COUNT(*) AS null_event_keys
+FROM notifications
+WHERE event_key IS NULL;
+```
+
+### 3. Hậu kiểm sau khi add cột và chạy lệnh backfill (Expected: 0):
+```sql
+SELECT COUNT(*) AS remaining_null_keys
+FROM notifications
+WHERE event_key IS NULL;
+```
+*(Bắt buộc kết quả = 0 trước khi thực thi `ALTER COLUMN event_key SET NOT NULL`).*
+
+### 4. Hậu kiểm va chạm khóa trùng lặp (Collision Check - Expected: 0 rows):
 ```sql
 SELECT
     recipient_id,
     event_key,
     COUNT(*) AS duplicate_count
 FROM notifications
-WHERE event_key IS NOT NULL
 GROUP BY recipient_id, event_key
 HAVING COUNT(*) > 1;
 ```
-*(Nếu có bất kỳ dòng nào trả về: Dừng di trú ngay lập tức - NO-GO).*
+*(Bắt buộc kết quả trả về 0 dòng - không có trùng lặp trước khi tạo Unique Index).*
 
-### 3. Tiền kiểm trạng thái chỉ mục hiện hữu:
+### 5. Tiền kiểm trạng thái chỉ mục hiện hữu:
 ```sql
 SELECT indexname, indexdef
 FROM pg_indexes

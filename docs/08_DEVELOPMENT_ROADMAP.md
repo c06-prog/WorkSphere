@@ -794,8 +794,10 @@ P1
 - Notification Entity và Repositories.
 - Di trú CSDL: Bản di trú `V017__add_notification_idempotency_and_query_indexes.sql` bổ sung cột `event_key` và unique index `uk_notifications_recipient_event` chống trùng lặp, cùng composite index `idx_notifications_recipient_created_at`.
 - Mô hình phân phối: In-app Database Notification Center. Kênh Push/Email lưu trữ preference, hoãn delivery side-effect (`push_enabled`, `email_enabled`).
-- Tạo thông báo từ hành động nghiệp vụ (Project Member, Task Assigned/Status/DueSoon/Overdue, Service Request Assigned/Status, Asset Assigned, Comment).
-- Cơ chế lũy đẳng (Idempotency) dựa trên `(recipient_id, event_key)`.
+- Tạo thông báo từ hành động nghiệp vụ thực tế (Project Member `POST /members`, Task Assigned `POST /assignments`, Task Status `PUT /status`, Service Request Assigned `POST /assignments`, Service Request Status `PUT /status`, Asset Assigned `POST /assignments`, Comment `POST /comments`).
+- Cơ chế lũy đẳng (Idempotency): Native `INSERT ... ON CONFLICT (recipient_id, event_key) DO NOTHING` trả về affected rows (1: tạo mới, 0: duplicate success; không dùng exception làm control flow).
+- Xử lý khi tùy chọn tắt: `inAppEnabled = false` bỏ qua không ghi CSDL, không lưu pending, không backfill.
+- Scheduler Scanner Policy: Quét định kỳ hạn chót (`TASK_DUE_SOON`, `TASK_OVERDUE`), điều phối đa thực thể bằng PostgreSQL advisory lock key `1101`, default scan delay `PT15M`, batch size `100`.
 - Danh sách thông báo (`GET /notifications`).
 - Đánh dấu đã đọc (`PUT /notifications/{id}/read` - trả về 404 nếu không sở hữu).
 - Đánh dấu tất cả đã đọc (`PUT /notifications/read-all`).
@@ -807,24 +809,24 @@ P1
 ### 15.3. Dashboard
 
 - Dashboard cá nhân (`GET /dashboard/me`) cho mọi vai trò (kể cả Admin):
-  - Task Summary (chỉ task được giao cho principal: `todo`, `inProgress`, `inReview`, `completed`, `overdue`, `dueSoon`).
-  - Project Summary (chỉ dự án principal là thành viên hoạt động: `active`, `onHold`).
-  - Service Request Summary (yêu cầu do principal tạo hoặc được giao xử lý: `open`, `inProgress`, `waitingForUser`, `resolved`).
-  - Danh sách công việc sắp đến hạn (`upcomingTasks`: Top 5, hạn trong vòng 72 giờ, sắp xếp `dueDate ASC, id ASC`).
-  - Danh sách thông báo gần nhất (`recentNotifications`: Top 5, sắp xếp `createdAt DESC, id DESC`).
+  - Task Summary (chỉ task có active assignment cho principal qua `task_assignments`: `todo`, `inProgress`, `inReview`, `completed`, `overdue`, `dueSoon`).
+  - Project Summary (chỉ dự án không soft-deleted mà principal là thành viên hoạt động qua `project_members`: `active`, `onHold`).
+  - Service Request Summary (yêu cầu do principal tạo hoặc có active assignment qua `service_assignments`: `open`, `inProgress`, `waitingForUser`, `resolved`).
+  - Danh sách công việc sắp đến hạn (`upcomingTasks`: Top 5, cùng scope active assignment, hạn trong vòng 72 giờ, sắp xếp `dueDate ASC, id ASC`).
+  - Danh sách thông báo gần nhất (`recentNotifications`: Top 5, của principal, sắp xếp `createdAt DESC, id DESC`).
 - Hoãn triển khai Dashboard dự án (`PROJECT_DASHBOARD_PROJECTION_DEFERRED`).
 
 ### 15.4. Kiểm thử
 
-- Tạo thông báo khi giao task và đổi trạng thái.
+- Tạo thông báo khi giao task và đổi trạng thái với thuật toán resolution chuẩn (active assignee, reporter, PM/Leaders; loại trừ actor).
 - Phân quyền thông báo: người dùng chỉ xem và cập nhật thông báo của chính mình (chặn truy cập chéo bằng 404).
-- Kiểm thử lũy đẳng: ghi trùng sự kiện không sinh thêm bản ghi.
-- Dashboard tính toán chính xác số liệu theo phân quyền CSDL; cô lập dữ liệu giữa các người dùng.
+- Kiểm thử lũy đẳng: ghi trùng sự kiện qua `ON CONFLICT DO NOTHING` không sinh thêm bản ghi và không rollback nghiệp vụ gốc.
+- Dashboard tính toán chính xác số liệu theo phân quyền CSDL (`task_assignments`, `service_assignments`, `project_members`); cô lập dữ liệu giữa các người dùng.
 - Kiểm thử ngưỡng thời gian `dueSoon` (72 giờ) và `overdue` bằng mock Clock.
 
 ### 15.5. Điều kiện hoàn thành
 
-- Di trú V017 áp dụng thành công.
+- Di trú V017 áp dụng thành công theo quy trình Controlled Deterministic Data Backfill.
 - Notification API hoạt động đầy đủ, đúng contract.
 - Dashboard cá nhân hoạt động với số liệu khớp dữ liệu thực tế.
 - Quyền dữ liệu và bảo mật được thực thi 100% tại tầng CSDL.

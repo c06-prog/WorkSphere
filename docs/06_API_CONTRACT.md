@@ -716,9 +716,9 @@ AUTHENTICATED
 
 Quy tắc phân quyền và phạm vi dữ liệu:
 - Endpoint luôn trả về Dashboard cá nhân cho mọi vai trò (kể cả `ADMIN`).
-- `tasks`: Chỉ đếm các công việc đang được phân công trực tiếp cho người dùng hiện tại (`assignee_id = principal.userId` và `is_deleted = false`). Không đếm toàn bộ công việc của dự án chỉ vì người dùng có vai trò PM hay Admin.
-- `serviceRequests`: Đếm các yêu cầu dịch vụ do người dùng tạo (`requester_id = principal.userId`) hoặc đang được phân công xử lý trực tiếp (`assigned_to = principal.userId`). Không đếm trùng lặp nếu người dùng vừa là người tạo vừa là người xử lý.
-- `projects`: Chỉ đếm các dự án mà người dùng hiện tại đang là thành viên hoạt động (`user_id = principal.userId` trong `project_members`).
+- `tasks`: Chỉ đếm các công việc đang có phân công hoạt động trực tiếp cho người dùng hiện tại qua bảng `task_assignments`: `EXISTS (SELECT 1 FROM task_assignments ta WHERE ta.task_id = t.id AND ta.assignee_id = :principalId AND ta.is_active = TRUE)` và `t.is_deleted = false`. Cả phần task summary và `upcomingTasks` đều sử dụng cùng phạm vi active assignment này. Không đếm toàn bộ công việc của dự án chỉ vì người dùng có vai trò PM hay Admin.
+- `serviceRequests`: Đếm các yêu cầu dịch vụ do người dùng tạo (`sr.requester_id = :principalId`) HOẶC đang được phân công xử lý trực tiếp qua bảng `service_assignments`: `EXISTS (SELECT 1 FROM service_assignments sa WHERE sa.request_id = sr.id AND sa.assignee_id = :principalId AND sa.is_active = TRUE)` và `sr.is_deleted = false`. Sử dụng `COUNT(DISTINCT sr.id)` để tuyệt đối không đếm trùng lặp nếu người dùng vừa là người tạo vừa là người xử lý.
+- `projects`: Chỉ đếm các dự án không bị xóa mềm (`p.is_deleted = false`) mà người dùng hiện tại đang là thành viên hoạt động (`EXISTS (SELECT 1 FROM project_members pm WHERE pm.project_id = p.id AND pm.user_id = :principalId AND pm.is_active = TRUE)`). `ADMIN` tại `/dashboard/me` không bypass điều kiện thành viên này. Trạng thái dự án: `active` tương ứng `p.status = 'ACTIVE'`, `onHold` tương ứng `p.status = 'ON_HOLD'`.
 - `recentNotifications`: Chỉ trả về thông báo gửi cho chính người dùng (`recipient_id = principal.userId`).
 - Nếu cần Dashboard quản trị toàn hệ thống, tính năng sẽ được thiết kế ở endpoint riêng biệt và không đưa vào `/dashboard/me`.
 
@@ -729,8 +729,8 @@ Quy tắc thời gian (Time Policy):
 - `overdue` và `dueSoon` là hai tập hợp không giao nhau (không đếm trùng).
 
 Quy tắc Projection danh sách:
-- `upcomingTasks`: Danh sách tối đa 5 công việc (Top 5) sắp đến hạn của người dùng (`now <= due_date`, chưa kết thúc), sắp xếp theo `dueDate ASC`, tie-breaker `id ASC`.
-- `recentNotifications`: Danh sách tối đa 5 thông báo (Top 5) mới nhất của người dùng, sắp xếp theo `createdAt DESC`, tie-breaker `id DESC`.
+- `upcomingTasks`: Danh sách tối đa 5 công việc (Top 5) sắp đến hạn của người dùng, sử dụng cùng phạm vi active assignment như summary, chỉ lấy task thuộc nhóm `dueSoon` (`now <= due_date < now + 72 hours`), loại trừ task đã kết thúc (`status NOT IN ('COMPLETED', 'CANCELLED')`) và task đã xóa mềm (`is_deleted = false`), sắp xếp theo `dueDate ASC`, tie-breaker `id ASC`.
+- `recentNotifications`: Danh sách tối đa 5 thông báo (Top 5) mới nhất của người dùng (`recipient_id = principal.userId`), sắp xếp theo `createdAt DESC`, tie-breaker `id DESC`.
 - Khi không có dữ liệu, trả về mảng rỗng `[]`.
 
 Response:
