@@ -22,6 +22,7 @@ import com.worksphere.asset.infrastructure.persistence.AssetRepository;
 import com.worksphere.identity.domain.User;
 import com.worksphere.identity.domain.UserStatus;
 import com.worksphere.identity.infrastructure.persistence.UserRepository;
+import com.worksphere.service_request.domain.ServiceAssignment;
 import com.worksphere.service_request.domain.ServiceRequest;
 import com.worksphere.service_request.infrastructure.persistence.ServiceRequestRepository;
 import com.worksphere.shared.exception.BusinessRuleException;
@@ -31,6 +32,7 @@ import com.worksphere.shared.security.WorkSphereUserPrincipal;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import jakarta.persistence.criteria.Subquery;
+import java.lang.reflect.Method;
 import java.sql.SQLException;
 import java.time.Clock;
 import java.time.Instant;
@@ -167,7 +169,19 @@ public class AssetApplicationService {
             preds.add(cb.isFalse(root.get("deleted")));
             preds.add(cb.equal(root.get("assetId"), id));
             if (!isAdmin) {
-                preds.add(cb.equal(root.get("requesterId"), principal.userId()));
+                UUID callerId = principal.userId();
+                Subquery<Integer> sub = query.subquery(Integer.class);
+                Root<ServiceAssignment> sa = sub.from(ServiceAssignment.class);
+                sub.select(cb.literal(1))
+                        .where(
+                                cb.equal(sa.get("requestId"), root.get("id")),
+                                cb.equal(sa.get("assigneeId"), callerId),
+                                cb.isTrue(sa.get("active"))
+                        );
+                preds.add(cb.or(
+                        cb.equal(root.get("requesterId"), callerId),
+                        cb.exists(sub)
+                ));
             }
             query.orderBy(cb.desc(root.get("createdAt")));
             return cb.and(preds.toArray(new Predicate[0]));
@@ -613,13 +627,14 @@ public class AssetApplicationService {
         Throwable cause = ex.getCause();
         while (cause != null) {
             if (cause instanceof SQLException sqlEx) {
-                if ("23505".equals(sqlEx.getSQLState())
-                        && sqlEx.getMessage() != null
-                        && sqlEx.getMessage().contains("uk_asset_assignments_one_active")) {
-                    throw new BusinessRuleException(
-                            "ASSET_ASSIGNMENT_CONFLICT",
-                            "Tài sản đang được cấp phát đồng thời hoặc trạng thái phân công đã thay đổi"
-                    );
+                if ("23505".equals(sqlEx.getSQLState())) {
+                    String constraint = extractConstraintName(sqlEx);
+                    if (constraint.contains("uk_asset_assignments_one_active")) {
+                        throw new BusinessRuleException(
+                                "ASSET_ASSIGNMENT_CONFLICT",
+                                "Tài sản đang được cấp phát đồng thời hoặc trạng thái phân công đã thay đổi"
+                        );
+                    }
                 }
             }
             cause = cause.getCause();
@@ -631,13 +646,13 @@ public class AssetApplicationService {
         while (cause != null) {
             if (cause instanceof SQLException sqlEx) {
                 String sqlState = sqlEx.getSQLState();
-                String msg = sqlEx.getMessage() != null ? sqlEx.getMessage() : "";
                 if ("23505".equals(sqlState)) {
-                    if (msg.contains("uk_assets_asset_code")) {
+                    String constraint = extractConstraintName(sqlEx);
+                    if (constraint.contains("uk_assets_asset_code")) {
                         throw new BusinessRuleException("ASSET_CODE_ALREADY_EXISTS",
                                 "Mã tài sản đã tồn tại trong hệ thống");
                     }
-                    if (msg.contains("uk_assets_serial_number")) {
+                    if (constraint.contains("uk_assets_serial_number")) {
                         throw new BusinessRuleException("ASSET_SERIAL_ALREADY_EXISTS",
                                 "Số serial đã tồn tại trong hệ thống");
                     }
@@ -645,6 +660,24 @@ public class AssetApplicationService {
             }
             cause = cause.getCause();
         }
+    }
+
+    private String extractConstraintName(SQLException sqlEx) {
+        try {
+            Method getServerErrorMessage = sqlEx.getClass().getMethod("getServerErrorMessage");
+            Object serverError = getServerErrorMessage.invoke(sqlEx);
+            if (serverError != null) {
+                Method getConstraint = serverError.getClass().getMethod("getConstraint");
+                Object constraint = getConstraint.invoke(serverError);
+                if (constraint != null) {
+                    return constraint.toString();
+                }
+            }
+        } catch (Exception ignored) {
+            // Fall back to SQL exception message
+        }
+        String msg = sqlEx.getMessage();
+        return msg != null ? msg : "";
     }
 
     private AssetAssignmentResponse toAssignmentResponse(

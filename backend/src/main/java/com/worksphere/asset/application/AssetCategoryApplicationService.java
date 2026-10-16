@@ -192,12 +192,32 @@ public class AssetCategoryApplicationService {
         Throwable cause = ex.getRootCause();
         if (cause instanceof SQLException sqlEx) {
             String sqlState = sqlEx.getSQLState();
-            String message = sqlEx.getMessage() != null ? sqlEx.getMessage() : "";
-            if ("23505".equals(sqlState) && message.contains("uk_asset_categories_code")) {
-                throw new BusinessRuleException("ASSET_CATEGORY_CODE_ALREADY_EXISTS",
-                        "Mã loại tài sản đã tồn tại trong hệ thống");
+            if ("23505".equals(sqlState)) {
+                String constraint = extractConstraintName(sqlEx);
+                if (constraint.contains("uk_asset_categories_code")) {
+                    throw new BusinessRuleException("ASSET_CATEGORY_CODE_ALREADY_EXISTS",
+                            "Mã loại tài sản đã tồn tại trong hệ thống");
+                }
             }
         }
+    }
+
+    private String extractConstraintName(SQLException sqlEx) {
+        try {
+            java.lang.reflect.Method getServerErrorMessage = sqlEx.getClass().getMethod("getServerErrorMessage");
+            Object serverError = getServerErrorMessage.invoke(sqlEx);
+            if (serverError != null) {
+                java.lang.reflect.Method getConstraint = serverError.getClass().getMethod("getConstraint");
+                Object constraint = getConstraint.invoke(serverError);
+                if (constraint != null) {
+                    return constraint.toString();
+                }
+            }
+        } catch (Exception ignored) {
+            // Fall back to message
+        }
+        String message = sqlEx.getMessage();
+        return message != null ? message : "";
     }
 
     private AssetCategoryResponse toResponse(AssetCategory category) {

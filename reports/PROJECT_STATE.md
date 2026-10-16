@@ -3,19 +3,17 @@
 ## Git Checkpoint
 
 - Branch: main
-- Current Checkpoint: `2034c4aa8fd1fc6d0720a8b8349868785158f4a6`
-- Latest Validated Implementation: `2034c4aa8fd1fc6d0720a8b8349868785158f4a6`
-- Phase 9 Hardening Commit: `2034c4aa8fd1fc6d0720a8b8349868785158f4a6`
-- Phase 9 Implementation Base: `e189306aa4d4a2f6700014d165f07d452d1cb16e`
+- Current Checkpoint: `46b3b5ca7023f4b1c5e4633def1f0f8e16816602`
+- Latest Implementation Commit: `46b3b5ca7023f4b1c5e4633def1f0f8e16816602`
+- Phase 10 Implementation Base: `41b7a175394d41c8f39ff41615121f0f42a7a823`
 - Working tree at checkpoint: clean
 
-## Latest Validated Implementation
+## Latest Implementation & Hardening
 
-- Commit: `2034c4aa8fd1fc6d0720a8b8349868785158f4a6`
-- Commit message: `fix(service-request): harden concurrency and rollback behavior`
-- Hardening Base: `2034c4aa8fd1fc6d0720a8b8349868785158f4a6`
-- Implementation Base: `e189306aa4d4a2f6700014d165f07d452d1cb16e`
-- Phase 9 Report Checkpoint: `reports/PHASE_09_REPORT.md`
+- Implementation Commit: `46b3b5ca7023f4b1c5e4633def1f0f8e16816602`
+- Commit message: `feat(asset): implement asset module`
+- Phase 10 Hardening Status: COMPLETED, AUDITED, HARDENED
+- Phase 10 Report Checkpoint: `reports/PHASE_10_REPORT.md`
 
 ## Validated Progress
 
@@ -120,6 +118,16 @@
     - Single rating per request enforced by unique constraint `service_ratings.request_id`.
     - Concurrent duplicate mapping to `SERVICE_RATING_ALREADY_EXISTS` (HTTP 409).
 
+- Phase 10 (Asset Management Module): COMPLETED, AUDITED, HARDENED, CONCURRENCY AND TRANSACTION VALIDATED
+  - Category: Authenticated active list (`GET /api/v1/asset-categories`), admin pagination, create with trim/uppercase normalization (`^[A-Z0-9_]{2,50}$`), in-use check on AVAILABLE and RETIRED assets (`ASSET_CATEGORY_IN_USE`, 400), optimistic locking (`OPTIMISTIC_LOCK_CONFLICT`, 409).
+  - Asset Core: Create with initial AVAILABLE status, code normalization (`^[A-Z0-9][A-Z0-9_-]{1,49}$`), duplicate code/serial rejection (409), status transition matrix, RETIRED terminal state.
+  - Assignment & Concurrency: Pessimistic locking + V016 partial unique index, no direct reassignment, controlled concurrency (5 rounds x 2 workers on PostgreSQL Testcontainers) with strict canonical assertions (winner 201, loser 400 or 409, 0 500s).
+  - Return & Rollback: Selectable resultingAssetStatus (`AVAILABLE`, `MAINTENANCE`, `BROKEN`, `RETIRED`), resulting status `ASSIGNED` rejected (400), ACID rollback verified on PostgreSQL via trigger failure injection.
+  - Read Scoping: Query-level JPA Specification subqueries (Admin global scope vs non-admin active assigned scope), my-assets caller locked.
+  - Related Service Requests: Projection in detail matches Phase 9 authorization (Admin sees all non-deleted, non-admin sees if requester OR active assignee; soft-deleted excluded).
+  - Repair History: Immutable audit record (405 on PUT/DELETE), SR reference validation, no auto status change.
+  - Migration V016: 8 tests in `V016MigrationTest` verifying clean migration V001-V016, constraints, indexes, and preflight NO-GO rollback with zero data loss.
+
 ## Latest Evidence
 
 - Host runtime: Oracle JDK 27
@@ -127,60 +135,43 @@
 - Maven: 3.9.16
 - Spring Boot: 4.1.1 (verified directly from backend/pom.xml)
 - PostgreSQL: postgres:15-alpine via Testcontainers
-- Full backend suite: 210/210 PASS (183 regression + 27 Phase 9 tests)
+- Full backend suite: 259/259 PASS (210 regression + 49 Phase 10 tests)
   - 0 failures, 0 errors, 0 skipped
   - Maven execution: BUILD SUCCESS (exit code 0)
-- Phase 9 test suites:
-  - ServiceCategoryMockMvcTest: 10/10 PASS
-  - ServiceRequestMockMvcTest: 17/17 PASS
+- Phase 10 test suites (49 tests):
+  - `V016MigrationTest`: 8/8 PASS
+  - `AssetCategoryMockMvcTest`: 9/9 PASS
+  - `AssetCoreMockMvcTest`: 13/13 PASS
+  - `AssetAssignmentAndConcurrencyMockMvcTest`: 10/10 PASS (hardened concurrency assertions & return rollback test)
+  - `AssetRepairHistoryMockMvcTest`: 7/7 PASS
+  - `AssetServiceRequestIntegrationMockMvcTest`: 6/6 PASS
 - Checkstyle: 0 violations
 - Concurrency evidence:
-  - Request-number allocation: 8 concurrent workers x 5 rounds (verified unique allocations and no duplicates)
-  - Service assignment: 2 concurrent workers x 5 rounds (verified serialized 200 or 409 conflict, no HTTP 500, exactly 1 active assignment preserved)
-  - Service rating: 2 concurrent workers x 5 rounds (verified 1 winner, 1 conflict, duplicate mapped to 409)
+  - Asset assignment: 2 concurrent workers x 5 rounds on PostgreSQL Testcontainers (verified exactly 1 winner 201, loser strictly 400/409, no 500, exactly 1 active assignment preserved)
 - Rollback evidence:
-  - Status history rollback verified on PostgreSQL via temporary trigger failure injection
-  - ServiceRequest status, version, and timestamps unchanged; history count unchanged
+  - Asset return rollback verified on PostgreSQL via BEFORE UPDATE trigger failure injection; asset remains ASSIGNED, assignment remains ACTIVE, versions unchanged, returnedAt remains null.
 - Database & Migrations:
-  - V001 to V015 applied and validated on PostgreSQL Testcontainers
-  - Migrations 100% immutable and tracked (no V016 needed)
+  - V001 to V016 applied and validated on PostgreSQL Testcontainers
+  - Migrations 100% immutable and tracked (V001-V016 intact)
 - Canonical documents: unchanged 100% (10/10 canonical documents in docs/ preserved)
 - Working tree: clean
-- HEAD equals origin/main before memory update
-- No Phase 10 source code implemented
-- No mobile implementation started
+- HEAD equals origin/main before hardening commit
 
 ## Deferred Items & Known Gaps
 
-- NOTIFICATION_SIDE_EFFECT_DEFERRED: Phase 9 không triển khai Notification Module; không email, push notification hoặc WebSocket. Hoãn đến phase canonical tiếp theo nếu Roadmap quy định.
+- ASSET_ASSIGNMENT_STATUS_CONTRACT_GAP: Giá trị enum `LOST` và `DAMAGED` trong `AssetAssignmentStatus` là schema-reserved enum values; API hoàn trả (`ReturnAssetRequest`) chỉ truyền `resultingAssetStatus` cho tài sản và luôn set trạng thái phân công là `RETURNED`. Chưa có luồng nghiệp vụ API trực tiếp tạo trạng thái phân công LOST/DAMAGED trong Phase 10 MVP.
+- NOTIFICATION_SIDE_EFFECT_DEFERRED: Phase 9/10 không triển khai Notification Module; không email, push notification hoặc WebSocket. Hoãn đến phase canonical tiếp theo nếu Roadmap quy định.
 - SERVICE_REQUEST_SLA_DEFERRED: Không có SLA engine, không tính business hours, không escalation, không pause/resume SLA.
 - SERVICE_ATTACHMENT_COMMENT_LINK_GAP: Bảng `service_attachments` chỉ liên kết với `request_id`. File gửi kèm khi tạo comment vẫn là attachment cấp Service Request; không có `comment_id` trong schema và không được mô tả là attachment riêng của comment.
-- FILE_ORPHAN_RECONCILIATION_GAP: Nếu metadata persistence và compensating physical cleanup cùng thất bại, physical file có thể trở thành orphan. Exception gốc được giữ nguyên, failure được log an toàn bằng fileId mà không lộ physical path. Cần reconciliation worker hoặc operational process trước khi đưa vào production.
-- FILE_STORAGE_TOCTOU_LOW: Existing symlink escape đã được chặn và kiểm thử thành công trên Linux container. Java NIO portable API không loại bỏ tuyệt đối TOCTOU trước actor đã có quyền can thiệp trực tiếp filesystem lưu trữ. Môi trường production phải bảo vệ storage root bằng phân quyền hệ điều hành phù hợp.
-- FILE_VIRUS_SCANNING_DEFERRED: ClamAV daemon hoãn đến môi trường production; kiểm tra in-flight qua magic bytes và ZIP entry inspection.
-- CLOUD_STORAGE_PROVIDER_DEFERRED: Production provider chưa được chọn. Local filesystem là provider Development/Test. FileStorageService abstraction cho phép bổ sung provider sau mà không ảnh hưởng controller/domain. Không mặc định chọn S3, MinIO hoặc Azure Blob.
-- TASK_DETAIL_ATTACHMENT_ITEMS_API_GAP: Canonical API trong docs/06_API_CONTRACT.md định nghĩa `attachmentCount`; schema chi tiết cho danh sách attachment items trong Task Detail chưa được định nghĩa. Hệ thống không tự ý phát minh response payload.
-- TASK_DELETE_RULE_AMBIGUITY_DEFERRED: Canonical docs chưa định nghĩa đầy đủ "business history quan trọng". Logic hiện tại chỉ kiểm tra task status history (TASK_CANNOT_DELETE_HAS_HISTORY).
+- FILE_ORPHAN_RECONCILIATION_GAP: Nếu metadata persistence và compensating physical cleanup cùng thất bại, physical file có thể trở thành orphan.
 - Technical Debt mức Low:
   - TASK_FLYWAY_CONFIGURATION_MODULE_LOCATION_LOW: TaskFlywayConfiguration hiện ở task.infrastructure. Có thể chuyển sang shared.infrastructure trong đợt refactor riêng.
-  - DATA_INTEGRITY_ERROR_MAPPING_FALLBACK_LOW: Exception mapping còn fallback message.contains("task_assignments"). Nên nâng cấp sang duyệt SQLException chain.
-- Deferred gaps cũ:
-  - TEMPORARY_PASSWORD_FLOW_GAP: Admin tạo User với trạng thái PENDING và mật khẩu tạm thời hash BCrypt.
-  - TEAM_API_CONTRACT_GAP: Team và Team Member domain/repository/service đã hoàn thành nhưng chưa có REST controller vì 06_API_CONTRACT.md chưa định nghĩa endpoints.
-  - DASHBOARD_AGGREGATED_API_GAP: API GET /api/v1/dashboard/me có trong hợp đồng nhưng chưa có backend controller.
-  - PUT_ME_PASSWORD_TEST_GAP: Test coverage cho luồng đổi mật khẩu người dùng hiện tại tiếp tục hoãn.
-
-## Phase 10 Pre-Implementation Status & Gaps
-
-- `API_CONTRACT_GAP`: **RESOLVED BY CANONICAL PATCH** (`docs/06_API_CONTRACT.md` Sections 14.0.6, 14.4, 14.5, 14.6, 14.7, 14.9, 20.7 updated with DTOs, Repair History API, error codes, and category in-use policy).
-- `ASSET_CODE_POLICY_GAP`: **RESOLVED BY D-046** (client-input, trim, uppercase, regex `^[A-Z0-9][A-Z0-9_-]{1,49}$`, immutable, globally unique).
-- `ASSET_SERVICE_REQUEST_INTEGRATION_GAP`: **RESOLVED BY D-046** (reference-only linkage, active assigned asset for user, no auto status change, no auto repair history).
-- `SCHEMA_GAP`: **DESIGN RESOLVED; IMPLEMENTATION PENDING V016** (`reports/runbooks/V016_ASSET_INVARIANTS_AND_INDEXES_PLAN.md` created; migration source V016 not created yet).
+  - DATA_INTEGRITY_ERROR_MAPPING_FALLBACK_LOW: Exception mapping cho task_assignments có thể nâng cấp sang trích xuất constraint PostgreSQL driver tương tự Asset module.
 
 ## Next Permitted Phase
 
-- **Giai đoạn 10: Asset Module** (theo đúng `docs/08_DEVELOPMENT_ROADMAP.md` Section 14, P1).
-- Không bắt đầu triển khai Phase 10 trong phiên hiện tại.
+- **Giai đoạn 11: Notification Module** (hoặc Audit / Checkpoint trước khi bắt đầu Phase 11).
+- Không bắt đầu triển khai Phase 11 trong phiên hiện tại.
 - Không bắt đầu triển khai React Native / mobile source trong giai đoạn này.
 
 ## Trust Rules

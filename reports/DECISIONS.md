@@ -650,3 +650,34 @@ Current operating mode:
       - `ASSET_REPAIR_HISTORY_NOT_FOUND` (HTTP 404): Không tìm thấy lịch sử sửa chữa.
       - `ASSET_CATEGORY_IN_USE` (HTTP 400): Dừng hoạt động danh mục đang được tham chiếu bởi tài sản chưa xóa mềm.
       - `ASSET_CATEGORY_ALREADY_INACTIVE` (HTTP 400): Thao tác trên loại tài sản đã dừng hoạt động.
+
+## D-047: Chốt hardening giao dịch tài sản, tương tranh, phân quyền và trạng thái phân công (Phase 10 Hardening)
+
+- **Ngày quyết định**: 2026-10-16.
+- **Phạm vi**: Backend Module Quản lý Tài sản (Asset Management) - Hardening sau kiểm toán Phase 10.
+- **Tình trạng**: APPROVED / IMPLEMENTED.
+- **Bối cảnh**: Sau khi hoàn thành triển khai Phase 10, kiểm toán độc lập đã chỉ ra các điểm cần thắt chặt về kiểm thử tương tranh (concurrency assertions), bằng chứng rollback giao dịch hoàn trả tài sản trên PostgreSQL (return rollback failure-injection), tính nhất quán trong phân quyền yêu cầu dịch vụ liên kết (related service requests authorization), trích xuất constraint metadata từ PostgreSQL driver và làm rõ ngữ nghĩa của các trạng thái phân công `LOST` / `DAMAGED`.
+- **Nội dung quyết định**:
+  1. **Quy chuẩn kiểm thử tương tranh phân công tài sản (Assignment Concurrency Assertions)**:
+     - Kịch bản kiểm thử 2 workers đồng thời qua 5 rounds với `CyclicBarrier` trên PostgreSQL Testcontainers.
+     - Worker chiến thắng: Bắt buộc nhận HTTP `201 Created`.
+     - Worker đối kháng: Chỉ chấp nhận mã lỗi nghiệp vụ chuẩn canonical: HTTP `400` với code `ASSET_NOT_AVAILABLE` hoặc `ASSET_ALREADY_ASSIGNED`, hoặc HTTP `409` với code `ASSET_ASSIGNMENT_CONFLICT`. Tuyệt đối không chấp nhận lỗi generic hoặc 500.
+     - Xác minh toàn vẹn CSDL sau mỗi vòng: Trạng thái tài sản chuyển `ASSIGNED`, duy nhất 1 bản ghi `ACTIVE` assignment, người nhận (`assignedTo`) thuộc về một trong hai ứng viên tham gia tương tranh, `assignedBy` đúng quản trị viên.
+  2. **Bằng chứng rollback giao dịch hoàn trả (Return Rollback Failure-Injection Evidence)**:
+     - Triển khai test failure-injection trên PostgreSQL Testcontainers: Sử dụng trigger `BEFORE UPDATE ON assets` kích hoạt lỗi mô phỏng riêng cho ID tài sản đang hoàn trả, xảy ra sau khi entity `AssetAssignment` đã được lưu/flush nhưng trước khi commit transaction.
+     - Khẳng định tính nguyên tử ACID: Toàn bộ giao dịch bị hủy bỏ hoàn toàn; sau khi fail, tài sản vẫn giữ nguyên `status = 'ASSIGNED'`, version không đổi; bản ghi phân công vẫn giữ nguyên `status = 'ACTIVE'`, version không đổi, `returned_at` và `return_condition` vẫn là null.
+  3. **Đồng bộ phân quyền yêu cầu dịch vụ liên kết trong chi tiết tài sản (Related Service Request Authorization Consistency)**:
+     - Thống nhất phân quyền với Phase 9: Người dùng non-admin khi xem chi tiết tài sản (`GET /api/v1/assets/{id}`) chỉ được xem các yêu cầu dịch vụ liên quan nếu:
+       - Bản thân là người tạo (`requester_id = principal.userId`), HOẶC
+       - Bản thân là người đang được phân công xử lý hoạt động (`EXISTS (SELECT 1 FROM service_assignments sa WHERE sa.request_id = sr.id AND sa.assignee_id = principal.userId AND sa.is_active = true)`).
+     - Quản trị viên (`ADMIN`) xem được toàn bộ yêu cầu dịch vụ chưa xóa mềm liên quan đến tài sản.
+     - Các yêu cầu dịch vụ đã bị xóa mềm (`is_deleted = true`) tuyệt đối không được trả về trong projection.
+  4. **Trích xuất tên ràng buộc CSDL qua PostgreSQL Driver (PostgreSQL Constraint Extraction)**:
+     - Phương thức bắt lỗi `DataIntegrityViolationException` ưu tiên trích xuất tên constraint thực tế từ driver qua `PSQLException.getServerErrorMessage().getConstraint()`.
+     - Tránh phụ thuộc hoàn toàn vào chuỗi thông báo lỗi bản địa hóa (localized error message) khi chuyển đổi thành `ASSET_ASSIGNMENT_CONFLICT` (409) hoặc các mã lỗi unique index.
+  5. **Quy ước trạng thái phân công dự trữ (Reserved Assignment Status Semantics)**:
+     - Các giá trị enum `LOST` và `DAMAGED` trong `AssetAssignmentStatus` là các giá trị dự trữ schema (schema-reserved values) phục vụ luồng xử lý thất thoát tài sản ở các phase sau.
+     - Trong Phase 10 MVP, API hoàn trả (`PUT /api/v1/assets/{id}/assignments/{assignmentId}/return`) luôn thiết lập trạng thái phân công là `RETURNED` và nhận trạng thái đích của tài sản qua `resultingAssetStatus` (`AVAILABLE`, `MAINTENANCE`, `BROKEN`, `RETIRED`).
+     - Độ lệch giữa mô tả văn bản và request payload được ghi nhận chính thức dưới dạng `ASSET_ASSIGNMENT_STATUS_CONTRACT_GAP` để đồng bộ ở phase nâng cao.
+  6. **Định danh danh sách loại tài sản hoạt động (Authenticated Active Categories List)**:
+     - Endpoint `GET /api/v1/asset-categories` nằm trong phạm vi bắt buộc xác thực (`.anyRequest().authenticated()`), trả về 401 Unauthorized nếu không có token. Do đó được định danh chuẩn xác là "Authenticated active-category list", không dùng từ "public".

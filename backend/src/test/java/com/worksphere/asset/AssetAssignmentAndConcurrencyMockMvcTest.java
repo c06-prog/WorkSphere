@@ -410,6 +410,8 @@ public class AssetAssignmentAndConcurrencyMockMvcTest {
         assertThat(list.stream().filter(a -> a.getStatus() == AssetAssignmentStatus.RETURNED).count()).isEqualTo(1);
     }
 
+    record WorkerResult(int status, String code) {}
+
     @Test
     @DisplayName("Thực thi phân bổ đồng thời có kiểm soát: 2 workers, 5 rounds, duy nhất 1 ACTIVE assignment")
     void testControlledConcurrencyRounds() throws Exception {
@@ -421,7 +423,7 @@ public class AssetAssignmentAndConcurrencyMockMvcTest {
                 Asset asset = createTestAsset("CONCUR-" + round, AssetStatus.AVAILABLE);
                 CyclicBarrier barrier = new CyclicBarrier(2);
 
-                Callable<Integer> task1 = () -> {
+                Callable<WorkerResult> task1 = () -> {
                     barrier.await();
                     AssignAssetRequest req = new AssignAssetRequest(employee1Id, null, "Concurrent Assign 1");
                     MvcResult res = mockMvc.perform(post("/api/v1/assets/{assetId}/assignments", asset.getId())
@@ -429,10 +431,15 @@ public class AssetAssignmentAndConcurrencyMockMvcTest {
                                     .contentType(MediaType.APPLICATION_JSON)
                                     .content(objectMapper.writeValueAsString(req)))
                             .andReturn();
-                    return res.getResponse().getStatus();
+                    int st = res.getResponse().getStatus();
+                    String cd = null;
+                    if (st != 201) {
+                        cd = objectMapper.readTree(res.getResponse().getContentAsString()).path("code").asText();
+                    }
+                    return new WorkerResult(st, cd);
                 };
 
-                Callable<Integer> task2 = () -> {
+                Callable<WorkerResult> task2 = () -> {
                     barrier.await();
                     AssignAssetRequest req = new AssignAssetRequest(employee2Id, null, "Concurrent Assign 2");
                     MvcResult res = mockMvc.perform(post("/api/v1/assets/{assetId}/assignments", asset.getId())
@@ -440,32 +447,131 @@ public class AssetAssignmentAndConcurrencyMockMvcTest {
                                     .contentType(MediaType.APPLICATION_JSON)
                                     .content(objectMapper.writeValueAsString(req)))
                             .andReturn();
-                    return res.getResponse().getStatus();
+                    int st = res.getResponse().getStatus();
+                    String cd = null;
+                    if (st != 201) {
+                        cd = objectMapper.readTree(res.getResponse().getContentAsString()).path("code").asText();
+                    }
+                    return new WorkerResult(st, cd);
                 };
 
-                List<Future<Integer>> futures = executor.invokeAll(List.of(task1, task2));
-                int status1 = futures.get(0).get(10, TimeUnit.SECONDS);
-                int status2 = futures.get(10 > 0 ? 1 : 0).get(10, TimeUnit.SECONDS);
+                List<Future<WorkerResult>> futures = executor.invokeAll(List.of(task1, task2));
+                WorkerResult r1 = futures.get(0).get(10, TimeUnit.SECONDS);
+                WorkerResult r2 = futures.get(1).get(10, TimeUnit.SECONDS);
 
                 // Không bao giờ được nhận 500
-                assertThat(status1).isNotEqualTo(500);
-                assertThat(status2).isNotEqualTo(500);
+                assertThat(r1.status()).isNotEqualTo(500);
+                assertThat(r2.status()).isNotEqualTo(500);
 
-                int successCount = (status1 == 201 ? 1 : 0) + (status2 == 201 ? 1 : 0);
-                int errorCount = (status1 != 201 ? 1 : 0) + (status2 != 201 ? 1 : 0);
+                boolean r1Success = r1.status() == 201;
+                boolean r2Success = r2.status() == 201;
 
-                // Đúng 1 worker thành công 201, worker còn lại nhận 400 hoặc 409
-                assertThat(successCount).as("Round " + round + " success count").isEqualTo(1);
-                assertThat(errorCount).as("Round " + round + " error count").isEqualTo(1);
+                // Đúng 1 worker thành công 201
+                assertThat(r1Success ^ r2Success).as("Round " + round + " exactly one winner").isTrue();
 
-                // Kiểm tra database invariant
+                // Worker đối kháng nhận mã lỗi chuẩn canonical
+                WorkerResult loser = r1Success ? r2 : r1;
+                if (loser.status() == 400) {
+                    assertThat(loser.code()).isIn("ASSET_NOT_AVAILABLE", "ASSET_ALREADY_ASSIGNED");
+                } else if (loser.status() == 409) {
+                    assertThat(loser.code()).isEqualTo("ASSET_ASSIGNMENT_CONFLICT");
+                } else {
+                    org.junit.jupiter.api.Assertions.fail("Unexpected loser status: " + loser.status() + ", code: " + loser.code());
+                }
+
+                // Kiểm tra trạng thái Asset trong database là ASSIGNED
+                Asset updatedAsset = assetRepository.findById(asset.getId()).orElseThrow();
+                assertThat(updatedAsset.getStatus()).isEqualTo(AssetStatus.ASSIGNED);
+
+                // Kiểm tra database invariant: duy nhất 1 ACTIVE assignment
                 List<AssetAssignment> actives = assignmentRepository.findByAssetIdAndStatus(
                         asset.getId(), AssetAssignmentStatus.ACTIVE
                 );
                 assertThat(actives).as("Round " + round + " active assignments count").hasSize(1);
+
+                AssetAssignment activeAssignment = actives.get(0);
+                assertThat(activeAssignment.getAssignedTo()).isIn(employee1Id, employee2Id);
+                assertThat(activeAssignment.getAssignedBy()).isEqualTo(adminUserId);
+                assertThat(activeAssignment.getAssignedAt()).isNotNull();
             }
         } finally {
             executor.shutdownNow();
+        }
+    }
+
+    @Test
+    @DisplayName("Rollback: Thất bại khi cập nhật Asset phục hồi nguyên trạng Assignment và Asset trên PostgreSQL")
+    void testReturnAssetRollbackOnFailure() throws Exception {
+        Asset asset = createTestAsset("ROLLBACK-01", AssetStatus.AVAILABLE);
+
+        AssignAssetRequest assignReq = new AssignAssetRequest(employee1Id, null, "Bàn giao ban đầu");
+        MvcResult assignRes = mockMvc.perform(post("/api/v1/assets/{assetId}/assignments", asset.getId())
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(assignReq)))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        String assignJson = assignRes.getResponse().getContentAsString();
+        String assignmentIdStr = objectMapper.readTree(assignJson).path("data").path("id").asText();
+        UUID assignmentId = UUID.fromString(assignmentIdStr);
+
+        // Lưu snapshot trạng thái ban đầu
+        Asset originalAsset = assetRepository.findById(asset.getId()).orElseThrow();
+        AssetAssignment originalAssignment = assignmentRepository.findById(assignmentId).orElseThrow();
+        Long originalAssetVersion = originalAsset.getVersion();
+        Long originalAssignmentVersion = originalAssignment.getVersion();
+        assertThat(originalAsset.getStatus()).isEqualTo(AssetStatus.ASSIGNED);
+        assertThat(originalAssignment.getStatus()).isEqualTo(AssetAssignmentStatus.ACTIVE);
+        assertThat(originalAssignment.getReturnedAt()).isNull();
+
+        // Failure injection: Tạo trigger lỗi dành riêng cho asset này trên PostgreSQL
+        String triggerFunc = """
+                CREATE OR REPLACE FUNCTION fail_asset_return_rollback_test()
+                RETURNS TRIGGER AS $$
+                BEGIN
+                    IF NEW.id = '%s'::uuid THEN
+                        RAISE EXCEPTION 'Simulated failure on asset update for return rollback test';
+                    END IF;
+                    RETURN NEW;
+                END;
+                $$ LANGUAGE plpgsql;
+                """.formatted(asset.getId());
+
+        String triggerSql = """
+                CREATE TRIGGER trg_test_return_rollback_asset
+                BEFORE UPDATE ON assets
+                FOR EACH ROW
+                EXECUTE FUNCTION fail_asset_return_rollback_test();
+                """;
+
+        jdbcTemplate.execute(triggerFunc);
+        jdbcTemplate.execute(triggerSql);
+
+        try {
+            ReturnAssetRequest returnReq = new ReturnAssetRequest("Thu hồi máy", AssetStatus.AVAILABLE, originalAssignmentVersion);
+            mockMvc.perform(put("/api/v1/assets/{assetId}/assignments/{assignmentId}/return", asset.getId(), assignmentId)
+                            .header("Authorization", "Bearer " + adminToken)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(returnReq)))
+                    .andExpect(status().isInternalServerError());
+
+            // Đọc lại từ database qua fresh lookup để xác minh full rollback
+            Asset afterFailureAsset = assetRepository.findById(asset.getId()).orElseThrow();
+            AssetAssignment afterFailureAssignment = assignmentRepository.findById(assignmentId).orElseThrow();
+
+            // 1. Asset vẫn ở trạng thái ASSIGNED, version không đổi
+            assertThat(afterFailureAsset.getStatus()).isEqualTo(AssetStatus.ASSIGNED);
+            assertThat(afterFailureAsset.getVersion()).isEqualTo(originalAssetVersion);
+
+            // 2. Assignment vẫn ở trạng thái ACTIVE, version không đổi, returnedAt vẫn null
+            assertThat(afterFailureAssignment.getStatus()).isEqualTo(AssetAssignmentStatus.ACTIVE);
+            assertThat(afterFailureAssignment.getVersion()).isEqualTo(originalAssignmentVersion);
+            assertThat(afterFailureAssignment.getReturnedAt()).isNull();
+            assertThat(afterFailureAssignment.getReturnCondition()).isNull();
+        } finally {
+            jdbcTemplate.execute("DROP TRIGGER IF EXISTS trg_test_return_rollback_asset ON assets;");
+            jdbcTemplate.execute("DROP FUNCTION IF EXISTS fail_asset_return_rollback_test();");
         }
     }
 }

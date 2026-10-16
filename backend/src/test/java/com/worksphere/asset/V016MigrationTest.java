@@ -225,6 +225,65 @@ class V016MigrationTest {
         }
     }
 
+    @Test
+    @Order(7)
+    @DisplayName("Verify clean V001 to V016 migration succeeds on fresh database")
+    void testCleanV001ToV016Migration() {
+        try (PostgreSQLContainer<?> freshPostgres = new PostgreSQLContainer<>("postgres:15-alpine")) {
+            freshPostgres.start();
+            Flyway flyway = Flyway.configure()
+                    .dataSource(freshPostgres.getJdbcUrl(), freshPostgres.getUsername(), freshPostgres.getPassword())
+                    .locations("classpath:db/migration")
+                    .load();
+            var result = flyway.migrate();
+            assertThat(result.success).isTrue();
+            assertThat(result.targetSchemaVersion).isEqualTo("016");
+        }
+    }
+
+    @Test
+    @Order(8)
+    @DisplayName("Verify preflight NO-GO scenario: duplicate category code fails V016 migration and preserves data")
+    void testPreflightCategoryDuplicateFailsV016() throws Exception {
+        try (PostgreSQLContainer<?> freshPostgres = new PostgreSQLContainer<>("postgres:15-alpine")) {
+            freshPostgres.start();
+
+            Flyway flywayV15 = Flyway.configure()
+                    .dataSource(freshPostgres.getJdbcUrl(), freshPostgres.getUsername(), freshPostgres.getPassword())
+                    .locations("classpath:db/migration")
+                    .target("015")
+                    .load();
+            flywayV15.migrate();
+
+            try (Connection conn = DriverManager.getConnection(
+                    freshPostgres.getJdbcUrl(), freshPostgres.getUsername(), freshPostgres.getPassword())) {
+                try (Statement stmt = conn.createStatement()) {
+                    stmt.executeUpdate(
+                            "INSERT INTO asset_categories (id, code, name, is_active, is_deleted, created_at, updated_at) " +
+                            "VALUES ('" + UUID.randomUUID() + "', 'DUP_CAT', 'Cat 1', true, false, now(), now())");
+                    stmt.executeUpdate(
+                            "INSERT INTO asset_categories (id, code, name, is_active, is_deleted, created_at, updated_at) " +
+                            "VALUES ('" + UUID.randomUUID() + "', 'DUP_CAT', 'Cat 2', true, false, now(), now())");
+                }
+
+                Flyway flywayV16 = Flyway.configure()
+                        .dataSource(freshPostgres.getJdbcUrl(), freshPostgres.getUsername(), freshPostgres.getPassword())
+                        .locations("classpath:db/migration")
+                        .target("016")
+                        .load();
+
+                assertThatThrownBy(flywayV16::migrate)
+                        .hasMessageContaining("uk_asset_categories_code");
+
+                try (Statement stmt = conn.createStatement();
+                     ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM asset_categories WHERE code = 'DUP_CAT'")) {
+                    assertThat(rs.next()).isTrue();
+                    assertThat(rs.getInt(1)).isEqualTo(2);
+                }
+            }
+        }
+    }
+
     private void insertUser(UUID id, String username, String email) throws SQLException {
         String sql = """
                 INSERT INTO users (id, username, email, password_hash, full_name, status, is_deleted, created_at, updated_at)
