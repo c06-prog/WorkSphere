@@ -47,6 +47,7 @@ public class TaskCommentApplicationService {
     private final UserRepository userRepository;
     private final StoredFileRepository storedFileRepository;
     private final TaskAttachmentRepository taskAttachmentRepository;
+    private final com.worksphere.notification.application.NotificationEventDispatcher eventDispatcher;
 
     public TaskCommentApplicationService(
             TaskCommentRepository commentRepository,
@@ -54,7 +55,8 @@ public class TaskCommentApplicationService {
             ProjectMemberRepository projectMemberRepository,
             UserRepository userRepository,
             StoredFileRepository storedFileRepository,
-            TaskAttachmentRepository taskAttachmentRepository
+            TaskAttachmentRepository taskAttachmentRepository,
+            com.worksphere.notification.application.NotificationEventDispatcher eventDispatcher
     ) {
         this.commentRepository = commentRepository;
         this.taskRepository = taskRepository;
@@ -62,6 +64,7 @@ public class TaskCommentApplicationService {
         this.userRepository = userRepository;
         this.storedFileRepository = storedFileRepository;
         this.taskAttachmentRepository = taskAttachmentRepository;
+        this.eventDispatcher = eventDispatcher;
     }
 
     @Transactional(readOnly = true)
@@ -154,6 +157,7 @@ public class TaskCommentApplicationService {
         );
 
         TaskComment saved = commentRepository.save(comment);
+        eventDispatcher.onTaskCommentAdded(taskId, saved.getId(), principal.userId(), task.getTitle(), task.getProjectId(), task.getReporterId());
         User author = userRepository.findById(principal.userId()).orElse(null);
         return toCommentResponse(saved, author);
     }

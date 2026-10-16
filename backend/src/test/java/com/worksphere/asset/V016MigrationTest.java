@@ -234,6 +234,7 @@ class V016MigrationTest {
             Flyway flyway = Flyway.configure()
                     .dataSource(freshPostgres.getJdbcUrl(), freshPostgres.getUsername(), freshPostgres.getPassword())
                     .locations("classpath:db/migration")
+                    .target("016")
                     .load();
             var result = flyway.migrate();
             assertThat(result.success).isTrue();

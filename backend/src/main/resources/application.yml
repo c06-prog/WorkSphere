@@ -11,3 +11,8 @@ spring:
 worksphere:
   storage:
     path: ${WORKSPHERE_STORAGE_PATH:D:/WorkSphereData/uploads}
+  notification:
+    scheduling:
+      enabled: true
+    task-deadline-scan-delay: PT15M
+    task-deadline-batch-size: 100

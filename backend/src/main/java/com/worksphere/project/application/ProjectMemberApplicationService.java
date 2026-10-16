@@ -39,15 +39,18 @@ public class ProjectMemberApplicationService {
     private final ProjectRepository projectRepository;
     private final ProjectMemberRepository projectMemberRepository;
     private final UserRepository userRepository;
+    private final com.worksphere.notification.application.NotificationEventDispatcher eventDispatcher;
 
     public ProjectMemberApplicationService(
             ProjectRepository projectRepository,
             ProjectMemberRepository projectMemberRepository,
-            UserRepository userRepository
+            UserRepository userRepository,
+            com.worksphere.notification.application.NotificationEventDispatcher eventDispatcher
     ) {
         this.projectRepository = projectRepository;
         this.projectMemberRepository = projectMemberRepository;
         this.userRepository = userRepository;
+        this.eventDispatcher = eventDispatcher;
     }
 
     @Transactional(readOnly = true)
@@ -120,6 +123,7 @@ public class ProjectMemberApplicationService {
                 ));
 
         ProjectMember saved = projectMemberRepository.save(member);
+        eventDispatcher.onProjectMemberAdded(projectId, saved.getId(), saved.getUserId(), currentUserId, project.getName());
         log.info("Project member added. projectId={}, userId={}, role={}", projectId, request.userId(), request.projectRole());
         return ProjectMemberResponse.from(saved, user.getFullName(), user.getEmail(), null);
     }

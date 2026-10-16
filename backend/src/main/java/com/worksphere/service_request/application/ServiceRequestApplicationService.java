@@ -93,6 +93,7 @@ public class ServiceRequestApplicationService {
     private final AssetRepository assetRepository;
     private final AssetAssignmentRepository assetAssignmentRepository;
     private final Clock clock;
+    private final com.worksphere.notification.application.NotificationEventDispatcher eventDispatcher;
 
     public ServiceRequestApplicationService(
             ServiceRequestRepository requestRepository,
@@ -106,7 +107,8 @@ public class ServiceRequestApplicationService {
             StoredFileRepository storedFileRepository,
             AssetRepository assetRepository,
             AssetAssignmentRepository assetAssignmentRepository,
-            Clock clock
+            Clock clock,
+            com.worksphere.notification.application.NotificationEventDispatcher eventDispatcher
     ) {
         this.requestRepository = requestRepository;
         this.categoryRepository = categoryRepository;
@@ -120,6 +122,7 @@ public class ServiceRequestApplicationService {
         this.assetRepository = assetRepository;
         this.assetAssignmentRepository = assetAssignmentRepository;
         this.clock = clock;
+        this.eventDispatcher = eventDispatcher;
     }
 
     @Transactional
@@ -482,6 +485,7 @@ public class ServiceRequestApplicationService {
 
         try {
             assignmentRepository.saveAndFlush(newAssignment);
+            eventDispatcher.onServiceRequestAssigned(requestId, newAssignment.getId(), request.assigneeId(), principal.userId(), sr.getTitle());
         } catch (DataIntegrityViolationException ex) {
             handleAssignmentConflict(ex);
         }
@@ -561,6 +565,7 @@ public class ServiceRequestApplicationService {
                 clock.instant()
         );
         historyRepository.save(history);
+        eventDispatcher.onServiceRequestStatusChanged(requestId, history.getId(), request.status(), principal.userId(), sr.getTitle(), sr.getRequesterId());
     }
 
     @Transactional
@@ -683,6 +688,19 @@ public class ServiceRequestApplicationService {
                 clock.instant()
         );
         ServiceComment saved = commentRepository.save(comment);
+
+        UUID activeAssigneeId = assignmentRepository.findByRequestIdAndActiveTrue(requestId)
+                .map(ServiceAssignment::getAssigneeId)
+                .orElse(null);
+        eventDispatcher.onServiceRequestCommentAdded(
+                requestId,
+                saved.getId(),
+                principal.userId(),
+                sr.getTitle(),
+                sr.getRequesterId(),
+                saved.isInternal(),
+                activeAssigneeId
+        );
 
         User author = userRepository.findById(principal.userId()).orElse(null);
         return new ServiceCommentResponse(

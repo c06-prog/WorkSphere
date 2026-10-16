@@ -84,6 +84,7 @@ public class TaskApplicationService {
     private final MilestoneRepository milestoneRepository;
     private final UserRepository userRepository;
     private final TaskAttachmentRepository taskAttachmentRepository;
+    private final com.worksphere.notification.application.NotificationEventDispatcher eventDispatcher;
 
     public TaskApplicationService(
             TaskRepository taskRepository,
@@ -94,7 +95,8 @@ public class TaskApplicationService {
             ProjectMemberRepository projectMemberRepository,
             MilestoneRepository milestoneRepository,
             UserRepository userRepository,
-            TaskAttachmentRepository taskAttachmentRepository
+            TaskAttachmentRepository taskAttachmentRepository,
+            com.worksphere.notification.application.NotificationEventDispatcher eventDispatcher
     ) {
         this.taskRepository = taskRepository;
         this.taskAssignmentRepository = taskAssignmentRepository;
@@ -105,6 +107,7 @@ public class TaskApplicationService {
         this.milestoneRepository = milestoneRepository;
         this.userRepository = userRepository;
         this.taskAttachmentRepository = taskAttachmentRepository;
+        this.eventDispatcher = eventDispatcher;
     }
 
     @Transactional(readOnly = true)
@@ -240,6 +243,7 @@ public class TaskApplicationService {
                             principal.userId()
                     );
                     taskAssignmentRepository.saveAndFlush(assignment);
+                    eventDispatcher.onTaskAssigned(savedTask.getId(), assignment.getId(), assigneeId, principal.userId(), savedTask.getTitle());
                 }
             } catch (DataIntegrityViolationException ex) {
                 if (isTaskAssignmentUniqueViolation(ex)) {
@@ -414,6 +418,16 @@ public class TaskApplicationService {
         );
         statusHistoryRepository.save(history);
 
+        eventDispatcher.onTaskStatusChanged(
+                task.getId(),
+                history.getId(),
+                newStatus,
+                principal.userId(),
+                task.getTitle(),
+                task.getProjectId(),
+                task.getReporterId()
+        );
+
         return getTaskDetail(taskId, principal);
     }
 
@@ -464,6 +478,7 @@ public class TaskApplicationService {
                         principal.userId()
                 );
                 taskAssignmentRepository.saveAndFlush(assignment);
+                eventDispatcher.onTaskAssigned(task.getId(), assignment.getId(), assigneeId, principal.userId(), task.getTitle());
             }
         } catch (DataIntegrityViolationException ex) {
             if (isTaskAssignmentUniqueViolation(ex)) {

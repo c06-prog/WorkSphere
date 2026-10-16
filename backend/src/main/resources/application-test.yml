@@ -20,3 +20,6 @@ worksphere:
     access-token-expiry-seconds: 900
   storage:
     path: ${WORKSPHERE_STORAGE_PATH:target/test-uploads}
+  notification:
+    scheduling:
+      enabled: false

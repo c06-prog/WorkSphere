@@ -71,6 +71,7 @@ public class AssetApplicationService {
     private final UserRepository userRepository;
     private final ServiceRequestRepository serviceRequestRepository;
     private final Clock clock;
+    private final com.worksphere.notification.application.NotificationEventDispatcher eventDispatcher;
 
     public AssetApplicationService(
             AssetRepository assetRepository,
@@ -79,7 +80,8 @@ public class AssetApplicationService {
             AssetRepairHistoryRepository repairHistoryRepository,
             UserRepository userRepository,
             ServiceRequestRepository serviceRequestRepository,
-            Clock clock
+            Clock clock,
+            com.worksphere.notification.application.NotificationEventDispatcher eventDispatcher
     ) {
         this.assetRepository = assetRepository;
         this.categoryRepository = categoryRepository;
@@ -88,6 +90,7 @@ public class AssetApplicationService {
         this.userRepository = userRepository;
         this.serviceRequestRepository = serviceRequestRepository;
         this.clock = clock;
+        this.eventDispatcher = eventDispatcher;
     }
 
     @Transactional(readOnly = true)
@@ -375,6 +378,14 @@ public class AssetApplicationService {
         try {
             AssetAssignment saved = assignmentRepository.saveAndFlush(assignment);
             assetRepository.saveAndFlush(asset);
+            eventDispatcher.onAssetAssigned(
+                    asset.getId(),
+                    saved.getId(),
+                    request.assignedTo(),
+                    principal.userId(),
+                    asset.getName(),
+                    asset.getAssetCode()
+            );
             return toAssignmentResponse(saved, targetUser, principal.user());
         } catch (DataIntegrityViolationException ex) {
             handleAssignmentConflict(ex);

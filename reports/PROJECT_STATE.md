@@ -232,21 +232,23 @@
 - DATA_INTEGRITY_ERROR_MAPPING_FALLBACK_LOW: Exception mapping cho task_assignments có thể nâng cấp sang trích xuất constraint PostgreSQL driver tương tự Asset module.
 - TEMPORARY_PASSWORD_FLOW_GAP: Luồng kích hoạt và endpoint thiết lập mật khẩu lần đầu tiếp tục hoãn.
 - TEAM_API_CONTRACT_GAP: Team REST controllers hoãn vì `06_API_CONTRACT.md` chưa định nghĩa endpoints.
-- DASHBOARD_AGGREGATED_API_GAP: DESIGN HARDENED via Decisions D-049 & D-050 & docs/06_API_CONTRACT.md (Top 5 upcomingTasks & recentNotifications schema finalized; aggregates strictly scoped to junction tables; Project Dashboard deferred as PROJECT_DASHBOARD_PROJECTION_DEFERRED). Implementation pending Phase 11.
-- NOTIFICATION_IDEMPOTENCY_GAP: DESIGN HARDENED via Decisions D-049 & D-050 (event_key VARCHAR(255) NOT NULL & uk_notifications_recipient_event; native INSERT ON CONFLICT DO NOTHING semantics; affected rows 1=created, 0=idempotent; preflight runbook V017_NOTIFICATION_IDEMPOTENCY_PLAN.md hardened with CONTROLLED DETERMINISTIC DATA BACKFILL). Implementation pending V017 migration.
-- NOTIFICATION_EVENT_MATRIX_GAP: DESIGN HARDENED via Decisions D-049 & D-050 & docs/02_USER_ROLES_AND_WORKFLOWS.md Section 8 (canonical matrix finalized with real endpoints, stable event keys, and recipient resolution algorithms).
-- NOTIFICATION_SCHEDULER_POLICY_GAP: DESIGN HARDENED via Decision D-050 (worksphere.notification.task-deadline-scan-delay PT15M, batch size 100, PostgreSQL advisory xact lock module key 1101, fixed Clock test harness).
-- NOTIFICATION_RETENTION_CLEANUP_DEFERRED: Phase 11 retains read notifications; auto-delete/cleanup scheduler deferred.
-- DASHBOARD_METRIC_SCOPE_GAP: DESIGN HARDENED via Decisions D-049 & D-050 & docs/06_API_CONTRACT.md (personal dashboard strictly scoped to principal active assignment via task_assignments, requester/assignee SR via service_assignments, active project membership via project_members).
-- DASHBOARD_TIME_POLICY_GAP: DESIGN HARDENED via Decisions D-049 & D-050 (overdue: due_date < now; dueSoon: now <= due_date < now + 72 hours, mutually exclusive, Clock injected).
+- DASHBOARD_AGGREGATED_API_GAP: RESOLVED in Phase 11. Endpoint GET /api/v1/dashboard/me implemented with native aggregation projections.
+- NOTIFICATION_IDEMPOTENCY_GAP: RESOLVED in Phase 11 via migration V017 and native INSERT ON CONFLICT DO NOTHING.
+- NOTIFICATION_EVENT_MATRIX_GAP: RESOLVED in Phase 11. All 8 canonical notification events wired into domain application services.
+- NOTIFICATION_SCHEDULER_POLICY_GAP: RESOLVED in Phase 11 with TaskDeadlineScanner and advisory xact lock 1101.
+- NOTIFICATION_RETENTION_CLEANUP_DEFERRED: Retained as deferred per scope.
+- DASHBOARD_METRIC_SCOPE_GAP: RESOLVED in Phase 11.
+- DASHBOARD_TIME_POLICY_GAP: RESOLVED in Phase 11.
+- PROJECT_DASHBOARD_PROJECTION_DEFERRED: Retained as deferred per scope.
+- SERVICE_REQUEST_INTERNAL_NOTE_NOTIFICATION_DEFERRED: Retained as deferred per scope.
 - PUT_ME_PASSWORD_TEST_GAP: Test coverage cho luồng đổi mật khẩu người dùng hiện tại tiếp tục hoãn.
 
 ## Next Permitted Phase
 
-- **Giai đoạn 11: Notification và Dashboard** (theo đúng `docs/08_DEVELOPMENT_ROADMAP.md` Section 15, P1).
-- Canonical decisions, event matrix, dashboard projections, query scopes, idempotent insert semantics, and V017 plan finalized and hardened (Decisions D-049, D-050).
-- Không bắt đầu triển khai Phase 11 source trong task quyết định hiện tại.
-- Không bắt đầu triển khai React Native / mobile source trong giai đoạn này.
+- **Giai đoạn 12: Báo cáo, Thống kê và Xuất dữ liệu** (theo đúng `docs/08_DEVELOPMENT_ROADMAP.md` Section 16, P1).
+- Phase 11: Notification and Personal Dashboard is COMPLETED and VALIDATED (290/290 tests PASS, Checkstyle 0 violations).
+- Không tự ý triển khai Phase 12 nếu task chưa yêu cầu.
+- Không triển khai React Native / mobile source trong giai đoạn này.
 
 ## Trust Rules
 
