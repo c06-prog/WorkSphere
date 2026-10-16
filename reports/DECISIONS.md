@@ -312,37 +312,69 @@ Current operating mode:
 - Workspace settings (`.vscode/settings.json`, `.vscode/extensions.json`, `.vscode/launch.json`, `.vscode/tasks.json`): chỉ tạo/sửa khi được phép, cấm chứa machine-specific path hoặc secret.
 - Cấm commit: extension binaries, VSIX, cache, token, profile, cookie, settings cá nhân, credentials.
 
-## D-035 Service Attachment Response Projection
+## D-035 Service Attachment Response Projection (IMPLEMENTATION_RESPONSE_PROJECTION)
 
 - Canonical `06_API_CONTRACT.md` Section 13.4 chỉ định "Tệp đính kèm" trong response chi tiết yêu cầu dịch vụ mà không định nghĩa cấu trúc JSON schema chi tiết.
-- Chuẩn hóa cấu trúc chiếu (implementation response projection) `ServiceAttachmentResponse` gồm 7 trường:
+- Chuẩn hóa cấu trúc chiếu triển khai (nhãn: `IMPLEMENTATION_RESPONSE_PROJECTION`, không gọi là canonical schema) `ServiceAttachmentResponse` gồm 7 trường:
   - `fileId` (UUID): ID tệp lưu trữ trong `stored_files`.
   - `originalName` (String): Tên tệp gốc từ phía client.
   - `mimeType` (String): Định dạng MIME đã xác thực.
-  - `sizeBytes` (Long): Dung lượng tệp tính bằng byte (thống nhất theo naming convention của File Module).
+  - `sizeBytes` (Long): Dung lượng tệp tính bằng byte (thống nhất tuyệt đối theo naming convention thực tế của `FileUploadResponse` và `StoredFile`, không dùng `fileSize`).
   - `downloadUrl` (String): Đường dẫn tải tệp `/api/v1/files/{fileId}/download`.
   - `uploadedBy` (UUID): ID người tải tệp lên.
   - `createdAt` (Instant): Thời điểm đính kèm tệp vào yêu cầu dịch vụ.
 - Cấu trúc này khớp 100% với naming convention thực tế của `FileUploadResponse` và `StoredFile` từ Phase 8.
 - Đây là implementation response projection nhúng trong `ServiceRequestDetailResponse.attachments`, không mở thêm endpoint REST mới, không làm thay đổi hợp đồng canonical.
 
-## D-036 Service Request Single Active Assignment Cardinality
+## D-036 Service Request Single Active Assignment and Database Invariants
 
-- Căn cứ `02_USER_ROLES_AND_WORKFLOWS.md` Section 6.3, `05_DATABASE_DESIGN.md` Section 9.3, và `06_API_CONTRACT.md` Section 13.4/13.6 ("Người xử lý" - số ít; payload phân công chỉ chứa `assigneeId` đơn):
-  - Mỗi Service Request tại một thời điểm chỉ có tối đa **MỘT** kỹ thuật viên/người xử lý đang hoạt động (`active cardinality = 0..1`).
-  - Khi phân công người xử lý mới (reassignment), phân công đang hoạt động cũ phải được hủy kích hoạt (`is_active = FALSE`, `unassigned_at = now()`) trước khi tạo bản ghi phân công mới với `is_active = TRUE`.
-  - Tầng Application Service bắt buộc kiểm soát tính đơn nhất của active assignment. Ràng buộc toàn vẹn cơ sở dữ liệu ngữ nghĩa đúng cho trường hợp này là partial unique index trên `request_id WHERE is_active = TRUE` (khác với task assignment V012 vốn là `(task_id, assignee_id) WHERE is_active = TRUE` vì task hỗ trợ nhiều người cùng làm). Do không tạo migration trong đợt decision này, logic được bảo vệ bằng kiểm tra transaction ở tầng Application Service.
+- **Cardinality**: Mỗi Service Request tại một thời điểm chỉ có tối đa **MỘT** kỹ thuật viên/người xử lý đang hoạt động (`active cardinality = 0..1`), căn cứ `02_USER_ROLES_AND_WORKFLOWS.md` Section 6.3, `05_DATABASE_DESIGN.md` Section 9.3, và `06_API_CONTRACT.md` Section 13.4/13.6 ("Người xử lý" - số ít; payload phân công chỉ chứa `assigneeId` đơn).
+- **Hàng rào Database & Khoảng trống Schema**:
+  - Việc chỉ dựa vào kiểm tra ở tầng Application Service không thể bảo vệ hệ thống trước hai transaction phân công đồng thời (race condition).
+  - Ghi nhận: `SERVICE_ASSIGNMENT_CONCURRENCY_SCHEMA_GAP`.
+  - Database PostgreSQL bắt buộc phải là hàng rào toàn vẹn cuối cùng thông qua partial unique index:
+    ```sql
+    CREATE UNIQUE INDEX uk_service_assignments_one_active
+    ON service_assignments(request_id)
+    WHERE is_active = TRUE;
+    ```
+  - Tuyệt đối không dùng `(request_id, assignee_id) WHERE is_active = TRUE` vì index theo cặp vẫn cho phép hai kỹ thuật viên khác nhau (User A và User B) cùng ở trạng thái active trên cùng một request.
+- **Kế hoạch Migration Phase 9**:
+  - Tạo migration `V013__add_service_request_assignment_invariants.sql` khi bắt đầu triển khai Phase 9 (không tạo trong đợt decision này).
+  - Tuyệt đối không sửa `V001`-`V012`.
+  - Không âm thầm xóa hoặc deactivate dữ liệu cũ; bắt buộc chạy preflight query kiểm tra vi phạm theo Runbook `reports/runbooks/V013_SERVICE_ASSIGNMENT_UNIQUENESS_PLAN.md`.
+- **Giao thức Reassignment Transaction**:
+  1. Khóa bản ghi `ServiceRequest` hoặc active assignment set bằng cơ chế transaction phù hợp.
+  2. Tìm active assignment hiện tại của request.
+  3. Nếu cùng `assigneeId`: Xử lý idempotent, trả về kết quả hiện tại mà không tạo row trùng lặp.
+  4. Nếu khác `assigneeId`:
+     - Cập nhật bản ghi cũ: `old.is_active = FALSE`, `old.unassigned_at = server Clock time`.
+     - Thực hiện flush (`saveAndFlush`) để giải phóng slot active trong partial index.
+     - Tạo bản ghi mới: `id = UUID.randomUUID()`, `requestId`, `assigneeId = newAssigneeId`, `assignedBy = principal.userId()`, `assignedAt = server Clock time`, `isActive = TRUE`.
+  5. Cam kết toàn bộ trong cùng `@Transactional`. `assigned_by` lấy từ Security Principal, không tin cậy dữ liệu client gửi lên.
+  6. Trong môi trường đồng thời, chỉ một transaction thành công; transaction kia bị chặn bởi partial unique index.
+- **Authorization & Canonical Roles**:
+  - Tuyệt đối không tự ý tạo thêm system role mới. Không sử dụng tên vai trò chung chung như "Manager" trong source.
+  - Phân quyền mức endpoint `@PreAuthorize` bắt buộc sử dụng các permission canonical đã định nghĩa trong `docs/06_API_CONTRACT.md` (ví dụ: `SERVICE_REQUEST_ASSIGN`, `SERVICE_REQUEST_READ`, `SERVICE_REQUEST_UPDATE`, `SERVICE_CATEGORY_MANAGE`).
+  - Business service kiểm tra quyền nghiệp vụ dựa trên mối quan hệ tài nguyên thực tế (`requester`, `active assignee`, hoặc `resource ownership`).
+  - Các vai trò như `TEAM_LEADER` hoặc `ADMIN` chỉ được kiểm tra nếu bảng phân quyền `V011` và canonical docs thực sự cấp quyền hạn tương ứng cho ngữ cảnh đó.
+- **Error Mapping & Khoảng trống mã lỗi**:
+  - Khi partial unique index `uk_service_assignments_one_active` bị vi phạm, bắt chính xác ngoại lệ thông qua kiểm tra SQLState `23505` và tên constraint `uk_service_assignments_one_active`. Không map mù quáng mọi `DataIntegrityViolationException`.
+  - Kiểm tra hợp đồng: `docs/06_API_CONTRACT.md` Section 13.6 và 20.6 **chưa định nghĩa mã lỗi** cho trường hợp xung đột phân công đồng thời (như `SERVICE_ALREADY_ASSIGNED` hay `SERVICE_ASSIGNMENT_CONFLICT`).
+  - Ghi nhận: **`SERVICE_ASSIGNMENT_ERROR_CODE_GAP`**. Agent không tự ý phát minh mã lỗi ngoài canonical docs khi chưa có quyết định từ người dùng/canonical.
 
-## D-037 Request Number Concurrency and Rollover Strategy
+## D-037 Request Number Concurrency, Clock Injection, and Non-Gapless Sequence
 
 - Format canonical là `SR-YYYY-NNNNNN` (ví dụ: `SR-2026-000001`).
 - Áp dụng phương án **PostgreSQL Transactional Advisory Lock** (`pg_advisory_xact_lock(hashtext('SR-' || current_year))`) kết hợp truy vấn max trong cùng `@Transactional` tạo request:
   `SELECT coalesce(max(cast(substring(request_number from 9) as integer)), 0) + 1 FROM service_requests WHERE request_number LIKE 'SR-' || current_year || '-%'`.
-- Ưu điểm:
-  1. Đảm bảo 100% duy nhất (unique) và tuần tự không bị trùng lặp trong môi trường concurrency cao.
-  2. Tự động chuyển đổi khi bước sang năm mới (`YYYY`) mà không cần DDL, sequence reset hay cron job.
-  3. Hoàn toàn không cần tạo bảng mới hay migration `V013` (Zero schema drift).
-  4. Tự động giải phóng lock khi transaction kết thúc (commit hoặc rollback).
+- Yêu cầu kỹ thuật thực thi:
+  1. Namespace khóa phân tách theo từng năm (`current_year`).
+  2. Giá trị năm (`current_year`) bắt buộc lấy từ `java.time.Clock` được inject vào service để hỗ trợ kiểm thử thời gian; múi giờ chốt chuẩn theo `ZoneId.of("Asia/Ho_Chi_Minh")` (hoặc cấu hình hệ thống).
+  3. Ràng buộc `uk_service_requests_request_number` (tạo từ `V010`) là hàng rào duy nhất cuối cùng ở mức database.
+  4. Kiểm thử đồng thời (concurrent create test) bắt buộc chạy đa luồng thực tế với các transaction và EntityManager độc lập, không dùng chung context luồng.
+  5. Kiểm thử kịch bản chuyển giao năm (year rollover) và kiểm thử transaction rollback.
+  6. **Tính chất Non-Gapless**: Hệ thống không tuyên bố chuỗi số là "gapless tuyệt đối". Khi một transaction sinh số bị rollback, số thứ tự đó có thể để lại khoảng trống (gap); định dạng nghiệp vụ không yêu cầu tính gapless tuyệt đối.
 
 ## D-038 Service Category Hierarchy and Cycle Prevention
 

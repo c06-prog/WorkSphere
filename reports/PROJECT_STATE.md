@@ -3,6 +3,7 @@
 ## Git Checkpoint
 
 - Branch: main
+- Current Checkpoint: `6fa5d87b5de185adf4e1523f31261443d5f35cf2`
 - Latest Validated Implementation: `ed2599d7f34644a7b03a29ffdb607b52d427e68f`
 - Phase 8 Hardening Commit: `3a8cdde8deeb447af97149b1d3885814897203e5`
 - Phase 8 Implementation Base: `6a72c01d8f6f6d9684d24d2699b6742c2a513e78`
@@ -55,7 +56,7 @@
   - Compensating cleanup: storage cleanup failure on rollback preserves primary persistence exception: verified.
   - Task Attachment integration: `TaskAttachment` entity, comment attachment integration (`attachmentFileIds`), atomic transaction, and N+1 safe `attachmentCount` batch query: verified.
   - Comprehensive report at reports/PHASE_08_REPORT.md.
-- Phase 9 Pre-Implementation Decisions: FINALIZED (D-035 Attachment projection, D-036 Single active assignment, D-037 Request number concurrency, D-038 Category hierarchy, D-039 File delete 200 OK)
+- Phase 9 Pre-Implementation Decisions & Concurrency Hardening: COMPLETED & HARDENED (D-035 Attachment projection IMPLEMENTATION_RESPONSE_PROJECTION, D-036 Single active assignment database invariant via partial unique index `uk_service_assignments_one_active`, V013 runbook at `reports/runbooks/V013_SERVICE_ASSIGNMENT_UNIQUENESS_PLAN.md`, D-037 Request number concurrency with Clock injection and non-gapless nature, D-038 Category hierarchy cycle prevention, D-039 File delete 200 OK correction, canonical authorization mapping without ad-hoc roles).
 
 ## Latest Evidence
 
@@ -78,6 +79,8 @@
 
 ## Deferred Items & Known Gaps
 
+- SERVICE_ASSIGNMENT_CONCURRENCY_SCHEMA_GAP: Quyết định ban đầu D-036 chỉ dựa vào Application Service check mà chưa có database constraint để bảo vệ active assignee cardinality 0..1 trước race condition. Đã giải quyết bằng kế hoạch migration V013 trong Phase 9 tạo partial unique index `uk_service_assignments_one_active` trên `service_assignments(request_id) WHERE is_active = TRUE;`.
+- SERVICE_ASSIGNMENT_ERROR_CODE_GAP: `docs/06_API_CONTRACT.md` Section 13 và Section 20.6 chưa định nghĩa mã lỗi nghiệp vụ cho trường hợp vi phạm phân công đồng thời (như `SERVICE_ALREADY_ASSIGNED` hay `SERVICE_ASSIGNMENT_CONFLICT`). Cần người dùng hoặc tài liệu canonical bổ sung mã lỗi trước khi thực hiện exception mapping chi tiết trong Phase 9.
 - FILE_ORPHAN_RECONCILIATION_GAP: Nếu metadata persistence và compensating physical cleanup cùng thất bại, physical file có thể trở thành orphan. Exception gốc được giữ nguyên, failure được log an toàn bằng fileId mà không lộ physical path. Cần reconciliation worker hoặc operational process trước khi đưa vào production.
 - FILE_STORAGE_TOCTOU_LOW: Existing symlink escape đã được chặn và kiểm thử thành công trên Linux container. Java NIO portable API không loại bỏ tuyệt đối TOCTOU trước actor đã có quyền can thiệp trực tiếp filesystem lưu trữ. Môi trường production phải bảo vệ storage root bằng phân quyền hệ điều hành phù hợp.
 - FILE_VIRUS_SCANNING_DEFERRED: ClamAV daemon hoãn đến môi trường production; kiểm tra in-flight qua magic bytes và ZIP entry inspection.
@@ -108,9 +111,10 @@
 
 ## Recent Git Log
 
+- 6fa5d87 docs(agent): finalize phase 9 pre-implementation decisions and extension policy
+- 98fd768 docs(agent): authorize ide extension discovery, installation, and automation
+- 45faf1e docs(agent): checkpoint phase 8 completion
 - ed2599d fix(file): verify symlink and archive resource safety
 - 3a8cdde fix(file): harden storage security, zip bomb defense, and download authorization
 - 5d45728 docs(agent): authorize web runtime and browser automation
 - 6a72c01 feat(file): implement secure file storage module
-- 1306570 docs(agent): checkpoint phase 7 completion
-- daa69a1 docs(ops): add V012 preflight and Java 21 validation

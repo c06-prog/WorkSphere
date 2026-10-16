@@ -4,6 +4,7 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
+- Current Checkpoint: `6fa5d87b5de185adf4e1523f31261443d5f35cf2`
 - Latest Validated Implementation: `ed2599d7f34644a7b03a29ffdb607b52d427e68f` (`fix(file): verify symlink and archive resource safety`)
 - Hardening Checkpoint: `3a8cdde8deeb447af97149b1d3885814897203e5` (`fix(file): harden storage security, zip bomb defense, and download authorization`)
 - Base Implementation: `6a72c01d8f6f6d9684d24d2699b6742c2a513e78` (`feat(file): implement secure file storage module`)
@@ -25,11 +26,18 @@ Phase 8 (File Module & Task Attachment Integration) đã hoàn tất toàn diệ
 - **Endpoints & Lifecycle**: `POST /api/v1/files` (201 Created), `GET /api/v1/files/{fileId}/download` (streaming `Resource`, `X-Content-Type-Options: nosniff`, phân quyền truy cập chặt chẽ), `DELETE /api/v1/files/{fileId}` (soft-delete retention, chặn xóa tệp đã gắn kết với mã lỗi 422 `FILE_ALREADY_LINKED`). Cơ chế compensating cleanup tự động xóa tệp vật lý nếu metadata DB ghi thất bại, bảo toàn nguyên vẹn exception nghiệp vụ gốc.
 - **Task Attachment Integration**: `TaskAttachment` entity và repository, liên kết tệp đính kèm nguyên tử trong cùng transaction lưu trữ bình luận công việc (`attachmentFileIds`), tổng hợp `attachmentCount` cho Task Detail và Task List thông qua batch query tránh triệt để N+1 query.
 - **IDE Extension Authorization**: Quyền phát hiện, cài đặt và tự động hóa extension trong Antigravity IDE được kích hoạt (D-033, D-034, kiểm kê 10 extension suite tại `C:\Users\dienm\.antigravity-ide\extensions`, PostgreSQL là canonical/mặc định, mssql được phép dùng khi task cụ thể yêu cầu).
-- **Service Request Module**: Đã hoàn tất audit và chốt các quyết định thiết kế tiền triển khai (D-035 đến D-039: chuẩn hóa response projection tệp đính kèm, single active assignee, concurrency an toàn cho mã yêu cầu, category hierarchy cycle check, và đính chính file delete 200 OK). Sẵn sàng cho triển khai Phase 9.
+- **Service Request Module**: Đã hoàn tất audit và chốt các quyết định thiết kế tiền triển khai (D-035 đến D-039). Đặc biệt đã làm cứng quyết định đồng thời D-036:
+  - Bắt buộc bảo vệ cardinality 0..1 active assignee bằng database invariant: partial unique index `uk_service_assignments_one_active` trên `service_assignments(request_id) WHERE is_active = TRUE;` thông qua migration `V013__add_service_request_assignment_invariants.sql` trong Phase 9.
+  - Ban hành Runbook preflight kiểm tra vi phạm dữ liệu tại `reports/runbooks/V013_SERVICE_ASSIGNMENT_UNIQUENESS_PLAN.md`.
+  - Quy chuẩn giao thức transaction phân công lại: lock request, kiểm tra idempotent nếu trùng assignee, deactivate bản ghi cũ (`is_active = FALSE`, `unassigned_at = server Clock time`), flush, tạo bản ghi mới với `assigned_by` từ principal.
+  - Xử lý ngoại lệ chính xác qua SQLState 23505 và tên constraint. Ghi nhận `SERVICE_ASSIGNMENT_ERROR_CODE_GAP` vì contract canonical chưa có mã lỗi xung đột phân công.
+  - Làm cứng D-037 (Clock injection, timezone cố định, non-gapless format), D-035 (`IMPLEMENTATION_RESPONSE_PROJECTION`), và chuẩn hóa phân quyền canonical không dùng role tùy tiện.
 - **Mobile Module**: Chưa bắt đầu (Zero mobile code).
 
 ## Deferred / Known Gaps
 
+- `SERVICE_ASSIGNMENT_CONCURRENCY_SCHEMA_GAP`: Quyết định ban đầu D-036 chỉ dựa vào Application Service check mà chưa có database constraint để bảo vệ active assignee cardinality 0..1 trước race condition. Đã giải quyết bằng kế hoạch migration V013 trong Phase 9 tạo partial unique index `uk_service_assignments_one_active` trên `service_assignments(request_id) WHERE is_active = TRUE;`.
+- `SERVICE_ASSIGNMENT_ERROR_CODE_GAP`: `docs/06_API_CONTRACT.md` Section 13 và Section 20.6 chưa định nghĩa mã lỗi nghiệp vụ cho trường hợp vi phạm phân công đồng thời (như `SERVICE_ALREADY_ASSIGNED` hay `SERVICE_ASSIGNMENT_CONFLICT`). Cần người dùng hoặc tài liệu canonical bổ sung mã lỗi trước khi thực hiện exception mapping chi tiết trong Phase 9.
 - `FILE_ORPHAN_RECONCILIATION_GAP`: Nếu metadata persistence và compensating physical cleanup cùng thất bại, physical file có thể trở thành orphan. Exception gốc được giữ nguyên, failure được log an toàn bằng fileId mà không lộ physical path. Cần reconciliation worker hoặc operational process trước khi đưa vào production.
 - `FILE_STORAGE_TOCTOU_LOW`: Existing symlink escape đã được chặn và kiểm thử thành công trên Linux container. Java NIO portable API không loại bỏ tuyệt đối TOCTOU trước actor đã có quyền can thiệp trực tiếp filesystem lưu trữ. Môi trường production phải bảo vệ storage root bằng phân quyền hệ điều hành phù hợp.
 - `FILE_VIRUS_SCANNING_DEFERRED`: ClamAV daemon hoãn đến môi trường production; kiểm tra in-flight qua magic bytes và ZIP entry inspection.
