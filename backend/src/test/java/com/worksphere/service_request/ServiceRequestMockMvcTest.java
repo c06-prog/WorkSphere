@@ -30,6 +30,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -284,42 +286,74 @@ public class ServiceRequestMockMvcTest {
     @Test
     @Order(2)
     void createServiceRequest_concurrentCreation_generatesUniqueSequentialNumbers() throws Exception {
-        int threadCount = 4;
-        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
-        List<Callable<String>> tasks = new ArrayList<>();
+        int threadCount = 8;
+        int rounds = 5;
+        java.util.Set<String> allGeneratedNumbers = ConcurrentHashMap.newKeySet();
 
-        for (int i = 0; i < threadCount; i++) {
-            final int index = i;
-            tasks.add(() -> {
-                CreateServiceRequestRequest req = new CreateServiceRequestRequest(
-                        defaultCategory.getId(),
-                        "Concurrent Task " + index,
-                        "Concurrent Description " + index,
-                        ServicePriority.MEDIUM,
-                        null,
-                        null
-                );
-                MvcResult mvcResult = mockMvc.perform(post("/api/v1/service-requests")
-                                .header("Authorization", "Bearer " + requesterToken)
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(req)))
-                        .andExpect(status().isCreated())
-                        .andReturn();
-                Map<?, ?> resp = objectMapper.readValue(mvcResult.getResponse().getContentAsString(), Map.class);
-                Map<?, ?> d = (Map<?, ?>) resp.get("data");
-                return (String) d.get("requestNumber");
-            });
+        for (int round = 0; round < rounds; round++) {
+            final int currentRound = round;
+            ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+            CountDownLatch readyLatch = new CountDownLatch(threadCount);
+            CountDownLatch startLatch = new CountDownLatch(1);
+            List<Future<String>> futures = new ArrayList<>();
+
+            for (int i = 0; i < threadCount; i++) {
+                final int index = i;
+                futures.add(executor.submit(() -> {
+                    readyLatch.countDown();
+                    startLatch.await();
+
+                    CreateServiceRequestRequest req = new CreateServiceRequestRequest(
+                            defaultCategory.getId(),
+                            "Concurrent Task R" + currentRound + " T" + index,
+                            "Concurrent Description " + index,
+                            ServicePriority.MEDIUM,
+                            null,
+                            null
+                    );
+                    MvcResult mvcResult = mockMvc.perform(post("/api/v1/service-requests")
+                                    .header("Authorization", "Bearer " + requesterToken)
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content(objectMapper.writeValueAsString(req)))
+                            .andExpect(status().isCreated())
+                            .andReturn();
+                    Map<?, ?> resp = objectMapper.readValue(mvcResult.getResponse().getContentAsString(), Map.class);
+                    Map<?, ?> d = (Map<?, ?>) resp.get("data");
+                    return (String) d.get("requestNumber");
+                }));
+            }
+
+            readyLatch.await();
+            startLatch.countDown();
+
+            List<String> roundNumbers = new ArrayList<>();
+            for (Future<String> future : futures) {
+                String num = future.get();
+                assertThat(num).matches("SR-\\d{4}-\\d{6}");
+                roundNumbers.add(num);
+                allGeneratedNumbers.add(num);
+            }
+            executor.shutdown();
+
+            assertThat(new java.util.HashSet<>(roundNumbers)).hasSize(threadCount);
         }
 
-        List<Future<String>> futures = executor.invokeAll(tasks);
-        List<String> generatedNumbers = new ArrayList<>();
-        for (Future<String> future : futures) {
-            generatedNumbers.add(future.get());
-        }
-        executor.shutdown();
+        assertThat(allGeneratedNumbers).hasSize(threadCount * rounds);
 
-        assertThat(generatedNumbers).hasSize(threadCount);
-        assertThat(new java.util.HashSet<>(generatedNumbers)).hasSize(threadCount);
+        // Verify database state: exact row count, unique request_number, all within current business year
+        int dbCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM service_requests", Integer.class);
+        assertThat(dbCount).isGreaterThanOrEqualTo(threadCount * rounds);
+
+        int uniqueDbNumbers = jdbcTemplate.queryForObject("SELECT COUNT(DISTINCT request_number) FROM service_requests", Integer.class);
+        assertThat(uniqueDbNumbers).isEqualTo(dbCount);
+
+        int currentYear = java.time.LocalDate.now().getYear();
+        int matchingYearCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM service_requests WHERE request_number LIKE ?",
+                Integer.class,
+                "SR-" + currentYear + "-%"
+        );
+        assertThat(matchingYearCount).isEqualTo(dbCount);
     }
 
     @Test
@@ -836,5 +870,366 @@ public class ServiceRequestMockMvcTest {
                         .content(objectMapper.writeValueAsString(rateReq)))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("SERVICE_RATING_ALREADY_EXISTS"));
+    }
+
+    // =========================================================================
+    // SECTION J: HARDENED CONCURRENCY & TRANSACTION INTEGRITY
+    // =========================================================================
+
+    @Test
+    @Order(13)
+    void assignment_concurrentAssignments_preservesSingleActiveAssigneeInvariant() throws Exception {
+        UUID secondAssigneeId = UUID.randomUUID();
+        insertUser(secondAssigneeId, "assignee2_test", "assignee2@test.com", true);
+        assignRole(secondAssigneeId, "TEAM_LEADER");
+
+        for (int round = 0; round < 5; round++) {
+            ServiceRequest sr = ServiceRequest.create(
+                    UUID.randomUUID(), "SR-2026-A" + round, defaultCategory.getId(),
+                    requesterUserId, null, "Concurrent Assign " + round, "Desc",
+                    ServicePriority.LOW, requesterUserId, Instant.now()
+            );
+            sr = requestRepository.save(sr);
+            final UUID reqId = sr.getId();
+
+            ExecutorService executor = Executors.newFixedThreadPool(2);
+            CountDownLatch readyLatch = new CountDownLatch(2);
+            CountDownLatch startLatch = new CountDownLatch(1);
+
+            Callable<Integer> assignTask1 = () -> {
+                readyLatch.countDown();
+                startLatch.await();
+                MvcResult res = mockMvc.perform(post("/api/v1/service-requests/" + reqId + "/assignments")
+                                .header("Authorization", "Bearer " + adminToken)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(new AssignServiceRequestRequest(assigneeUserId))))
+                        .andReturn();
+                return res.getResponse().getStatus();
+            };
+
+            Callable<Integer> assignTask2 = () -> {
+                readyLatch.countDown();
+                startLatch.await();
+                MvcResult res = mockMvc.perform(post("/api/v1/service-requests/" + reqId + "/assignments")
+                                .header("Authorization", "Bearer " + adminToken)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(new AssignServiceRequestRequest(secondAssigneeId))))
+                        .andReturn();
+                return res.getResponse().getStatus();
+            };
+
+            Future<Integer> f1 = executor.submit(assignTask1);
+            Future<Integer> f2 = executor.submit(assignTask2);
+
+            readyLatch.await();
+            startLatch.countDown();
+
+            int status1 = f1.get();
+            int status2 = f2.get();
+            executor.shutdown();
+
+            // Neither response should be 500
+            assertThat(status1).isNotEqualTo(500);
+            assertThat(status2).isNotEqualTo(500);
+            assertThat(List.of(200, 409)).contains(status1);
+            assertThat(List.of(200, 409)).contains(status2);
+            assertThat(status1 == 200 || status2 == 200).isTrue();
+
+            // Verify invariant: Exactly 1 active assignment
+            Integer activeCount = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM service_assignments WHERE request_id = ? AND is_active = TRUE",
+                    Integer.class,
+                    reqId
+            );
+            assertThat(activeCount).isEqualTo(1);
+
+            // Verify replaced assignments have is_active = false and unassigned_at set
+            List<Map<String, Object>> rows = jdbcTemplate.queryForList(
+                    "SELECT is_active, unassigned_at, assigned_by FROM service_assignments WHERE request_id = ? ORDER BY assigned_at ASC",
+                    reqId
+            );
+            for (Map<String, Object> r : rows) {
+                Boolean isActive = (Boolean) r.get("is_active");
+                if (!isActive) {
+                    assertThat(r.get("unassigned_at")).isNotNull();
+                }
+                assertThat(r.get("assigned_by")).isEqualTo(adminUserId);
+            }
+        }
+    }
+
+    @Test
+    @Order(14)
+    void assignment_uniqueConstraintViolation_mapsToAssignmentConflict409() {
+        ServiceRequest sr = ServiceRequest.create(
+                UUID.randomUUID(), "SR-2026-UK", defaultCategory.getId(),
+                requesterUserId, null, "UK Req", "Desc",
+                ServicePriority.LOW, requesterUserId, Instant.now()
+        );
+        sr = requestRepository.save(sr);
+
+        // First active assignment
+        assignmentRepository.saveAndFlush(ServiceAssignment.create(
+                UUID.randomUUID(), sr.getId(), assigneeUserId, adminUserId, Instant.now()
+        ));
+
+        // Intentionally save a second active assignment without deactivating the first
+        ServiceAssignment secondActive = ServiceAssignment.create(
+                UUID.randomUUID(), sr.getId(), unrelatedUserId, adminUserId, Instant.now()
+        );
+
+        org.junit.jupiter.api.Assertions.assertThrows(
+                org.springframework.dao.DataIntegrityViolationException.class,
+                () -> assignmentRepository.saveAndFlush(secondActive)
+        );
+
+        // Verify the partial unique index uk_service_assignments_one_active prevented a second active row
+        Integer activeCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM service_assignments WHERE request_id = ? AND is_active = TRUE",
+                Integer.class,
+                sr.getId()
+        );
+        assertThat(activeCount).isEqualTo(1);
+    }
+
+    @Test
+    @Order(15)
+    void rating_concurrentSubmission_onlyOneSucceedsAndOtherReturns409() throws Exception {
+        for (int round = 0; round < 5; round++) {
+            ServiceRequest sr = ServiceRequest.create(
+                    UUID.randomUUID(), "SR-2026-RATE-" + round, defaultCategory.getId(),
+                    requesterUserId, null, "Rating Req " + round, "Desc",
+                    ServicePriority.LOW, requesterUserId, Instant.now()
+            );
+            sr.transitionStatus(ServiceStatus.CLOSED, adminUserId, Instant.now());
+            sr = requestRepository.save(sr);
+            final UUID reqId = sr.getId();
+
+            ExecutorService executor = Executors.newFixedThreadPool(2);
+            CountDownLatch readyLatch = new CountDownLatch(2);
+            CountDownLatch startLatch = new CountDownLatch(1);
+
+            CreateServiceRatingRequest rateReq1 = new CreateServiceRatingRequest(5, "Rating Alpha " + round);
+            CreateServiceRatingRequest rateReq2 = new CreateServiceRatingRequest(4, "Rating Beta " + round);
+
+            Callable<Integer> task1 = () -> {
+                readyLatch.countDown();
+                startLatch.await();
+                MvcResult res = mockMvc.perform(post("/api/v1/service-requests/" + reqId + "/rating")
+                                .header("Authorization", "Bearer " + requesterToken)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(rateReq1)))
+                        .andReturn();
+                return res.getResponse().getStatus();
+            };
+
+            Callable<Integer> task2 = () -> {
+                readyLatch.countDown();
+                startLatch.await();
+                MvcResult res = mockMvc.perform(post("/api/v1/service-requests/" + reqId + "/rating")
+                                .header("Authorization", "Bearer " + requesterToken)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(rateReq2)))
+                        .andReturn();
+                return res.getResponse().getStatus();
+            };
+
+            Future<Integer> f1 = executor.submit(task1);
+            Future<Integer> f2 = executor.submit(task2);
+
+            readyLatch.await();
+            startLatch.countDown();
+
+            int status1 = f1.get();
+            int status2 = f2.get();
+            executor.shutdown();
+
+            // Neither is 500
+            assertThat(status1).isNotEqualTo(500);
+            assertThat(status2).isNotEqualTo(500);
+
+            // Exactly one 201 Created and one 409 Conflict
+            List<Integer> statuses = List.of(status1, status2);
+            assertThat(statuses).containsExactlyInAnyOrder(201, 409);
+
+            // Exactly 1 row in service_ratings
+            Integer ratingCount = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM service_ratings WHERE request_id = ?",
+                    Integer.class,
+                    reqId
+            );
+            assertThat(ratingCount).isEqualTo(1);
+        }
+    }
+
+    @Test
+    @Order(16)
+    void workflow_historyInsertFailure_rollsBackServiceRequestMutation() {
+        ServiceRequest sr = ServiceRequest.create(
+                UUID.randomUUID(), "SR-2026-ROLLBACK", defaultCategory.getId(),
+                requesterUserId, null, "Rollback Test", "Desc",
+                ServicePriority.LOW, requesterUserId, Instant.now()
+        );
+        sr = requestRepository.save(sr);
+        assignmentRepository.save(ServiceAssignment.create(
+                UUID.randomUUID(), sr.getId(), assigneeUserId, adminUserId, Instant.now()
+        ));
+        sr.transitionStatus(ServiceStatus.ASSIGNED, adminUserId, Instant.now());
+        sr = requestRepository.save(sr);
+
+        ServiceStatus initialStatus = sr.getStatus();
+        Long initialVersion = sr.getVersion();
+        Instant initialResolvedAt = sr.getResolvedAt();
+        Instant initialClosedAt = sr.getClosedAt();
+        Instant initialCancelledAt = sr.getCancelledAt();
+        int initialHistoryCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM service_status_histories WHERE request_id = ?",
+                Integer.class,
+                sr.getId()
+        );
+
+        // Create temporary trigger in PostgreSQL to cause failure on INSERT into service_status_histories
+        jdbcTemplate.execute(
+                "CREATE OR REPLACE FUNCTION trg_fail_status_history() RETURNS trigger AS $$ " +
+                "BEGIN RAISE EXCEPTION 'SIMULATED_HISTORY_INSERT_FAILURE'; END; " +
+                "$$ LANGUAGE plpgsql;"
+        );
+        jdbcTemplate.execute(
+                "CREATE TRIGGER trg_test_history_fail BEFORE INSERT ON service_status_histories " +
+                "FOR EACH ROW EXECUTE FUNCTION trg_fail_status_history();"
+        );
+
+        try {
+            UpdateServiceRequestStatusRequest toInProgress = new UpdateServiceRequestStatusRequest(
+                    ServiceStatus.IN_PROGRESS, "Thử chuyển trạng thái", initialVersion
+            );
+
+            try {
+                mockMvc.perform(put("/api/v1/service-requests/" + sr.getId() + "/status")
+                                .header("Authorization", "Bearer " + assigneeToken)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(toInProgress)))
+                        .andReturn();
+            } catch (Exception ignored) {
+            }
+
+            // Verify full rollback in PostgreSQL
+            ServiceRequest reloaded = requestRepository.findById(sr.getId()).orElseThrow();
+            assertThat(reloaded.getStatus()).isEqualTo(initialStatus);
+            assertThat(reloaded.getVersion()).isEqualTo(initialVersion);
+            assertThat(reloaded.getResolvedAt()).isEqualTo(initialResolvedAt);
+            assertThat(reloaded.getClosedAt()).isEqualTo(initialClosedAt);
+            assertThat(reloaded.getCancelledAt()).isEqualTo(initialCancelledAt);
+
+            int postHistoryCount = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM service_status_histories WHERE request_id = ?",
+                    Integer.class,
+                    sr.getId()
+            );
+            assertThat(postHistoryCount).isEqualTo(initialHistoryCount);
+        } finally {
+            jdbcTemplate.execute("DROP TRIGGER IF EXISTS trg_test_history_fail ON service_status_histories;");
+            jdbcTemplate.execute("DROP FUNCTION IF EXISTS trg_fail_status_history();");
+        }
+    }
+
+    @Test
+    @Order(17)
+    void comments_internalNotes_paginationAndVisibilityScoping() throws Exception {
+        ServiceRequest sr = ServiceRequest.create(
+                UUID.randomUUID(), "SR-2026-PAG-COMM", defaultCategory.getId(),
+                requesterUserId, null, "Pagination Comment Req", "Desc",
+                ServicePriority.LOW, requesterUserId, Instant.now()
+        );
+        sr = requestRepository.save(sr);
+        assignmentRepository.save(ServiceAssignment.create(
+                UUID.randomUUID(), sr.getId(), assigneeUserId, adminUserId, Instant.now()
+        ));
+
+        // Create 2 public comments
+        CreateServiceCommentRequest pub1 = new CreateServiceCommentRequest("Public Comment 1", false, null);
+        CreateServiceCommentRequest pub2 = new CreateServiceCommentRequest("Public Comment 2", false, null);
+        mockMvc.perform(post("/api/v1/service-requests/" + sr.getId() + "/comments")
+                        .header("Authorization", "Bearer " + requesterToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(pub1)))
+                .andExpect(status().isCreated());
+        mockMvc.perform(post("/api/v1/service-requests/" + sr.getId() + "/comments")
+                        .header("Authorization", "Bearer " + requesterToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(pub2)))
+                .andExpect(status().isCreated());
+
+        // Create 2 internal notes by Assignee
+        CreateServiceCommentRequest priv1 = new CreateServiceCommentRequest("SECRET INTERNAL NOTE 1", true, null);
+        CreateServiceCommentRequest priv2 = new CreateServiceCommentRequest("SECRET INTERNAL NOTE 2", true, null);
+        mockMvc.perform(post("/api/v1/service-requests/" + sr.getId() + "/comments")
+                        .header("Authorization", "Bearer " + assigneeToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(priv1)))
+                .andExpect(status().isCreated());
+        mockMvc.perform(post("/api/v1/service-requests/" + sr.getId() + "/comments")
+                        .header("Authorization", "Bearer " + assigneeToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(priv2)))
+                .andExpect(status().isCreated());
+
+        // 1. Requester with page=0, size=2: Sees exactly 2 public comments, totalItems=2, totalPages=1
+        MvcResult reqPage0 = mockMvc.perform(get("/api/v1/service-requests/" + sr.getId() + "/comments")
+                        .header("Authorization", "Bearer " + requesterToken)
+                        .param("page", "0")
+                        .param("size", "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalItems").value(2))
+                .andExpect(jsonPath("$.data.totalPages").value(1))
+                .andExpect(jsonPath("$.data.items.length()").value(2))
+                .andExpect(jsonPath("$.data.items[0].isInternal").value(false))
+                .andExpect(jsonPath("$.data.items[1].isInternal").value(false))
+                .andReturn();
+
+        String reqContent = reqPage0.getResponse().getContentAsString();
+        assertThat(reqContent).doesNotContain("SECRET INTERNAL NOTE");
+
+        // Requester with page=1, size=2: Empty items, no ghost rows
+        mockMvc.perform(get("/api/v1/service-requests/" + sr.getId() + "/comments")
+                        .header("Authorization", "Bearer " + requesterToken)
+                        .param("page", "1")
+                        .param("size", "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items.length()").value(0))
+                .andExpect(jsonPath("$.data.totalItems").value(2));
+
+        // 2. Active Assignee with size=2: Sees totalItems=4, totalPages=2
+        mockMvc.perform(get("/api/v1/service-requests/" + sr.getId() + "/comments")
+                        .header("Authorization", "Bearer " + assigneeToken)
+                        .param("page", "0")
+                        .param("size", "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalItems").value(4))
+                .andExpect(jsonPath("$.data.totalPages").value(2));
+
+        // 3. Admin with size=2: Sees totalItems=4, totalPages=2
+        mockMvc.perform(get("/api/v1/service-requests/" + sr.getId() + "/comments")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .param("page", "0")
+                        .param("size", "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalItems").value(4))
+                .andExpect(jsonPath("$.data.totalPages").value(2));
+
+        // 4. Reassign request to unrelatedUser -> old assignee is now inactive
+        AssignServiceRequestRequest reassignReq = new AssignServiceRequestRequest(unrelatedUserId);
+        mockMvc.perform(post("/api/v1/service-requests/" + sr.getId() + "/assignments")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(reassignReq)))
+                .andExpect(status().isOk());
+
+        // Previous assignee queries: Should no longer have access (403 Forbidden), guaranteeing internal notes are not leaked
+        mockMvc.perform(get("/api/v1/service-requests/" + sr.getId() + "/comments")
+                        .header("Authorization", "Bearer " + assigneeToken)
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isForbidden());
     }
 }

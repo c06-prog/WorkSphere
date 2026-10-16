@@ -73,7 +73,7 @@
 
 - Backend Test Suite on Host (Oracle JDK 27, Testcontainers postgres:15-alpine):
   - Checkstyle: 0 violations
-  - Total tests: 205/205 PASS (183 regression suite + 22 Phase 9 tests)
+  - Total tests: 210/210 PASS (183 regression suite + 27 Phase 9 tests)
   - Failures: 0 | Errors: 0 | Skipped: 0
   - Maven execution: BUILD SUCCESS (exit code 0)
 - Database & Migrations:

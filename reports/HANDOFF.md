@@ -4,16 +4,16 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: TRIỂN KHAI PHASE 9 - SERVICE REQUEST MODULE
-- Latest Validated Checkpoint: Prior `fb8f41b03b110e069cb2639a39ab6981463c0294`
+- Current Task: HARDENING CONCURRENCY, ROLLBACK VÀ REPORT CHO PHASE 9
+- Latest Validated Checkpoint: `e189306aa4d4a2f6700014d165f07d452d1cb16e`
 - Operational Documentation Checkpoint: reports/DECISIONS.md (D-045), reports/PHASE_09_REPORT.md
 - Working tree: clean
 - Build status: BUILD SUCCESS (Maven 3.9.16, Java target 21, Checkstyle 0 violations)
 - Test status:
-  - Host Suite (Oracle JDK 27, Testcontainers PostgreSQL): 205/205 PASS (0 failures, 0 errors, 0 skipped)
+  - Host Suite (Oracle JDK 27, Testcontainers PostgreSQL): 210/210 PASS (0 failures, 0 errors, 0 skipped)
   - Existing Regression Suite (Phase 0 - Phase 8): 183/183 PASS
   - Phase 9 Service Category Tests (`ServiceCategoryMockMvcTest`): 10/10 PASS
-  - Phase 9 Service Request Core / Workflow / Assignment / Attachment / Rating / Scoping Tests (`ServiceRequestMockMvcTest`): 12/12 PASS
+  - Phase 9 Service Request Core / Workflow / Assignment / Attachment / Rating / Scoping Tests (`ServiceRequestMockMvcTest`): 17/17 PASS (bao gồm 5 hardened controlled concurrency & rollback tests)
 
 ## Phase 9 Service Request Module: COMPLETED & VERIFIED
 

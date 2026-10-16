@@ -893,7 +893,10 @@ public class ServiceRequestApplicationService {
         Throwable cause = ex.getCause();
         while (cause != null) {
             if (cause instanceof SQLException sqlEx) {
-                if ("23505".equals(sqlEx.getSQLState())) {
+                if ("23505".equals(sqlEx.getSQLState())
+                        && sqlEx.getMessage() != null
+                        && (sqlEx.getMessage().contains("service_ratings_request_id_key")
+                                || (sqlEx.getMessage().contains("service_ratings") && sqlEx.getMessage().contains("request_id")))) {
                     throw new BusinessRuleException(
                             "SERVICE_RATING_ALREADY_EXISTS",
                             "Yêu cầu dịch vụ này đã được đánh giá trước đó"
