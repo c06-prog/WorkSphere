@@ -111,7 +111,7 @@ ORDER BY active_count DESC, request_id;
 2. **Đề xuất thiết kế mã lỗi nghiệp vụ**:
    - **Tên mã lỗi**: `SERVICE_ASSIGNMENT_CONFLICT`
    - **HTTP Status**: `409 Conflict`
-   - **Thông điệp tiếng Việt**: "Yêu cầu dịch vụ đang có thao tác phân công đồng thời hoặc đã được phân công cho người khác."
+   - **Thông điệp tiếng Việt**: "Yêu cầu dịch vụ đang được phân công đồng thời hoặc trạng thái phân công đã thay đổi. Vui lòng tải lại dữ liệu và thử lại."
    - **Phân biệt ranh giới**:
      - *Khác với lỗi validation* (HTTP 400 `VALIDATION_ERROR`): Định dạng request và assigneeId hoàn toàn hợp lệ về mặt cú pháp.
      - *Khác với lỗi optimistic lock* (HTTP 409 `OPTIMISTIC_LOCK_CONFLICT`): Phát sinh do vi phạm unique index trên bảng con `service_assignments`, không phải do lệch version trên `service_requests`.
@@ -119,5 +119,8 @@ ORDER BY active_count DESC, request_id;
 3. **Quy tắc Governance & Trạng thái hiện tại**:
    - Tài liệu [06_API_CONTRACT.md](file:///D:/WorkSphere/docs/06_API_CONTRACT.md) Section 13.6 và 20.6 hiện chưa có mã lỗi `SERVICE_ASSIGNMENT_CONFLICT`.
    - Theo quy tắc `AGENTS.md` và [10_AI_AGENT_INSTRUCTIONS.md](file:///D:/WorkSphere/docs/10_AI_AGENT_INSTRUCTIONS.md), Agent không được tự ý phát minh mã lỗi mới trong production code khi chưa cập nhật canonical docs.
-   - Ghi nhận: **`SERVICE_ASSIGNMENT_ERROR_CODE_GAP`**.
+   - Ghi nhận: **`CANONICAL_PATCH_REQUIRED`** và **`SERVICE_ASSIGNMENT_ERROR_CODE_GAP`**.
    - Trong test plan và tài liệu thiết kế, ghi nhận HTTP 409 Conflict dưới dạng pending canonical decision.
+4. **Tách biệt phạm vi di trú (Migration Decoupling)**:
+   - Bản di trú `V013` chỉ phục vụ việc tạo partial unique index `uk_service_assignments_one_active`.
+   - Seed dữ liệu `role_permissions` được tách riêng sang bản di trú `V014__seed_role_permissions.sql` sau khi ma trận phân quyền canonical được hoàn tất và phê duyệt chính thức.

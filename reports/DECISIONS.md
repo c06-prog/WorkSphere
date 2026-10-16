@@ -359,11 +359,11 @@ Current operating mode:
   10. Trong môi trường đồng thời, chỉ một transaction thành công; transaction kia bị chặn bởi partial unique index.
 - **Error Mapping & Khoảng trống mã lỗi**:
   - Khi partial unique index `uk_service_assignments_one_active` bị vi phạm: Duyệt qua `SQLException` cause chain, bắt buộc SQLState phải là `23505`, và tên constraint phải khớp chính xác `uk_service_assignments_one_active`. Không sử dụng `message.contains("service_assignments")` làm fallback rộng. Không map các lỗi Foreign Key (23503) hay Not Null (23502) thành xung đột phân công. Toàn bộ transaction phải rollback.
-  - **Đề xuất thiết kế mã lỗi**: `SERVICE_ASSIGNMENT_CONFLICT` (HTTP 409 Conflict, Message: "Yêu cầu dịch vụ đang có thao tác phân công đồng thời hoặc đã được phân công cho người khác").
+  - **Đề xuất thiết kế mã lỗi**: `SERVICE_ASSIGNMENT_CONFLICT` (HTTP 409 Conflict, Message: "Yêu cầu dịch vụ đang được phân công đồng thời hoặc trạng thái phân công đã thay đổi. Vui lòng tải lại dữ liệu và thử lại.").
     - Khác biệt với validation error (400 `VALIDATION_ERROR`): Định dạng UUID và thông tin assignee hợp lệ về mặt cú pháp.
     - Khác biệt với optimistic lock (409 `OPTIMISTIC_LOCK_CONFLICT`): Bị kích hoạt bởi partial unique index trên `service_assignments`, không phải do lệch `@Version` trên `service_requests`.
     - Khác biệt với assignee inactive/not found: Trả về `USER_NOT_FOUND` hoặc `USER_INACTIVE`.
-  - **Quy tắc Governance**: Theo quy định `AGENTS.md` và `docs/10_AI_AGENT_INSTRUCTIONS.md`, Agent không được tự ý đưa mã lỗi mới vào production code khi tài liệu canonical chưa cập nhật. Tiếp tục ghi nhận: **`SERVICE_ASSIGNMENT_ERROR_CODE_GAP`**. Test plan ghi nhận kỳ vọng HTTP 409 dưới dạng pending decision.
+  - **Quy tắc Governance & Yêu cầu vá Canonical**: Theo quy định `AGENTS.md` và `docs/10_AI_AGENT_INSTRUCTIONS.md`, Agent không được tự ý đưa mã lỗi mới vào production code khi tài liệu canonical chưa cập nhật. Ghi nhận: **`CANONICAL_PATCH_REQUIRED`** và **`SERVICE_ASSIGNMENT_ERROR_CODE_GAP`**. Test plan ghi nhận kỳ vọng HTTP 409 dưới dạng pending decision.
 
 ## D-037 Request Number Concurrency, Two-Key Advisory Lock, and Non-Gapless Sequence
 
@@ -411,26 +411,21 @@ Current operating mode:
   7. `SERVICE_CATEGORY_IN_USE` (HTTP 400): Có trong canonical contract (YES). Dùng khi thao tác vi phạm ràng buộc danh mục đang được sử dụng.
 - **Kết luận**: Tất cả các mã lỗi cần thiết cho Service Category đều đã có sẵn trong canonical contract dưới tên chuẩn `SERVICE_CATEGORY_*`. Không tồn tại `SERVICE_CATEGORY_ERROR_CODE_GAP` nếu implementation tuân thủ đúng tên canonical.
 
-## D-041 Authorization Role-Permission Audit and Mapping Gap
+## D-041 Authorization Role-Permission Audit, Migration Decoupling, and Blockers
 
-- **Kiểm kê thực tế**:
-  - Flyway migration `V011__seed_roles_and_permissions.sql` đã seed các bảng `roles` (`EMPLOYEE`, `TEAM_LEADER`, `PROJECT_MANAGER`, `ADMIN`) và `permissions` (`SERVICE_REQUEST_READ`, `SERVICE_REQUEST_CREATE`, `SERVICE_REQUEST_UPDATE`, `SERVICE_REQUEST_ASSIGN`, `SERVICE_REQUEST_UPDATE_STATUS`, `SERVICE_CATEGORY_MANAGE`), nhưng **CHƯA TỪNG** seed dữ liệu vào bảng liên kết `role_permissions`.
-  - Do đó, trong schema mặc định, không có role nào được liên kết tự động với `SERVICE_REQUEST_ASSIGN` thông qua cơ sở dữ liệu.
-- **Ma trận phân quyền thực tế cho Service Request API**:
-  - `GET /service-categories`: Yêu cầu `AUTHENTICATED`. Mọi người dùng đã đăng nhập đều có quyền.
-  - `GET/POST/PUT/PATCH /admin/service-categories/**`: Yêu cầu global permission `SERVICE_CATEGORY_MANAGE` (thường gắn với Admin).
-  - `POST /service-requests`: Yêu cầu global permission `SERVICE_REQUEST_CREATE`.
-  - `GET /service-requests`: Yêu cầu global permission `SERVICE_REQUEST_READ` kết hợp kiểm tra quan hệ nghiệp vụ: Người dùng thông thường chỉ xem yêu cầu do chính mình tạo (`requester`) hoặc được giao xử lý (`active assignee`); người có thẩm quyền quản trị mới xem toàn bộ.
-  - `GET /service-requests/{id}`: Yêu cầu `SERVICE_REQUEST_READ` kết hợp kiểm tra quan hệ nghiệp vụ (requester, active assignee, hoặc admin).
-  - `PUT /service-requests/{id}`: Yêu cầu global permission `SERVICE_REQUEST_UPDATE` kết hợp kiểm tra người gọi phải là `requester` và trạng thái yêu cầu còn cho phép sửa (`OPEN`).
-  - `POST /service-requests/{id}/assignments`: Yêu cầu global permission `SERVICE_REQUEST_ASSIGN`.
-  - `PUT /service-requests/{id}/status`: Yêu cầu global permission `SERVICE_REQUEST_UPDATE_STATUS` kết hợp kiểm tra quyền sở hữu xử lý (`active assignee` hoặc admin).
-  - `POST /service-requests/{id}/reject-resolution`: Yêu cầu `AUTHENTICATED` và kiểm tra tài nguyên nghiêm ngặt: Người gọi bắt buộc phải là chính `requester` (căn cứ [06_API_CONTRACT.md](file:///D:/WorkSphere/docs/06_API_CONTRACT.md) Section 13.7.1).
-  - `POST /service-requests/{id}/rating`: Yêu cầu người gọi là `requester` và request đã `CLOSED`.
-- **Đánh giá vai trò TEAM_LEADER**:
-  - Căn cứ [02_USER_ROLES_AND_WORKFLOWS.md](file:///D:/WorkSphere/docs/02_USER_ROLES_AND_WORKFLOWS.md) Section 2.2, `TEAM_LEADER` chỉ quản lý công việc dự án/nhóm (`TASK_ASSIGN`), không được cấp thẩm quyền quản lý hoặc phân công yêu cầu dịch vụ (`SERVICE_REQUEST_ASSIGN`).
-  - Tuyệt đối không suy diễn cho phép `TEAM_LEADER` phân công Service Request chỉ vì tên vai trò.
-- **Ghi nhận khoảng trống**:
-  - Ghi nhận: **`SERVICE_AUTHORIZATION_MAPPING_GAP`**. Bảng `role_permissions` chưa có seed cho các quyền Service Request trong Flyway migrations. Trong test suite Phase 9, quyền phải được cấp minh thị qua fixture; trên production cần một migration seed `role_permissions` chính thức trước khi đưa vào vận hành thực tế.
+- **Kết quả kiểm toán cơ sở dữ liệu và mã nguồn**:
+  - `ROLE_PERMISSION_SEED_GAP_CONFIRMED`: Bản di trú `V011__seed_roles_and_permissions.sql` chỉ seed bảng `roles` (4 dòng) và `permissions` (29 dòng); bảng `role_permissions` có **0 dòng**.
+  - `TEST_AUTHORITY_FIXTURE_MASKS_SEED_GAP`: Các test suite integration/MockMvc hiện tại (`AdminUserMockMvcTest`, `DepartmentMockMvcTest`, `ProjectMockMvcTest`, `TaskMockMvcTest`, `TaskAttachmentMockMvcTest`) đều tự động chạy lệnh `INSERT INTO role_permissions` trong `@BeforeEach`, che giấu khoảng trống dữ liệu seed của môi trường production.
+  - `ROLE_PERMISSION_CANONICAL_MATRIX_GAP`: Tài liệu canonical không có ma trận chính thức gán quyền cho 4 System Roles.
+  - `SERVICE_AUTHORIZATION_MAPPING_GAP`: Quyền `SERVICE_REQUEST_ASSIGN` được yêu cầu bởi endpoint nhưng không có vai trò nào được cấp theo canonical docs.
+- **Quy tắc phân quyền và Admin Bypass**:
+  - Endpoint bảo vệ bởi `@PreAuthorize("hasAuthority('...')")`. Khi `role_permissions` trống, `authorities` chỉ có `ROLE_<ROLE_CODE>`, không có permission nào.
+  - Hệ thống không có cơ chế bypass cho Admin; do đó trên production, mọi user (kể cả Admin) sẽ bị HTTP 403 Forbidden trên các endpoint yêu cầu permission nghiệp vụ.
+  - Vai trò `TEAM_LEADER` chỉ quản lý công việc dự án/nhóm (`TASK_ASSIGN`), không có thẩm quyền phân công yêu cầu dịch vụ (`SERVICE_REQUEST_ASSIGN`). Tuyệt đối không suy diễn cấp quyền chỉ vì tên chức danh.
+- **Kế hoạch Migration Phase 9**:
+  - Tách biệt hai bản migration (Phương án B):
+    1. `V013__add_service_request_assignment_invariants.sql`: Chỉ tạo partial unique index `uk_service_assignments_one_active` trong domain Service Request.
+    2. `V014__seed_role_permissions.sql`: Seed dữ liệu liên kết vai trò - quyền hạn sau khi tài liệu canonical hoàn tất phê duyệt ma trận phân quyền chính thức.
+  - Sử dụng cú pháp idempotent `INSERT INTO role_permissions ... ON CONFLICT (role_id, permission_id) DO NOTHING`.
 
 
