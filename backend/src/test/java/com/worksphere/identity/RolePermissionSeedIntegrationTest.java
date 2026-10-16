@@ -28,7 +28,6 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -38,8 +37,10 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -50,7 +51,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Clean integration tests validating V013 and V014 migrations and canonical role permissions.
+ * Clean integration tests validating V013, V014, and V015 migrations and canonical role permissions.
  * Tests run against clean PostgreSQL Testcontainers.
  * Absolutely NO manual insertion into role_permissions in this test.
  */
@@ -113,6 +114,11 @@ public class RolePermissionSeedIntegrationTest {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    private UUID adminUserId;
+    private UUID pmUserId;
+    private UUID leaderUserId;
+    private UUID employeeUserId;
+
     private String adminToken;
     private String pmToken;
     private String leaderToken;
@@ -141,27 +147,27 @@ public class RolePermissionSeedIntegrationTest {
         String encodedPassword = passwordEncoder.encode(rawPassword);
 
         // 1. Create ADMIN user
-        UUID adminId = UUID.randomUUID();
-        insertUser(adminId, "admin_seed", "admin_seed@test.com", encodedPassword);
-        assignRole(adminId, "ADMIN");
+        adminUserId = UUID.randomUUID();
+        insertUser(adminUserId, "admin_seed", "admin_seed@test.com", encodedPassword);
+        assignRole(adminUserId, "ADMIN");
         adminToken = loginAndGetToken("admin_seed", rawPassword);
 
         // 2. Create PROJECT_MANAGER user
-        UUID pmId = UUID.randomUUID();
-        insertUser(pmId, "pm_seed", "pm_seed@test.com", encodedPassword);
-        assignRole(pmId, "PROJECT_MANAGER");
+        pmUserId = UUID.randomUUID();
+        insertUser(pmUserId, "pm_seed", "pm_seed@test.com", encodedPassword);
+        assignRole(pmUserId, "PROJECT_MANAGER");
         pmToken = loginAndGetToken("pm_seed", rawPassword);
 
         // 3. Create TEAM_LEADER user
-        UUID leaderId = UUID.randomUUID();
-        insertUser(leaderId, "leader_seed", "leader_seed@test.com", encodedPassword);
-        assignRole(leaderId, "TEAM_LEADER");
+        leaderUserId = UUID.randomUUID();
+        insertUser(leaderUserId, "leader_seed", "leader_seed@test.com", encodedPassword);
+        assignRole(leaderUserId, "TEAM_LEADER");
         leaderToken = loginAndGetToken("leader_seed", rawPassword);
 
         // 4. Create EMPLOYEE user
-        UUID employeeId = UUID.randomUUID();
-        insertUser(employeeId, "emp_seed", "emp_seed@test.com", encodedPassword);
-        assignRole(employeeId, "EMPLOYEE");
+        employeeUserId = UUID.randomUUID();
+        insertUser(employeeUserId, "emp_seed", "emp_seed@test.com", encodedPassword);
+        assignRole(employeeUserId, "EMPLOYEE");
         employeeToken = loginAndGetToken("emp_seed", rawPassword);
     }
 
@@ -214,16 +220,16 @@ public class RolePermissionSeedIntegrationTest {
 
     @Test
     @Order(2)
-    @DisplayName("V014 migration: roles, permissions, and role_permissions exact counts")
-    void v014_shouldHaveExactCanonicalCounts() {
+    @DisplayName("V015 migration: roles, permissions, and role_permissions exact counts")
+    void v015_shouldHaveExactCanonicalCounts() {
         Integer roleCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM roles", Integer.class);
         Integer permissionCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM permissions", Integer.class);
         Integer mappingCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM role_permissions", Integer.class);
 
         assertThat(roleCount).isEqualTo(4);
         assertThat(permissionCount).isEqualTo(29);
-        // ADMIN(29) + PM(19) + LEADER(14) + EMP(12) = 74
-        assertThat(mappingCount).isEqualTo(74);
+        // ADMIN(29) + PM(19) + LEADER(15) + EMP(13) = 76
+        assertThat(mappingCount).isEqualTo(76);
 
         Integer adminPermissions = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM role_permissions rp JOIN roles r ON r.id = rp.role_id WHERE r.code = 'ADMIN'",
@@ -240,8 +246,8 @@ public class RolePermissionSeedIntegrationTest {
 
         assertThat(adminPermissions).isEqualTo(29);
         assertThat(pmPermissions).isEqualTo(19);
-        assertThat(leaderPermissions).isEqualTo(14);
-        assertThat(empPermissions).isEqualTo(12);
+        assertThat(leaderPermissions).isEqualTo(15);
+        assertThat(empPermissions).isEqualTo(13);
     }
 
     // =========================================================================
@@ -283,8 +289,8 @@ public class RolePermissionSeedIntegrationTest {
 
     @Test
     @Order(4)
-    @DisplayName("EMPLOYEE: Allowed self-service profile and task read, forbidden from admin endpoints")
-    void employee_shouldAccessSelfService_andBeForbiddenFromAdmin() throws Exception {
+    @DisplayName("EMPLOYEE: Allowed self-service profile, task read, and project read; forbidden from admin endpoints")
+    void employee_shouldAccessSelfServiceAndProjects_andBeForbiddenFromAdmin() throws Exception {
         // Self-service profile endpoint
         mockMvc.perform(get("/api/v1/me")
                         .header("Authorization", "Bearer " + employeeToken))
@@ -297,14 +303,14 @@ public class RolePermissionSeedIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true));
 
+        // Project read endpoint (@PreAuthorize("hasAuthority('PROJECT_READ')")) - allowed per V015
+        mockMvc.perform(get("/api/v1/projects")
+                        .header("Authorization", "Bearer " + employeeToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
         // Forbidden on admin identity endpoint (@PreAuthorize("hasAuthority('USER_READ')"))
         mockMvc.perform(get("/api/v1/admin/users")
-                        .header("Authorization", "Bearer " + employeeToken))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.code").value("FORBIDDEN"));
-
-        // Forbidden on project read endpoint (@PreAuthorize("hasAuthority('PROJECT_READ')"))
-        mockMvc.perform(get("/api/v1/projects")
                         .header("Authorization", "Bearer " + employeeToken))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("FORBIDDEN"));
@@ -330,22 +336,22 @@ public class RolePermissionSeedIntegrationTest {
 
     @Test
     @Order(5)
-    @DisplayName("TEAM_LEADER: Has task read, forbidden from admin users and SERVICE_REQUEST_ASSIGN")
-    void teamLeader_shouldHaveTaskPermissions_andBeForbiddenFromServiceRequestAssign() throws Exception {
+    @DisplayName("TEAM_LEADER: Has task and project read; forbidden from admin users and SERVICE_REQUEST_ASSIGN")
+    void teamLeader_shouldHaveTaskAndProjectPermissions_andBeForbiddenFromServiceRequestAssign() throws Exception {
         // Task read endpoint (@PreAuthorize("hasAuthority('TASK_READ')"))
         mockMvc.perform(get("/api/v1/tasks")
                         .header("Authorization", "Bearer " + leaderToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true));
 
+        // Project read endpoint (@PreAuthorize("hasAuthority('PROJECT_READ')")) - allowed per V015
+        mockMvc.perform(get("/api/v1/projects")
+                        .header("Authorization", "Bearer " + leaderToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
         // Forbidden on admin identity endpoint (@PreAuthorize("hasAuthority('USER_READ')"))
         mockMvc.perform(get("/api/v1/admin/users")
-                        .header("Authorization", "Bearer " + leaderToken))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.code").value("FORBIDDEN"));
-
-        // Forbidden on project read endpoint (@PreAuthorize("hasAuthority('PROJECT_READ')"))
-        mockMvc.perform(get("/api/v1/projects")
                         .header("Authorization", "Bearer " + leaderToken))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("FORBIDDEN"));
@@ -398,6 +404,10 @@ public class RolePermissionSeedIntegrationTest {
                 .andExpect(jsonPath("$.code").value("FORBIDDEN"));
     }
 
+    // =========================================================================
+    // 6. CANONICAL MATRIX SPECIFIC ASSERTIONS
+    // =========================================================================
+
     @Test
     @Order(7)
     @DisplayName("Verify specific permissions in database match canonical expectations exactly")
@@ -410,7 +420,7 @@ public class RolePermissionSeedIntegrationTest {
                 String.class
         );
         assertThat(adminCodes).hasSize(29);
-        assertThat(adminCodes).contains("SERVICE_REQUEST_ASSIGN", "SERVICE_CATEGORY_MANAGE", "USER_MANAGE");
+        assertThat(adminCodes).contains("SERVICE_REQUEST_ASSIGN", "SERVICE_CATEGORY_MANAGE", "USER_MANAGE", "PROJECT_READ");
 
         List<String> leaderCodes = jdbcTemplate.queryForList(
                 "SELECT p.code FROM role_permissions rp "
@@ -419,9 +429,9 @@ public class RolePermissionSeedIntegrationTest {
                         + "WHERE r.code = 'TEAM_LEADER' ORDER BY p.code",
                 String.class
         );
-        assertThat(leaderCodes).hasSize(14);
-        assertThat(leaderCodes).contains("TASK_CREATE", "TASK_ASSIGN", "TASK_UPDATE_STATUS");
-        assertThat(leaderCodes).doesNotContain("SERVICE_REQUEST_ASSIGN", "PROJECT_READ", "PROJECT_CREATE", "USER_READ");
+        assertThat(leaderCodes).hasSize(15);
+        assertThat(leaderCodes).contains("PROJECT_READ", "TASK_CREATE", "TASK_ASSIGN", "TASK_UPDATE_STATUS");
+        assertThat(leaderCodes).doesNotContain("SERVICE_REQUEST_ASSIGN", "PROJECT_CREATE", "USER_READ");
 
         List<String> pmCodes = jdbcTemplate.queryForList(
                 "SELECT p.code FROM role_permissions rp "
@@ -441,11 +451,133 @@ public class RolePermissionSeedIntegrationTest {
                         + "WHERE r.code = 'EMPLOYEE' ORDER BY p.code",
                 String.class
         );
-        assertThat(empCodes).hasSize(12);
-        assertThat(empCodes).contains("PROFILE_READ", "PROFILE_UPDATE", "TASK_READ", "TASK_UPDATE",
+        assertThat(empCodes).hasSize(13);
+        assertThat(empCodes).contains("PROJECT_READ", "PROFILE_READ", "PROFILE_UPDATE", "TASK_READ", "TASK_UPDATE",
                 "TASK_UPDATE_STATUS", "SERVICE_REQUEST_READ", "SERVICE_REQUEST_CREATE", "SERVICE_REQUEST_UPDATE",
                 "SERVICE_REQUEST_UPDATE_STATUS", "ASSET_READ", "NOTIFICATION_READ", "NOTIFICATION_UPDATE");
-        assertThat(empCodes).doesNotContain("TASK_CREATE", "TASK_ASSIGN", "TASK_DELETE", "PROJECT_READ", "PROJECT_CREATE",
+        assertThat(empCodes).doesNotContain("TASK_CREATE", "TASK_ASSIGN", "TASK_DELETE", "PROJECT_CREATE",
                 "SERVICE_REQUEST_ASSIGN", "USER_READ");
+    }
+
+    // =========================================================================
+    // 7. EXACT MATRIX SET DIFFERENCE VALIDATION (EXPECTED EXCEPT ACTUAL = empty)
+    // =========================================================================
+
+    @Test
+    @Order(8)
+    @DisplayName("Exact set comparison: EXPECTED EXCEPT ACTUAL = empty and ACTUAL EXCEPT EXPECTED = empty")
+    void databaseMappings_exactSetComparison() {
+        Set<String> expectedAdmin = new HashSet<>(jdbcTemplate.queryForList(
+                "SELECT code FROM permissions", String.class));
+        assertThat(expectedAdmin).hasSize(29);
+
+        Set<String> expectedPm = Set.of(
+                "PROFILE_READ", "PROFILE_UPDATE",
+                "PROJECT_READ", "PROJECT_CREATE", "PROJECT_UPDATE", "PROJECT_MEMBER_MANAGE",
+                "TASK_READ", "TASK_CREATE", "TASK_UPDATE", "TASK_DELETE", "TASK_ASSIGN", "TASK_UPDATE_STATUS",
+                "SERVICE_REQUEST_READ", "SERVICE_REQUEST_CREATE", "SERVICE_REQUEST_UPDATE", "SERVICE_REQUEST_UPDATE_STATUS",
+                "ASSET_READ", "NOTIFICATION_READ", "NOTIFICATION_UPDATE"
+        );
+        assertThat(expectedPm).hasSize(19);
+
+        Set<String> expectedLeader = Set.of(
+                "PROFILE_READ", "PROFILE_UPDATE",
+                "PROJECT_READ",
+                "TASK_READ", "TASK_CREATE", "TASK_UPDATE", "TASK_ASSIGN", "TASK_UPDATE_STATUS",
+                "SERVICE_REQUEST_READ", "SERVICE_REQUEST_CREATE", "SERVICE_REQUEST_UPDATE", "SERVICE_REQUEST_UPDATE_STATUS",
+                "ASSET_READ", "NOTIFICATION_READ", "NOTIFICATION_UPDATE"
+        );
+        assertThat(expectedLeader).hasSize(15);
+
+        Set<String> expectedEmp = Set.of(
+                "PROFILE_READ", "PROFILE_UPDATE",
+                "PROJECT_READ",
+                "TASK_READ", "TASK_UPDATE", "TASK_UPDATE_STATUS",
+                "SERVICE_REQUEST_READ", "SERVICE_REQUEST_CREATE", "SERVICE_REQUEST_UPDATE", "SERVICE_REQUEST_UPDATE_STATUS",
+                "ASSET_READ", "NOTIFICATION_READ", "NOTIFICATION_UPDATE"
+        );
+        assertThat(expectedEmp).hasSize(13);
+
+        verifyRoleExactSet("ADMIN", expectedAdmin);
+        verifyRoleExactSet("PROJECT_MANAGER", expectedPm);
+        verifyRoleExactSet("TEAM_LEADER", expectedLeader);
+        verifyRoleExactSet("EMPLOYEE", expectedEmp);
+    }
+
+    private void verifyRoleExactSet(String roleCode, Set<String> expectedCodes) {
+        Set<String> actualCodes = new HashSet<>(jdbcTemplate.queryForList(
+                "SELECT p.code FROM role_permissions rp "
+                        + "JOIN roles r ON r.id = rp.role_id "
+                        + "JOIN permissions p ON p.id = rp.permission_id "
+                        + "WHERE r.code = ?",
+                String.class,
+                roleCode
+        ));
+
+        // EXPECTED EXCEPT ACTUAL
+        Set<String> missingInActual = new HashSet<>(expectedCodes);
+        missingInActual.removeAll(actualCodes);
+        assertThat(missingInActual).as("Permissions expected for %s but missing in database", roleCode).isEmpty();
+
+        // ACTUAL EXCEPT EXPECTED
+        Set<String> unexpectedInActual = new HashSet<>(actualCodes);
+        unexpectedInActual.removeAll(expectedCodes);
+        assertThat(unexpectedInActual).as("Permissions found for %s but unexpected in matrix", roleCode).isEmpty();
+
+        assertThat(actualCodes).isEqualTo(expectedCodes);
+    }
+
+    // =========================================================================
+    // 8. PROJECT MEMBER ACCESS INTEGRATION TESTS
+    // =========================================================================
+
+    @Test
+    @Order(9)
+    @DisplayName("Project Member Access: EMPLOYEE and TEAM_LEADER active members can read project detail")
+    void projectMemberAccess_shouldSucceedForActiveMembers() throws Exception {
+        UUID projectId = UUID.randomUUID();
+        // Insert active project managed by pmUserId
+        jdbcTemplate.update(
+                "INSERT INTO projects (id, code, name, description, manager_id, status, priority, is_deleted, created_by, created_at, updated_at, version) "
+                        + "VALUES (?, 'PRJ-MEMBER-TEST', 'Project Member Test', 'Description', ?, 'ACTIVE', 'MEDIUM', false, ?, now(), now(), 0)",
+                projectId, pmUserId, pmUserId
+        );
+
+        // Add PM as PROJECT_MANAGER in project_members
+        jdbcTemplate.update(
+                "INSERT INTO project_members (id, project_id, user_id, project_role, is_active, joined_at, created_by, created_at, updated_at) "
+                        + "VALUES (?, ?, ?, 'PROJECT_MANAGER', true, now(), ?, now(), now())",
+                UUID.randomUUID(), projectId, pmUserId, pmUserId
+        );
+
+        // Scenario A: EMPLOYEE active member
+        jdbcTemplate.update(
+                "INSERT INTO project_members (id, project_id, user_id, project_role, is_active, joined_at, created_by, created_at, updated_at) "
+                        + "VALUES (?, ?, ?, 'MEMBER', true, now(), ?, now(), now())",
+                UUID.randomUUID(), projectId, employeeUserId, pmUserId
+        );
+
+        // Employee calls GET /api/v1/projects/{projectId}
+        mockMvc.perform(get("/api/v1/projects/" + projectId)
+                        .header("Authorization", "Bearer " + employeeToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.id").value(projectId.toString()))
+                .andExpect(jsonPath("$.data.code").value("PRJ-MEMBER-TEST"));
+
+        // Scenario B: TEAM_LEADER active member
+        jdbcTemplate.update(
+                "INSERT INTO project_members (id, project_id, user_id, project_role, is_active, joined_at, created_by, created_at, updated_at) "
+                        + "VALUES (?, ?, ?, 'TEAM_LEADER', true, now(), ?, now(), now())",
+                UUID.randomUUID(), projectId, leaderUserId, pmUserId
+        );
+
+        // Team Leader calls GET /api/v1/projects/{projectId}
+        mockMvc.perform(get("/api/v1/projects/" + projectId)
+                        .header("Authorization", "Bearer " + leaderToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.id").value(projectId.toString()))
+                .andExpect(jsonPath("$.data.code").value("PRJ-MEMBER-TEST"));
     }
 }

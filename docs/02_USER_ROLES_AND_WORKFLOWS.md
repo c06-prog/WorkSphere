@@ -210,32 +210,32 @@ Bảng ma trận phân quyền chính thức (Canonical Role-Permission Matrix) 
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | `PROFILE_READ` | GRANTED | GRANTED | GRANTED | GRANTED | Bản ghi hồ sơ cá nhân của chính mình (Self profile) | `02_USER_ROLES_AND_WORKFLOWS.md` 2.1; `06_API_CONTRACT.md` 9.1 |
 | `PROFILE_UPDATE` | GRANTED | GRANTED | GRANTED | GRANTED | Bản ghi hồ sơ cá nhân của chính mình (Self profile) | `02_USER_ROLES_AND_WORKFLOWS.md` 2.1; `06_API_CONTRACT.md` 9.2 |
-| `PROJECT_READ` | GRANTED | GRANTED | NOT_GRANTED | NOT_GRANTED | Phạm vi quản trị/quản lý dự án (PM phụ trách hoặc Admin) | `02_USER_ROLES_AND_WORKFLOWS.md` 2.1 (88), 2.2 (114), 2.3 (131); `06_API_CONTRACT.md` 12.1 |
-| `PROJECT_CREATE` | GRANTED | GRANTED | NOT_GRANTED | NOT_GRANTED | Phạm vi quản lý dự án (PM/Admin) | `02_USER_ROLES_AND_WORKFLOWS.md` 2.1 (85), 2.3 (126); `06_API_CONTRACT.md` 12.2 |
-| `PROJECT_UPDATE` | GRANTED | GRANTED | NOT_GRANTED | NOT_GRANTED | PM phụ trách dự án hoặc Admin | `02_USER_ROLES_AND_WORKFLOWS.md` 2.3 (126, 136); `06_API_CONTRACT.md` 12.4 |
-| `PROJECT_MEMBER_MANAGE` | GRANTED | GRANTED | NOT_GRANTED | NOT_GRANTED | PM phụ trách dự án hoặc Admin | `02_USER_ROLES_AND_WORKFLOWS.md` 2.3 (128), 4.3; `06_API_CONTRACT.md` 12.6-12.8 |
-| `TASK_READ` | GRANTED | GRANTED | GRANTED | GRANTED | Thành viên dự án, người thực hiện (assignee), hoặc Admin | `02_USER_ROLES_AND_WORKFLOWS.md` 2.1 (75); `06_API_CONTRACT.md` 13.1 |
-| `TASK_CREATE` | GRANTED | GRANTED | GRANTED | NOT_GRANTED | Thành viên dự án với vai trò PM/Leader trong dự án hoặc nhóm | `02_USER_ROLES_AND_WORKFLOWS.md` 2.2 (101), 2.3 (132), 5.1 (404); `06_API_CONTRACT.md` 13.2 |
-| `TASK_UPDATE` | GRANTED | GRANTED | GRANTED | GRANTED | Người thực hiện (cập nhật tiến độ), người tạo, Leader/PM dự án, hoặc Admin | `02_USER_ROLES_AND_WORKFLOWS.md` 2.1 (76), 2.2 (102), 2.3 (132); `06_API_CONTRACT.md` 13.4, 13.5 |
-| `TASK_DELETE` | GRANTED | GRANTED | NOT_GRANTED | NOT_GRANTED | PM phụ trách dự án hoặc Admin (khi task ở trạng thái TODO và chưa có lịch sử) | `02_USER_ROLES_AND_WORKFLOWS.md` 2.3; `06_API_CONTRACT.md` 13.9 |
-| `TASK_ASSIGN` | GRANTED | GRANTED | GRANTED | NOT_GRANTED | Leader/PM phụ trách dự án/nhóm hoặc Admin | `02_USER_ROLES_AND_WORKFLOWS.md` 2.2 (103), 2.3 (132); `06_API_CONTRACT.md` 13.7 |
-| `TASK_UPDATE_STATUS` | GRANTED | GRANTED | GRANTED | GRANTED | Người thực hiện (chuyển sang IN_PROGRESS, IN_REVIEW), người review/Leader/PM (duyệt sang COMPLETED), hoặc Admin | `02_USER_ROLES_AND_WORKFLOWS.md` 2.1 (76), 5.2 (505-520); `06_API_CONTRACT.md` 13.5 |
-| `SERVICE_REQUEST_READ` | GRANTED | GRANTED | GRANTED | GRANTED | Người tạo (requester), kỹ thuật viên đang xử lý (active assignee), hoặc Admin | `02_USER_ROLES_AND_WORKFLOWS.md` 2.1 (78), 6.1-6.3; `06_API_CONTRACT.md` 13.1 |
-| `SERVICE_REQUEST_CREATE` | GRANTED | GRANTED | GRANTED | GRANTED | Mọi nhân viên tạo yêu cầu dịch vụ cho chính mình (Self-service requester) | `02_USER_ROLES_AND_WORKFLOWS.md` 2.1 (78), 6.1 (555); `06_API_CONTRACT.md` 13.2 |
-| `SERVICE_REQUEST_UPDATE` | GRANTED | GRANTED | GRANTED | GRANTED | Chỉ người tạo (requester) khi yêu cầu ở trạng thái OPEN | `02_USER_ROLES_AND_WORKFLOWS.md` 6.1; `06_API_CONTRACT.md` 13.5 (1856) |
+| `PROJECT_READ` | GRANTED | GRANTED | GRANTED | GRANTED | Thành viên dự án đang hoạt động (Active Project Member) hoặc phạm vi quản trị canonical của ADMIN | `02_USER_ROLES_AND_WORKFLOWS.md` 2.1 (74), 2.2, 2.3 (131); `06_API_CONTRACT.md` 11.1, 11.3 |
+| `PROJECT_CREATE` | GRANTED | GRANTED | NOT_GRANTED | NOT_GRANTED | Phạm vi quản lý dự án (PM/Admin) | `02_USER_ROLES_AND_WORKFLOWS.md` 2.1 (85), 2.3 (126); `06_API_CONTRACT.md` 11.2 |
+| `PROJECT_UPDATE` | GRANTED | GRANTED | NOT_GRANTED | NOT_GRANTED | PM phụ trách dự án hoặc Admin | `02_USER_ROLES_AND_WORKFLOWS.md` 2.3 (126, 136); `06_API_CONTRACT.md` 11.4 |
+| `PROJECT_MEMBER_MANAGE` | GRANTED | GRANTED | NOT_GRANTED | NOT_GRANTED | PM phụ trách dự án hoặc Admin | `02_USER_ROLES_AND_WORKFLOWS.md` 2.3 (128), 4.3; `06_API_CONTRACT.md` 11.7-11.9 |
+| `TASK_READ` | GRANTED | GRANTED | GRANTED | GRANTED | Thành viên dự án, người thực hiện (assignee), hoặc Admin | `02_USER_ROLES_AND_WORKFLOWS.md` 2.1 (75); `06_API_CONTRACT.md` 12.1, 12.3 |
+| `TASK_CREATE` | GRANTED | GRANTED | GRANTED | NOT_GRANTED | Thành viên dự án với vai trò PM/Leader trong dự án hoặc nhóm | `02_USER_ROLES_AND_WORKFLOWS.md` 2.2 (101), 2.3 (132), 5.1; `06_API_CONTRACT.md` 12.2, 12.11 |
+| `TASK_UPDATE` | GRANTED | GRANTED | GRANTED | GRANTED | Người thực hiện (cập nhật tiến độ), người tạo, Leader/PM dự án, hoặc Admin | `02_USER_ROLES_AND_WORKFLOWS.md` 2.1 (76), 2.2 (102), 2.3 (132); `06_API_CONTRACT.md` 12.4, 12.6 |
+| `TASK_DELETE` | GRANTED | GRANTED | NOT_GRANTED | NOT_GRANTED | PM phụ trách dự án hoặc Admin (khi task ở trạng thái TODO và chưa có lịch sử) | `02_USER_ROLES_AND_WORKFLOWS.md` 2.3; `06_API_CONTRACT.md` 12.9 |
+| `TASK_ASSIGN` | GRANTED | GRANTED | GRANTED | NOT_GRANTED | Leader/PM phụ trách dự án/nhóm hoặc Admin | `02_USER_ROLES_AND_WORKFLOWS.md` 2.2 (103), 2.3 (132); `06_API_CONTRACT.md` 12.7, 12.8 |
+| `TASK_UPDATE_STATUS` | GRANTED | GRANTED | GRANTED | GRANTED | Người thực hiện (chuyển sang IN_PROGRESS, IN_REVIEW), người review/Leader/PM (duyệt sang COMPLETED), hoặc Admin | `02_USER_ROLES_AND_WORKFLOWS.md` 2.1 (76), 5.2; `06_API_CONTRACT.md` 12.5 |
+| `SERVICE_REQUEST_READ` | GRANTED | GRANTED | GRANTED | GRANTED | Người tạo (requester), kỹ thuật viên đang xử lý (active assignee), hoặc Admin | `02_USER_ROLES_AND_WORKFLOWS.md` 2.1 (78), 6.1-6.3; `06_API_CONTRACT.md` 13.1, 13.3 |
+| `SERVICE_REQUEST_CREATE` | GRANTED | GRANTED | GRANTED | GRANTED | Mọi nhân viên tạo yêu cầu dịch vụ cho chính mình (Self-service requester) | `02_USER_ROLES_AND_WORKFLOWS.md` 2.1 (78), 6.1; `06_API_CONTRACT.md` 13.2 |
+| `SERVICE_REQUEST_UPDATE` | GRANTED | GRANTED | GRANTED | GRANTED | Chỉ người tạo (requester) khi yêu cầu ở trạng thái OPEN | `02_USER_ROLES_AND_WORKFLOWS.md` 6.1; `06_API_CONTRACT.md` 13.5 |
 | `SERVICE_REQUEST_ASSIGN` | GRANTED | NOT_GRANTED | NOT_GRANTED | NOT_GRANTED | Quản trị viên hệ thống điều phối dịch vụ trong MVP (System dispatcher) | `02_USER_ROLES_AND_WORKFLOWS.md` 2.4; `06_API_CONTRACT.md` 13.6 |
-| `SERVICE_REQUEST_UPDATE_STATUS` | GRANTED | GRANTED | GRANTED | GRANTED | Kỹ thuật viên đang được phân công xử lý (active assignee) hoặc Admin | `02_USER_ROLES_AND_WORKFLOWS.md` 6.2-6.3; `06_API_CONTRACT.md` 13.7 (1915) |
+| `SERVICE_REQUEST_UPDATE_STATUS` | GRANTED | GRANTED | GRANTED | GRANTED | Kỹ thuật viên đang được phân công xử lý (active assignee) hoặc Admin | `02_USER_ROLES_AND_WORKFLOWS.md` 6.2-6.3; `06_API_CONTRACT.md` 13.7 |
 | `SERVICE_CATEGORY_MANAGE` | GRANTED | NOT_GRANTED | NOT_GRANTED | NOT_GRANTED | Quản trị viên hệ thống quản lý danh mục (System category admin) | `02_USER_ROLES_AND_WORKFLOWS.md` 2.4 (152); `06_API_CONTRACT.md` 13.10 |
-| `ASSET_READ` | GRANTED | GRANTED | GRANTED | GRANTED | Người được giao tài sản (Assigned asset) hoặc Admin | `02_USER_ROLES_AND_WORKFLOWS.md` 2.1 (79), 7.1; `06_API_CONTRACT.md` 14.1 |
+| `ASSET_READ` | GRANTED | GRANTED | GRANTED | GRANTED | Người được giao tài sản (Assigned asset) hoặc Admin | `02_USER_ROLES_AND_WORKFLOWS.md` 2.1 (79), 7.1; `06_API_CONTRACT.md` 14.1, 14.2 |
 | `ASSET_MANAGE` | GRANTED | NOT_GRANTED | NOT_GRANTED | NOT_GRANTED | Quản trị viên hệ thống quản lý tài sản | `02_USER_ROLES_AND_WORKFLOWS.md` 2.4; `06_API_CONTRACT.md` 14.3-14.4 |
 | `ASSET_CATEGORY_MANAGE` | GRANTED | NOT_GRANTED | NOT_GRANTED | NOT_GRANTED | Quản trị viên hệ thống quản lý danh mục tài sản | `02_USER_ROLES_AND_WORKFLOWS.md` 2.4 (153); `06_API_CONTRACT.md` 14.5 |
 | `NOTIFICATION_READ` | GRANTED | GRANTED | GRANTED | GRANTED | Người nhận thông báo (Notification recipient) | `02_USER_ROLES_AND_WORKFLOWS.md` 2.1 (81), 8; `06_API_CONTRACT.md` 15.1 |
 | `NOTIFICATION_UPDATE` | GRANTED | GRANTED | GRANTED | GRANTED | Người nhận thông báo (đánh dấu đã đọc) | `02_USER_ROLES_AND_WORKFLOWS.md` 8; `06_API_CONTRACT.md` 15.2-15.3 |
-| `USER_READ` | GRANTED | NOT_GRANTED | NOT_GRANTED | NOT_GRANTED | Quản trị viên hệ thống xem danh sách tài khoản | `02_USER_ROLES_AND_WORKFLOWS.md` 2.4 (148); `06_API_CONTRACT.md` 10.1 |
-| `USER_MANAGE` | GRANTED | NOT_GRANTED | NOT_GRANTED | NOT_GRANTED | Quản trị viên hệ thống tạo, cập nhật, khóa tài khoản | `02_USER_ROLES_AND_WORKFLOWS.md` 2.4 (148-149); `06_API_CONTRACT.md` 10.2-10.7 |
-| `ROLE_MANAGE` | GRANTED | NOT_GRANTED | NOT_GRANTED | NOT_GRANTED | Quản trị viên hệ thống quản lý vai trò và phân quyền | `02_USER_ROLES_AND_WORKFLOWS.md` 2.4 (151) |
-| `DEPARTMENT_MANAGE` | GRANTED | NOT_GRANTED | NOT_GRANTED | NOT_GRANTED | Quản trị viên hệ thống quản lý phòng ban | `02_USER_ROLES_AND_WORKFLOWS.md` 2.4 (150); `06_API_CONTRACT.md` 11.1-11.4 |
-| `AUDIT_READ` | GRANTED | NOT_GRANTED | NOT_GRANTED | NOT_GRANTED | Quản trị viên hệ thống theo dõi nhật ký hoạt động | `02_USER_ROLES_AND_WORKFLOWS.md` 2.4 (154); `06_API_CONTRACT.md` 17.1 |
+| `USER_READ` | GRANTED | NOT_GRANTED | NOT_GRANTED | NOT_GRANTED | Quản trị viên hệ thống xem danh sách tài khoản | `02_USER_ROLES_AND_WORKFLOWS.md` 2.4 (148); `06_API_CONTRACT.md` 17.1, 17.2 |
+| `USER_MANAGE` | GRANTED | NOT_GRANTED | NOT_GRANTED | NOT_GRANTED | Quản trị viên hệ thống tạo, cập nhật, khóa tài khoản | `02_USER_ROLES_AND_WORKFLOWS.md` 2.4 (148-149); `06_API_CONTRACT.md` 17.3-17.7 |
+| `ROLE_MANAGE` | GRANTED | NOT_GRANTED | NOT_GRANTED | NOT_GRANTED | Quản trị viên hệ thống quản lý vai trò và phân quyền | `02_USER_ROLES_AND_WORKFLOWS.md` 2.4 (151); `06_API_CONTRACT.md` 17.12 |
+| `DEPARTMENT_MANAGE` | GRANTED | NOT_GRANTED | NOT_GRANTED | NOT_GRANTED | Quản trị viên hệ thống quản lý phòng ban | `02_USER_ROLES_AND_WORKFLOWS.md` 2.4 (150); `06_API_CONTRACT.md` 17.8-17.11 |
+| `AUDIT_READ` | GRANTED | NOT_GRANTED | NOT_GRANTED | NOT_GRANTED | Quản trị viên hệ thống theo dõi nhật ký hoạt động | `02_USER_ROLES_AND_WORKFLOWS.md` 2.4 (154); `06_API_CONTRACT.md` 18.1 |
 | `REPORT_READ` | GRANTED | NOT_GRANTED | NOT_GRANTED | NOT_GRANTED | Quản trị viên hệ thống xem báo cáo tổng hợp | `02_USER_ROLES_AND_WORKFLOWS.md` 2.4; `06_API_CONTRACT.md` 19.1-19.4 |
 
 **Quy tắc áp dụng bắt buộc**:

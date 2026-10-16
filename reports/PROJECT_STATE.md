@@ -79,7 +79,10 @@
 
 ## Deferred Items & Known Gaps
 
-- [RESOLVED] ROLE_PERMISSION_SEED_GAP_CONFIRMED: Đã khắc phục bằng bản di trú `V014__seed_role_permissions.sql` nạp 74 bản ghi liên kết chính thức cho 4 System Roles. Đã kiểm chứng qua `RolePermissionSeedIntegrationTest`.
+- [RESOLVED] PROJECT_READ_PERMISSION_MATRIX_RISK: Đã khắc phục bằng bản di trú `V015__correct_project_read_permissions_and_validate_role_matrix.sql` cấp `PROJECT_READ` cho toàn bộ 4 System Roles (`ADMIN`, `PROJECT_MANAGER`, `TEAM_LEADER`, `EMPLOYEE`), cho phép active project members truy cập thông tin dự án qua cổng `@PreAuthorize("hasAuthority('PROJECT_READ')")`. Đã kiểm chứng qua integration test `projectMemberAccess_shouldSucceedForActiveMembers`.
+- [RESOLVED] ROLE_PERMISSION_SEED_SILENT_OMISSION_RISK: Đã khắc phục bằng strict validation guard (PostgreSQL `DO $$ ... END $$;`) trong V015, lập tức `RAISE EXCEPTION` nếu thiếu hụt hoặc sai lệch bất kỳ mapping nào.
+- [RESOLVED] ROLE_PERMISSION_MATRIX_EVIDENCE_GAP: Đã rà soát và điều chỉnh chính xác toàn bộ số section trong cột Canonical rationale tại `docs/02_USER_ROLES_AND_WORKFLOWS.md` Section 2.6 (Section 11 Project, Section 12 Task, Section 17 Admin, Section 18 Audit).
+- [RESOLVED] ROLE_PERMISSION_SEED_GAP_CONFIRMED: Đã khắc phục bằng bản di trú `V014__seed_role_permissions.sql` và `V015__correct_project_read_permissions_and_validate_role_matrix.sql` nạp 76 bản ghi liên kết chính thức cho 4 System Roles. Đã kiểm chứng qua `RolePermissionSeedIntegrationTest`.
 - [RESOLVED] TEST_AUTHORITY_FIXTURE_MASKS_SEED_GAP: Đã bổ sung `RolePermissionSeedIntegrationTest.java` chạy trên PostgreSQL Testcontainers sạch, đăng nhập thật qua `/api/v1/auth/login`, nhận JWT thật và gọi `@PreAuthorize` endpoints mà không có bất kỳ câu lệnh chèn fixture thủ công nào.
 - [RESOLVED] ROLE_PERMISSION_CANONICAL_MATRIX_GAP: Đã giải quyết bằng việc ban hành chính thức bảng ma trận phân quyền tại [02_USER_ROLES_AND_WORKFLOWS.md](file:///D:/WorkSphere/docs/02_USER_ROLES_AND_WORKFLOWS.md) Section 2.6.
 - [RESOLVED] SERVICE_AUTHORIZATION_MAPPING_GAP: Đã giải quyết bằng việc phân bổ thẩm quyền `SERVICE_REQUEST_ASSIGN` cho vai trò `ADMIN` trong MVP (Section 2.6 và V014).

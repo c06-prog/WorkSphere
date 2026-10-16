@@ -119,6 +119,7 @@ public class ProjectMockMvcTest {
     private String adminToken;
     private String pmToken;
     private String employeeToken;
+    private String unprivilegedToken;
     private UUID departmentId;
 
     @BeforeEach
@@ -185,7 +186,7 @@ public class ProjectMockMvcTest {
         }
         pmToken = jwtService.generateAccessToken(pmUserId, UUID.randomUUID());
 
-        // Create regular Employee user (no project permissions)
+        // Create regular Employee user (has PROJECT_READ per V015)
         employeeUserId = UUID.randomUUID();
         insertUser(employeeUserId, "emp_user", "emp@test.com", passwordEncoder.encode("Password123!"));
         UUID empRoleId = jdbcTemplate.queryForObject(
@@ -196,6 +197,11 @@ public class ProjectMockMvcTest {
                     employeeUserId, empRoleId);
         }
         employeeToken = jwtService.generateAccessToken(employeeUserId, UUID.randomUUID());
+
+        // Create unprivileged user with no roles/permissions
+        UUID unprivilegedUserId = UUID.randomUUID();
+        insertUser(unprivilegedUserId, "no_perm_user", "noperm@test.com", passwordEncoder.encode("Password123!"));
+        unprivilegedToken = jwtService.generateAccessToken(unprivilegedUserId, UUID.randomUUID());
     }
 
     private void insertUser(UUID id, String username, String email, String passwordHash) {
@@ -228,7 +234,7 @@ public class ProjectMockMvcTest {
     @Order(3)
     void getProjects_shouldFailWhenMissingPermission() throws Exception {
         mockMvc.perform(get("/api/v1/projects")
-                        .header("Authorization", "Bearer " + employeeToken))
+                        .header("Authorization", "Bearer " + unprivilegedToken))
                 .andExpect(status().isForbidden());
     }
 

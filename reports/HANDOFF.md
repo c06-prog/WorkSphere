@@ -4,31 +4,39 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: KHẮC PHỤC ROLE-PERMISSION NỀN TẢNG VÀ CANONICAL BLOCKERS TRƯỚC PHASE 9
-- Latest Validated Checkpoint: Prior `b9bc66e6f593fe1d09d1bbc48855a5f7be6bd09b`, updated in this remediation.
-- Operational Documentation Checkpoint: reports/ROLE_PERMISSION_AUDIT.md
+- Current Task: VÁ PROJECT MEMBER ACCESS VÀ LÀM CỨNG ROLE-PERMISSION MATRIX
+- Latest Validated Checkpoint: Prior `176795161f337900388f976b8dd7c9c5d286bd7e`, updated in this remediation.
+- Operational Documentation Checkpoint: reports/DECISIONS.md (D-043)
 - Working tree: clean
 - Build status: BUILD SUCCESS (Maven 3.9.16, Java target 21, Checkstyle 0 violations)
 - Test status:
-  - Host Suite (Oracle JDK 27, Testcontainers PostgreSQL): 177/177 PASS (0 failures, 0 errors, 0 skipped)
-  - V013 Partial Unique Index `uk_service_assignments_one_active` Verified: PASS
-  - V014 Canonical Role-Permission Seed Verified: PASS (74 mappings: ADMIN=29, PM=19, LEADER=14, EMP=12)
-  - Clean Authentication & PreAuthorize Flow Verified: `RolePermissionSeedIntegrationTest` (7/7 PASS without any fixture injections)
+  - Host Suite (Oracle JDK 27, Testcontainers PostgreSQL): 179/179 PASS (0 failures, 0 errors, 0 skipped)
+  - V015 Canonical Project Read Permission & Strict Role Matrix Validation Verified: PASS (76 mappings: ADMIN=29, PM=19, LEADER=15, EMP=13)
+  - Project Member Access Verified: Active Employee & Team Leader project members access `GET /api/v1/projects/{projectId}` successfully with real JWT (200 OK)
+  - Exact Role-Permission Set Difference Verified: `EXPECTED EXCEPT ACTUAL = empty` and `ACTUAL EXCEPT EXPECTED = empty` on clean PostgreSQL
 
 ## Foundation Authorization Remediation & Canonical Blockers: RESOLVED
 
-Nhiệm vụ khắc phục nền tảng phân quyền và chốt canonical blockers trước Phase 9 đã hoàn thành:
+Nhiệm vụ vá lỗi truy cập thành viên dự án và làm cứng ma trận phân quyền trước Phase 9 đã hoàn thành:
 
-- **Canonical Role-Permission Matrix**: Đã ban hành chính thức Section 2.6 trong [02_USER_ROLES_AND_WORKFLOWS.md](file:///D:/WorkSphere/docs/02_USER_ROLES_AND_WORKFLOWS.md) định nghĩa toàn bộ 29 permissions cho 4 System Roles. Thẩm quyền `SERVICE_REQUEST_ASSIGN` được cấp cho `ADMIN` trong MVP.
-- **Canonical Error Code Patch**: Đã cập nhật chính thức mã lỗi `SERVICE_ASSIGNMENT_CONFLICT` (HTTP 409 Conflict) vào [06_API_CONTRACT.md](file:///D:/WorkSphere/docs/06_API_CONTRACT.md) Section 13.6 và 20.6.
-- **Flyway Migrations**:
-  - `V013__add_service_request_assignment_invariants.sql`: Tạo partial unique index `uk_service_assignments_one_active` trên `service_assignments(request_id) WHERE is_active = TRUE`.
-  - `V014__seed_role_permissions.sql`: Seed 74 bản ghi liên kết quyền hạn với `ON CONFLICT (role_id, permission_id) DO NOTHING`.
-- **Clean Authentication Integration Test**:
-  - `RolePermissionSeedIntegrationTest.java`: 7 bài test chạy trên clean PostgreSQL Testcontainers, login thật qua `/api/v1/auth/login`, nhận JWT thật và gọi các endpoint `@PreAuthorize`, xác minh phân quyền nạp 100% từ migration V014 mà không có bất kỳ câu lệnh fixture nào.
-  - Toàn bộ 177/177 tests của repository và Checkstyle 0 lỗi đều PASS.
+- **Canonical Role-Permission Matrix Hardening**: Đã cập nhật Section 2.6 trong [02_USER_ROLES_AND_WORKFLOWS.md](file:///D:/WorkSphere/docs/02_USER_ROLES_AND_WORKFLOWS.md):
+  - Cấp quyền `PROJECT_READ` cho cả 4 System Roles: `ADMIN`, `PROJECT_MANAGER`, `TEAM_LEADER`, `EMPLOYEE`.
+  - Quy định rõ ràng business relation required: *Thành viên dự án đang hoạt động (Active Project Member) hoặc phạm vi quản trị canonical của ADMIN*.
+  - Sửa toàn bộ số thứ tự section trong cột Canonical rationale tham chiếu đúng [06_API_CONTRACT.md](file:///D:/WorkSphere/docs/06_API_CONTRACT.md) (Section 11: Project API, Section 12: Task API, Section 17: Admin APIs, Section 18: Audit API).
+- **Flyway Migration V015**:
+  - Tạo `V015__correct_project_read_permissions_and_validate_role_matrix.sql` cấp `PROJECT_READ` cho `TEAM_LEADER` và `EMPLOYEE`.
+  - Khối PostgreSQL `DO $$ ... END $$;` kiểm tra chặt chẽ số lượng và invariant: 4 roles, 29 permissions, 29 ADMIN, 19 PM, 15 LEADER, 13 EMP, 76 total mappings; kiểm tra `PROJECT_READ` có đủ trên 4 roles; kiểm tra `SERVICE_REQUEST_ASSIGN` và `SERVICE_CATEGORY_MANAGE` duy nhất thuộc `ADMIN`. Fail-fast nếu có bất kỳ sai lệch nào.
+- **Exact Set Difference & Real Member Access Integration Tests**:
+  - `RolePermissionSeedIntegrationTest.java`: Bổ sung kiểm tra hiệu tập hợp 2 chiều đối xứng (symmetric difference check) giữa EXPECTED và ACTUAL, đảm bảo không thiếu và không thừa bất kỳ permission nào cho từng role.
+  - Bổ sung test tích hợp xác thực thực tế: Nhân viên (`EMPLOYEE`) và Trưởng nhóm (`TEAM_LEADER`) là active project member đăng nhập thật, nhận JWT thật và gọi `GET /api/v1/projects/{projectId}` thành công (200 OK).
+  - Cập nhật fixture trong `ProjectMockMvcTest.java` sử dụng unprivileged token khi kiểm thử gate 403 của `@PreAuthorize`.
+  - Toàn bộ 179/179 tests của repository và Checkstyle 0 lỗi đều PASS.
 
 ## Deferred / Known Gaps
+
+- [RESOLVED] `PROJECT_READ_PERMISSION_MATRIX_RISK`: Đã giải quyết bằng migration `V015` và cập nhật Section 2.6 canonical matrix.
+- [RESOLVED] `ROLE_PERMISSION_SEED_SILENT_OMISSION_RISK`: Đã giải quyết bằng khối DO block fail-fast validation guard trong `V015`.
+- [RESOLVED] `ROLE_PERMISSION_MATRIX_EVIDENCE_GAP`: Đã giải quyết bằng kiểm tra hiệu tập hợp hai chiều (exact set difference) trong `RolePermissionSeedIntegrationTest` và rà soát số section canonical.
 
 - [RESOLVED] `ROLE_PERMISSION_SEED_GAP_CONFIRMED`: Đã khắc phục bằng bản di trú `V014__seed_role_permissions.sql` nạp 74 bản ghi liên kết chính thức cho 4 System Roles.
 - [RESOLVED] `TEST_AUTHORITY_FIXTURE_MASKS_SEED_GAP`: Đã bổ sung `RolePermissionSeedIntegrationTest.java` kiểm chứng luồng phân quyền sạch từ CSDL seed thật.

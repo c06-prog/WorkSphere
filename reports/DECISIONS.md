@@ -450,4 +450,31 @@ Current operating mode:
   - Kiểm tra độc lập quyền `SERVICE_REQUEST_ASSIGN`: Admin được phép, Team Leader / PM / Employee bị từ chối với HTTP 403 Forbidden.
   - Toàn bộ 177/177 bài kiểm thử của repository và 0 lỗi Checkstyle đều PASS với exit code 0.
 
+## D-043 Project Member Access Remediation, Canonical Matrix Hardening, and V015 Migration
+
+- **Bối cảnh**:
+  - Kiểm toán độc lập phát hiện `PROJECT_READ_PERMISSION_MATRIX_RISK`: `ProjectController` bảo vệ endpoint `GET /projects/{projectId}`, `GET /projects/{projectId}/members`, `GET /projects/{projectId}/milestones` bằng `@PreAuthorize("hasAuthority('PROJECT_READ')")`.
+  - Trong ma trận V014 trước đây, `PROJECT_READ` chỉ được cấp cho `ADMIN` và `PROJECT_MANAGER`. Do đó, nhân viên (`EMPLOYEE`) và trưởng nhóm (`TEAM_LEADER`) dù là thành viên dự án đang hoạt động (`active project member`) cũng bị chặn bởi cổng bảo vệ Spring Security với HTTP 403 Forbidden trước khi request đến được tầng nghiệp vụ.
+  - Kiểm toán cũng phát hiện `ROLE_PERMISSION_SEED_SILENT_OMISSION_RISK` do câu lệnh `INSERT ... SELECT WHERE p.code IN (...)` có thể im lặng bỏ sót dòng nếu có lỗi chính tả, và `ROLE_PERMISSION_MATRIX_EVIDENCE_GAP` do lệch số section tham chiếu trong cột rationale của tài liệu canonical.
+- **Quyết định điều chỉnh Ma trận Canonical**:
+  - `PROJECT_READ` được chính thức cấp (`GRANTED`) cho toàn bộ 4 System Roles (`ADMIN`, `PROJECT_MANAGER`, `TEAM_LEADER`, `EMPLOYEE`).
+  - Điều kiện quan hệ nghiệp vụ bắt buộc (`Business relation required`): Thành viên dự án đang hoạt động (`Active Project Member`) hoặc phạm vi quản trị canonical của `ADMIN`.
+  - Quyền `PROJECT_READ` toàn cục đóng vai trò cổng xác thực; tầng Application Service/Repository bắt buộc tiếp tục kiểm tra quyền thành viên và phân quyền dữ liệu.
+  - Hiệu chỉnh toàn bộ các tham chiếu số section bị lệch trong cột rationale của `docs/02_USER_ROLES_AND_WORKFLOWS.md` Section 2.6 (trỏ đúng Section 11 cho Project, Section 12 cho Task, Section 17 cho Admin/User/Department, Section 18 cho Audit).
+- **Di trú CSDL V015 (Bất biến V014)**:
+  - Giữ nguyên V001–V014 để bảo toàn checksum Flyway.
+  - Tạo mới `V015__correct_project_read_permissions_and_validate_role_matrix.sql`:
+    1. Cấp bổ sung `PROJECT_READ` cho `TEAM_LEADER` và `EMPLOYEE`.
+    2. Bổ sung `DO $$ ... END $$;` block thực hiện strict validation guard, fail-fast nếu sai số lượng mapping:
+       - roles = 4, permissions = 29.
+       - ADMIN = 29, PROJECT_MANAGER = 19, TEAM_LEADER = 15, EMPLOYEE = 13.
+       - Tổng mapping = 76.
+       - `PROJECT_READ` có đủ trên cả 4 vai trò.
+       - `SERVICE_REQUEST_ASSIGN` và `SERVICE_CATEGORY_MANAGE` chỉ duy nhất thuộc về `ADMIN`.
+- **Kiểm thử và xác minh**:
+  - Cập nhật `RolePermissionSeedIntegrationTest.java` với kịch bản kiểm tra exact set comparison (`EXPECTED EXCEPT ACTUAL = empty` và `ACTUAL EXCEPT EXPECTED = empty`).
+  - Bổ sung kịch bản kiểm thử tích hợp truy cập chi tiết dự án (`GET /api/v1/projects/{projectId}`) cho `EMPLOYEE` và `TEAM_LEADER` là active project member, xác nhận trả về HTTP 200 OK thành công bằng JWT thật.
+  - Cập nhật `ProjectMockMvcTest.java` để kiểm thử kiểm tra quyền truy cập dự án bằng token không có quyền (`unprivilegedToken`) thay cho `employeeToken`.
+
+
 
