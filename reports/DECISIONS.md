@@ -681,6 +681,7 @@ Current operating mode:
      - Độ lệch giữa mô tả văn bản và request payload được ghi nhận chính thức dưới dạng `ASSET_ASSIGNMENT_STATUS_CONTRACT_GAP` để đồng bộ ở phase nâng cao.
   6. **Định danh danh sách loại tài sản hoạt động (Authenticated Active Categories List)**:
      - Endpoint `GET /api/v1/asset-categories` nằm trong phạm vi bắt buộc xác thực (`.anyRequest().authenticated()`), trả về 401 Unauthorized nếu không có token. Do đó được định danh chuẩn xác là "Authenticated active-category list", không dùng từ "public".
+
 ## D-048: Chốt chuẩn hóa hợp đồng phân công tài sản và hoàn tất kiểm toán cuối Phase 10 (Phase 10 Final Contract Alignment & Audit)
 
 - **Ngày quyết định**: 2026-10-16.
@@ -707,3 +708,5 @@ Current operating mode:
   5. **Xác minh tên Index V016**:
      - Các chỉ mục thực tế của V016: uk_asset_assignments_one_active, uk_asset_categories_code, idx_asset_assignments_assigned_to, idx_asset_assignments_asset_id.
      - Test V016MigrationTest.testV016IndexesExist kiểm tra chính xác 100% các tên index này trên PostgreSQL pg_indexes.
+  6. **Cơ chế trích xuất tên ràng buộc CSDL qua Reflection (Technical Note)**:
+     - Ghi nhận `POSTGRES_CONSTRAINT_METADATA_REFLECTION_LOW`: Dependency `org.postgresql:postgresql` nằm ở phạm vi runtime scope trong `pom.xml`. Triển khai sử dụng reflection có kiểm soát để đọc `getServerErrorMessage().getConstraint()` với fallback an toàn về message; không fallback rộng theo tên bảng; không phải blocker.

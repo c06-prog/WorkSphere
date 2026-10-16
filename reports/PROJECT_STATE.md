@@ -3,17 +3,19 @@
 ## Git Checkpoint
 
 - Branch: main
-- Current Checkpoint: `46b3b5ca7023f4b1c5e4633def1f0f8e16816602`
-- Latest Implementation Commit: `46b3b5ca7023f4b1c5e4633def1f0f8e16816602`
+- Current Checkpoint: `cd9c972cb18c0158807c47a260e21ddfca019427` (với memory checkpoint commit sắp tới)
+- Base Phase 10 Implementation: `46b3b5ca7023f4b1c5e4633def1f0f8e16816602`
+- First Hardening Commit: `af165119efa9d2ed7c062a53eb10da2df757bc1a`
+- Latest Validated Phase 10 Implementation: `cd9c972cb18c0158807c47a260e21ddfca019427`
 - Phase 10 Implementation Base: `41b7a175394d41c8f39ff41615121f0f42a7a823`
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening
 
-- Implementation Commit: `46b3b5ca7023f4b1c5e4633def1f0f8e16816602`
-- Commit message: `feat(asset): implement asset module`
-- Phase 10 Hardening Status: COMPLETED, AUDITED, HARDENED
-- Phase 10 Report Checkpoint: `reports/PHASE_10_REPORT.md`
+- Latest Validated Implementation Commit: `cd9c972cb18c0158807c47a260e21ddfca019427`
+- Commit message: `fix(asset): align assignment contract and error semantics`
+- Phase 10 Status: COMPLETED, AUDITED, HARDENED, AUTHORIZATION, CONCURRENCY AND TRANSACTION VALIDATED
+- Operational Documentation Checkpoint: reports/DECISIONS.md (D-046, D-047, D-048), reports/PHASE_10_REPORT.md, reports/PROJECT_STATE.md, reports/HANDOFF.md
 
 ## Validated Progress
 
@@ -118,19 +120,70 @@
     - Single rating per request enforced by unique constraint `service_ratings.request_id`.
     - Concurrent duplicate mapping to `SERVICE_RATING_ALREADY_EXISTS` (HTTP 409).
 
-- Phase 10 (Asset Management Module): COMPLETED, AUDITED, HARDENED, CONCURRENCY AND TRANSACTION VALIDATED
-  - Category: Authenticated active list (`GET /api/v1/asset-categories`), admin pagination, create with trim/uppercase normalization (`^[A-Z0-9_]{2,50}$`), in-use check on AVAILABLE and RETIRED assets (`ASSET_CATEGORY_IN_USE`, 400), optimistic locking (`OPTIMISTIC_LOCK_CONFLICT`, 409).
-  - Asset Core: Create with initial AVAILABLE status, code normalization (`^[A-Z0-9][A-Z0-9_-]{1,49}$`), duplicate code/serial rejection (409), status transition matrix, RETIRED terminal state.
-  - Assignment & Concurrency: Pessimistic locking + V016 partial unique index, no direct reassignment, controlled concurrency (5 rounds x 2 workers on PostgreSQL Testcontainers) with strict canonical assertions (winner 201, loser 400 or 409, 0 500s).
-  - Return & Rollback: Selectable resultingAssetStatus (`AVAILABLE`, `MAINTENANCE`, `BROKEN`, `RETIRED`), resulting status `ASSIGNED` rejected (400), ACID rollback verified on PostgreSQL via trigger failure injection.
-  - Read Scoping: Query-level JPA Specification subqueries (Admin global scope vs non-admin active assigned scope), my-assets caller locked.
-  - Related Service Requests: Projection in detail matches Phase 9 authorization (Admin sees all non-deleted, non-admin sees if requester OR active assignee; soft-deleted excluded).
-  - Repair History: Immutable audit record (405 on PUT/DELETE), SR reference validation, no auto status change.
-  - Migration V016: 8 tests in `V016MigrationTest` verifying clean migration V001-V016, constraints, indexes, and preflight NO-GO rollback with zero data loss.
+- Phase 10 (Asset Management Module): COMPLETED, AUDITED, HARDENED, AUTHORIZATION, CONCURRENCY AND TRANSACTION VALIDATED
+  - Asset Category:
+    - Authenticated active-category list (`GET /api/v1/asset-categories` - requires authentication, returns 401 if unauthorized; strictly not public).
+    - Admin paginated management (`GET /api/v1/admin/asset-categories` with `ASSET_CATEGORY_MANAGE`).
+    - Client-input code with trim + uppercase normalization; regex `^[A-Z0-9_]{2,50}$`; immutable after create; permanent global uniqueness.
+    - Active/deactivate lifecycle; in-use guard blocks deactivation if any non-deleted Asset references the category, including RETIRED assets (`ASSET_CATEGORY_IN_USE`, HTTP 400).
+    - Optimistic locking (`@Version`); V016 database checks and uniqueness (`chk_asset_categories_code_normalized`, `uk_asset_categories_code`).
+  - Asset Core:
+    - Create, List, My Assets, Detail, and Update lifecycle.
+    - Initial status strictly `AVAILABLE`; client-supplied status ignored.
+    - `assetCode` supplied by client, trim + uppercase normalized, regex `^[A-Z0-9][A-Z0-9_-]{1,49}$`, immutable after creation.
+    - Global serial number uniqueness (`uk_assets_serial_number`, `ASSET_SERIAL_ALREADY_EXISTS`, HTTP 409).
+    - Soft-delete filtering (`is_deleted = false`).
+    - Optimistic locking (`@Version`), audit principal and Clock integration.
+    - Five canonical Asset statuses: `AVAILABLE`, `ASSIGNED`, `MAINTENANCE`, `BROKEN`, `RETIRED` (`RETIRED` is terminal state).
+  - V016 Migration & Invariants:
+    - Migration: `V016__add_asset_assignment_and_category_invariants.sql`.
+    - Exact invariants and indexes: `uk_asset_assignments_one_active`, `chk_asset_categories_code_normalized`, `uk_asset_categories_code`, `chk_assets_asset_code_normalized`, `idx_asset_assignments_assigned_to`, `idx_asset_assignments_asset_id`.
+    - Zero data modification; no automatic legacy normalization; no auto-deactivation of duplicate assignments; duplicate/incompatible data causes fail-safe migration abort.
+    - PostgreSQL Testcontainers migration tests: 8/8 PASS; duplicate data preserved on transaction rollback.
+  - Read Authorization & Scoping:
+    - `ADMIN`: can read all non-deleted assets across the system.
+    - Non-admin: restricted strictly to assets with active assignment to caller principal (`assigned_to = principal.userId AND status = 'ACTIVE'`).
+    - Database query scoping via Spring Data JPA Specification subqueries; count and pagination match scoped dataset; client assignedTo cannot expand scope; previous/returned assignee loses access; unauthorized detail access rejected with `ASSET_ACCESS_DENIED` (HTTP 403).
+  - Assignment & Concurrency:
+    - Active assignment cardinality 0..1.
+    - Row-level coordination lock via `PESSIMISTIC_WRITE` on `Asset`.
+    - V016 partial unique index `uk_asset_assignments_one_active` as final engine guard.
+    - No direct reassignment; same-user repeat assignment rejected (`ASSET_ALREADY_ASSIGNED`, HTTP 400); different-user assignment while active rejected (`ASSET_ALREADY_ASSIGNED`, HTTP 400); must return before assigning again.
+    - `assignedBy` from principal, `assignedAt` from injected Clock.
+    - Concurrency semantics: row lock serializes competing transactions; exactly 1 request succeeds with 201 Created; competing request receives canonical error (`ASSET_NOT_AVAILABLE`, `ASSET_ALREADY_ASSIGNED`, or `ASSET_ASSIGNMENT_CONFLICT` HTTP 409); zero HTTP 500s; exactly 1 ACTIVE assignment row remains; final assigned user matches 201 winner; controlled concurrency verified for 2 workers x 5 rounds on PostgreSQL Testcontainers.
+  - Return Transaction & Rollback:
+    - Canonical endpoint: `PUT /api/v1/assets/{assetId}/assignments/{assignmentId}/return`.
+    - Assignment must belong to Asset, must be in `ACTIVE` status.
+    - Assignment status becomes `RETURNED`; `returnedAt` and `returnCondition` recorded.
+    - Asset status becomes: `AVAILABLE`, `MAINTENANCE`, `BROKEN`, or `RETIRED`; `ASSIGNED` rejected (`ASSET_STATUS_TRANSITION_INVALID`, HTTP 400).
+    - Asset and Assignment mutate in one atomic database transaction.
+    - PostgreSQL failure-injection test proves full ACID rollback: after simulated trigger failure, Asset remains `ASSIGNED`, version unchanged; Assignment remains `ACTIVE`, version unchanged, `returnedAt` remains null.
+    - HTTP 500 test response is safe: returns standardized `INTERNAL_ERROR` payload, does not leak SQL, stack trace, trigger function name (`fail_asset_return_rollback_test`), PSQLException or database internal details.
+  - Assignment Status Scope:
+    - Phase 10 API supported lifecycle: `ACTIVE -> RETURNED`.
+    - Schema-reserved values not exposed by Phase 10 API: `LOST`, `DAMAGED`.
+    - Deferred item: `ASSET_ASSIGNMENT_LOST_DAMAGED_WORKFLOW_DEFERRED` (canonical patch in `docs/06_API_CONTRACT.md` Section 14.7; not an unresolved contract gap).
+  - Repair History:
+    - Immutable audit record; `POST` and `GET` only; `PUT` and `DELETE` return HTTP 405 Method Not Allowed.
+    - Optional `serviceRequestId`; must reference the same Asset when Service Request has `assetId`.
+    - Zero side effects: no Asset status mutation, no Service Request mutation, no auto-creation from Service Request lifecycle.
+    - Created by Admin (`ASSET_MANAGE`); read by Admin or current active Asset assignee (`ASSET_READ`); previous/unrelated users denied (HTTP 403).
+    - Sorted by `startedAt DESC`.
+    - `cost` is optional (`NUMERIC(18,2) NULL`, verified with null-cost test); `completedAt >= startedAt`.
+  - Service Request Integration:
+    - Creating Service Request with `assetId`: Asset must exist and not be soft-deleted; Admin may link any valid Asset; non-admin may link only an Asset actively assigned to requester; previous/returned assignee denied; no auto Asset status update; no auto Repair History creation; null `assetId` backward compatible.
+    - Related Service Requests in Asset Detail: Admin sees all non-deleted related Service Requests; non-admin sees if requester relation OR active Service Request assignee relation (`is_active = true`); previous/inactive assignees, soft-deleted requests, and requests of other assets excluded (verified against exact UUIDs).
+  - Error Semantics & Constraint Extraction:
+    - Canonical duplicate serial error code: `ASSET_SERIAL_ALREADY_EXISTS` (HTTP 409, constraint `uk_assets_serial_number`).
+    - Unique assignment conflict: `uk_asset_assignments_one_active` -> `ASSET_ASSIGNMENT_CONFLICT` (HTTP 409).
+    - Category duplicate: `uk_asset_categories_code` -> `ASSET_CATEGORY_CODE_ALREADY_EXISTS` (HTTP 409).
+    - Asset code duplicate: `uk_assets_asset_code` -> `ASSET_CODE_ALREADY_EXISTS` (HTTP 409).
+    - PostgreSQL dependency has runtime scope; extraction uses constrained reflection to read PostgreSQL server error metadata (`PSQLException.getServerErrorMessage().getConstraint()`) with fallback to message; no broad table-name error mapping.
 
 ## Latest Evidence
 
-- Host runtime: Oracle JDK 27
+- Host: Windows 11
+- Runtime: Oracle JDK 27
 - Project target: Java 21
 - Maven: 3.9.16
 - Spring Boot: 4.1.1 (verified directly from backend/pom.xml)
@@ -145,32 +198,45 @@
   - `AssetAssignmentAndConcurrencyMockMvcTest`: 10/10 PASS (hardened concurrency assertions & return rollback test with response safety)
   - `AssetRepairHistoryMockMvcTest`: 8/8 PASS (bao gồm kiểm thử chi phí null/optional)
   - `AssetServiceRequestIntegrationMockMvcTest`: 6/6 PASS
+- Targeted Asset suite: 50/50 PASS run twice consecutively, 0 failures, 0 errors, 0 skipped, no observed flakiness
 - Checkstyle: 0 violations
 - Concurrency evidence:
-  - Asset assignment: 2 concurrent workers x 5 rounds on PostgreSQL Testcontainers (verified exactly 1 winner 201 with matching assignedTo, loser strictly 400/409, no 500, exactly 1 active assignment preserved)
+  - Asset assignment: 2 concurrent workers x 5 rounds on PostgreSQL Testcontainers (verified exactly 1 winner 201 with matching assignedTo, loser strictly 400/409, zero 500s, exactly 1 active assignment preserved)
 - Rollback evidence:
-  - Asset return rollback verified on PostgreSQL via BEFORE UPDATE trigger failure injection; asset remains ASSIGNED, assignment remains ACTIVE, versions unchanged, returnedAt remains null, response payload safe.
+  - Asset return rollback verified on PostgreSQL via BEFORE UPDATE trigger failure injection; asset remains ASSIGNED, assignment remains ACTIVE, versions unchanged, returnedAt remains null, response payload safe without leak
 - Database & Migrations:
   - V001 to V016 applied and validated on PostgreSQL Testcontainers
   - Migrations 100% immutable and tracked (V001-V016 intact; zero V017)
 - Canonical documents: Section 14.7 patched to clarify assignment lifecycle and schema-reserved states
 - Working tree: clean
-- HEAD equals origin/main before audit commit
+- HEAD equals origin/main
 
 ## Deferred Items & Known Gaps
 
 - ASSET_ASSIGNMENT_LOST_DAMAGED_WORKFLOW_DEFERRED: Giá trị enum `LOST` và `DAMAGED` trong `AssetAssignmentStatus` là schema-reserved enum values; `docs/06_API_CONTRACT.md` mục 14.7 đã chuẩn hóa phạm vi vòng đời Phase 10 là `ACTIVE -> RETURNED`; quy trình xử lý phân công thất thoát/hư hỏng hoãn lại rõ ràng, không còn unresolved contract gap.
 - NOTIFICATION_SIDE_EFFECT_DEFERRED: Phase 9/10 không triển khai Notification Module; không email, push notification hoặc WebSocket. Hoãn đến phase canonical tiếp theo nếu Roadmap quy định.
+- ASSET_ATTACHMENT_DEFERRED: Chưa có liên kết tài liệu/hình ảnh đính kèm cho tài sản; chưa có `ASSET_ATTACHMENT` trong `FilePurpose`.
+- ASSET_BARCODE_QR_DEFERRED: Chưa triển khai sinh Barcode hoặc mã QR cho tài sản ở backend.
+- ASSET_DEPRECIATION_DEFERRED: Chưa triển khai công cụ khấu hao hoặc kế toán tài sản.
+- POSTGRES_CONSTRAINT_METADATA_REFLECTION_LOW: Trích xuất tên ràng buộc CSDL qua reflection do dependency driver PostgreSQL nằm ở scope runtime; fallback qua chuỗi message an toàn, không phải blocker.
 - SERVICE_REQUEST_SLA_DEFERRED: Không có SLA engine, không tính business hours, không escalation, không pause/resume SLA.
 - SERVICE_ATTACHMENT_COMMENT_LINK_GAP: Bảng `service_attachments` chỉ liên kết với `request_id`. File gửi kèm khi tạo comment vẫn là attachment cấp Service Request; không có `comment_id` trong schema và không được mô tả là attachment riêng của comment.
 - FILE_ORPHAN_RECONCILIATION_GAP: Nếu metadata persistence và compensating physical cleanup cùng thất bại, physical file có thể trở thành orphan.
-- Technical Debt mức Low:
-  - TASK_FLYWAY_CONFIGURATION_MODULE_LOCATION_LOW: TaskFlywayConfiguration hiện ở task.infrastructure. Có thể chuyển sang shared.infrastructure trong đợt refactor riêng.
-  - DATA_INTEGRITY_ERROR_MAPPING_FALLBACK_LOW: Exception mapping cho task_assignments có thể nâng cấp sang trích xuất constraint PostgreSQL driver tương tự Asset module.
+- FILE_STORAGE_TOCTOU_LOW: Existing symlink escape đã được chặn và kiểm thử thành công trên Linux container. Môi trường production phải bảo vệ storage root bằng phân quyền hệ điều hành phù hợp.
+- FILE_VIRUS_SCANNING_DEFERRED: ClamAV daemon hoãn đến môi trường production; kiểm tra in-flight qua magic bytes và ZIP entry inspection.
+- CLOUD_STORAGE_PROVIDER_DEFERRED: Production provider chưa được chọn. Local filesystem là provider Development/Test.
+- TASK_DETAIL_ATTACHMENT_ITEMS_API_GAP: Canonical API định nghĩa `attachmentCount`; schema chi tiết cho danh sách attachment items trong Task Detail chưa được định nghĩa.
+- TASK_DELETE_RULE_AMBIGUITY_DEFERRED: Định nghĩa “Business history quan trọng” chưa đầy đủ trong canonical docs; giữ logic xét status history.
+- TASK_FLYWAY_CONFIGURATION_MODULE_LOCATION_LOW: TaskFlywayConfiguration hiện ở task.infrastructure. Có thể chuyển sang shared.infrastructure trong đợt refactor riêng.
+- DATA_INTEGRITY_ERROR_MAPPING_FALLBACK_LOW: Exception mapping cho task_assignments có thể nâng cấp sang trích xuất constraint PostgreSQL driver tương tự Asset module.
+- TEMPORARY_PASSWORD_FLOW_GAP: Luồng kích hoạt và endpoint thiết lập mật khẩu lần đầu tiếp tục hoãn.
+- TEAM_API_CONTRACT_GAP: Team REST controllers hoãn vì `06_API_CONTRACT.md` chưa định nghĩa endpoints.
+- DASHBOARD_AGGREGATED_API_GAP: API `GET /api/v1/dashboard/me` chưa có backend controller.
+- PUT_ME_PASSWORD_TEST_GAP: Test coverage cho luồng đổi mật khẩu người dùng hiện tại tiếp tục hoãn.
 
 ## Next Permitted Phase
 
-- **Giai đoạn 11: Notification Module** (hoặc Audit / Checkpoint trước khi bắt đầu Phase 11).
+- **Giai đoạn 11: Notification và Dashboard** (theo đúng `docs/08_DEVELOPMENT_ROADMAP.md` Section 15, P1).
 - Không bắt đầu triển khai Phase 11 trong phiên hiện tại.
 - Không bắt đầu triển khai React Native / mobile source trong giai đoạn này.
 
@@ -183,11 +249,11 @@
 
 ## Recent Git Log
 
+- cd9c972 fix(asset): align assignment contract and error semantics
+- af16511 fix(asset): harden assignment and return consistency
+- 46b3b5c feat(asset): implement asset module
+- 41b7a17 docs(design): finalize phase 10 asset policies
+- f04e5be docs(agent): checkpoint phase 9 completion
 - 2034c4a fix(service-request): harden concurrency and rollback behavior
 - e189306 feat(service-request): implement service request module
 - fb8f41b fix(project): enforce member-scoped project reads
-- 3e05c7c fix(auth): grant project read to members and harden matrix validation
-- 1767951 fix(auth): seed canonical role permissions
-- b9bc66e docs(audit): audit role-permission seeds and identify phase 9 blockers
-- e811261 docs(design): finalize phase 9 locking and error semantics
-- 41c648a docs(design): harden phase 9 assignment concurrency decision
