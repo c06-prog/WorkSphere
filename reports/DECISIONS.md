@@ -305,9 +305,54 @@ Current operating mode:
 
 ## D-034 Database Extension and Development Safety Policy
 
-- WorkSphere sử dụng PostgreSQL. Agent ưu tiên: PostgreSQL CLI/psql, Testcontainers PostgreSQL, SQLTools với PostgreSQL driver phù hợp.
-- SQL Server (mssql) có thể giữ nếu phục vụ dự án khác, nhưng cấm dùng làm công cụ chính cho WorkSphere, cấm tạo connection SQL Server cho WorkSphere, cấm đổi schema hoặc sửa migration PostgreSQL để tương thích mssql.
+- WorkSphere sử dụng PostgreSQL là database canonical và mặc định. Agent ưu tiên: PostgreSQL CLI/psql, Testcontainers PostgreSQL, SQLTools với PostgreSQL driver phù hợp.
+- SQL Server (mssql) đã cài và được phép sử dụng khi một nhiệm vụ WorkSphere cụ thể chứng minh cần thiết. "Không ưu tiên" không đồng nghĩa với "cấm sử dụng".
+- Tuyệt đối không tự chuyển schema, Flyway migration hoặc runtime database sang SQL Server; không sửa migration PostgreSQL chỉ để tương thích mssql.
 - Tuyệt đối không lưu database password/credentials vào repository, workspace settings được Git theo dõi, screenshot, raw logs hay extension connection export.
 - Workspace settings (`.vscode/settings.json`, `.vscode/extensions.json`, `.vscode/launch.json`, `.vscode/tasks.json`): chỉ tạo/sửa khi được phép, cấm chứa machine-specific path hoặc secret.
 - Cấm commit: extension binaries, VSIX, cache, token, profile, cookie, settings cá nhân, credentials.
+
+## D-035 Service Attachment Response Projection
+
+- Canonical `06_API_CONTRACT.md` Section 13.4 chỉ định "Tệp đính kèm" trong response chi tiết yêu cầu dịch vụ mà không định nghĩa cấu trúc JSON schema chi tiết.
+- Chuẩn hóa cấu trúc chiếu (implementation response projection) `ServiceAttachmentResponse` gồm 7 trường:
+  - `fileId` (UUID): ID tệp lưu trữ trong `stored_files`.
+  - `originalName` (String): Tên tệp gốc từ phía client.
+  - `mimeType` (String): Định dạng MIME đã xác thực.
+  - `sizeBytes` (Long): Dung lượng tệp tính bằng byte (thống nhất theo naming convention của File Module).
+  - `downloadUrl` (String): Đường dẫn tải tệp `/api/v1/files/{fileId}/download`.
+  - `uploadedBy` (UUID): ID người tải tệp lên.
+  - `createdAt` (Instant): Thời điểm đính kèm tệp vào yêu cầu dịch vụ.
+- Cấu trúc này khớp 100% với naming convention thực tế của `FileUploadResponse` và `StoredFile` từ Phase 8.
+- Đây là implementation response projection nhúng trong `ServiceRequestDetailResponse.attachments`, không mở thêm endpoint REST mới, không làm thay đổi hợp đồng canonical.
+
+## D-036 Service Request Single Active Assignment Cardinality
+
+- Căn cứ `02_USER_ROLES_AND_WORKFLOWS.md` Section 6.3, `05_DATABASE_DESIGN.md` Section 9.3, và `06_API_CONTRACT.md` Section 13.4/13.6 ("Người xử lý" - số ít; payload phân công chỉ chứa `assigneeId` đơn):
+  - Mỗi Service Request tại một thời điểm chỉ có tối đa **MỘT** kỹ thuật viên/người xử lý đang hoạt động (`active cardinality = 0..1`).
+  - Khi phân công người xử lý mới (reassignment), phân công đang hoạt động cũ phải được hủy kích hoạt (`is_active = FALSE`, `unassigned_at = now()`) trước khi tạo bản ghi phân công mới với `is_active = TRUE`.
+  - Tầng Application Service bắt buộc kiểm soát tính đơn nhất của active assignment. Ràng buộc toàn vẹn cơ sở dữ liệu ngữ nghĩa đúng cho trường hợp này là partial unique index trên `request_id WHERE is_active = TRUE` (khác với task assignment V012 vốn là `(task_id, assignee_id) WHERE is_active = TRUE` vì task hỗ trợ nhiều người cùng làm). Do không tạo migration trong đợt decision này, logic được bảo vệ bằng kiểm tra transaction ở tầng Application Service.
+
+## D-037 Request Number Concurrency and Rollover Strategy
+
+- Format canonical là `SR-YYYY-NNNNNN` (ví dụ: `SR-2026-000001`).
+- Áp dụng phương án **PostgreSQL Transactional Advisory Lock** (`pg_advisory_xact_lock(hashtext('SR-' || current_year))`) kết hợp truy vấn max trong cùng `@Transactional` tạo request:
+  `SELECT coalesce(max(cast(substring(request_number from 9) as integer)), 0) + 1 FROM service_requests WHERE request_number LIKE 'SR-' || current_year || '-%'`.
+- Ưu điểm:
+  1. Đảm bảo 100% duy nhất (unique) và tuần tự không bị trùng lặp trong môi trường concurrency cao.
+  2. Tự động chuyển đổi khi bước sang năm mới (`YYYY`) mà không cần DDL, sequence reset hay cron job.
+  3. Hoàn toàn không cần tạo bảng mới hay migration `V013` (Zero schema drift).
+  4. Tự động giải phóng lock khi transaction kết thúc (commit hoặc rollback).
+
+## D-038 Service Category Hierarchy and Cycle Prevention
+
+- `parentId` trỏ tới danh mục cha trong `service_categories`.
+- Điều kiện hợp lệ khi gán `parentId`: Danh mục cha phải tồn tại, đang hoạt động (`is_active = TRUE`), chưa bị xóa mềm (`is_deleted = FALSE`), và không được là chính nó (`parentId != id`).
+- Ngăn ngừa chu trình (cycle detection): Duyệt chuỗi tổ tiên bằng `Set<UUID> visited`. Nếu gặp ID của chính danh mục đang cập nhật thì từ chối ngay. Không áp đặt giới hạn depth tùy tiện.
+
+## D-039 File Delete Memory Inaccuracy Correction
+
+- Xác nhận chính thức rằng mã nguồn `FileController.java` và test suite `FileMockMvcTest.java` hiện thực endpoint `DELETE /api/v1/files/{fileId}` trả về **HTTP 200 OK** kèm body `ApiResponse<Void>` (chứa `success: true`).
+- Đính chính các ghi chú trong báo cáo bộ nhớ trước đây từng ghi nhầm là `204 No Content`. Không sửa `FileController` hay `PHASE_08_REPORT.md`.
+
 

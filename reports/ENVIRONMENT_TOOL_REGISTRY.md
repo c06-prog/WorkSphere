@@ -673,7 +673,7 @@ File manifest:
 - **License**: Microsoft Software License Terms
 - **Install Location**: `C:\Users\dienm\.antigravity-ide\extensions\ms-mssql.mssql-1.46.0-universal`
 - **Mục đích trong WorkSphere**: Giữ nguyên phục vụ các dự án khác nếu người dùng cần.
-- **Chính sách WorkSphere**: **BỊ CẤM CHO WORKSPHERE**. WorkSphere sử dụng PostgreSQL. Không tạo connection SQL Server cho WorkSphere, không chuyển schema WorkSphere sang SQL Server, không sửa Flyway migrations PostgreSQL vì mssql.
+- **Chính sách WorkSphere**: SQL Server (mssql) đã cài và được phép sử dụng khi một nhiệm vụ WorkSphere cụ thể chứng minh cần thiết. PostgreSQL vẫn là database canonical và mặc định của WorkSphere. "Không ưu tiên" không đồng nghĩa với "cấm sử dụng". Tuyệt đối không tự chuyển schema, Flyway migration hoặc runtime database sang SQL Server; không sửa migration PostgreSQL chỉ để tương thích mssql.
 - **Dữ liệu / Quyền truy cập**: Kết nối database theo connection profile.
 - **Ghi chú an toàn**: Tuyệt đối không lưu mật khẩu SQL Server vào repository hoặc workspace settings được Git theo dõi.
 - **Cách kiểm tra lại**: `Test-Path "C:\Users\dienm\.antigravity-ide\extensions\ms-mssql.mssql-1.46.0-universal"`

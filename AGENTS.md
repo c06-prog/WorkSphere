@@ -203,8 +203,9 @@ Nguyên tắc ưu tiên extension:
 7. Tránh cài nhiều extension trùng chức năng (ví dụ: ưu tiên GitLens nếu đã đủ tính năng so với Git History; Microsoft Edge Tools ưu tiên cho web/prototype debug; Docker extension bổ trợ Docker CLI nhưng không thay thế lệnh CLI bắt buộc; markdownlint dùng phát hiện lỗi Markdown nhưng không tự sửa nội dung canonical ngoài phạm vi task).
 
 Database Extension Policy:
-- WorkSphere sử dụng PostgreSQL. Agent ưu tiên: PostgreSQL CLI/psql, Testcontainers PostgreSQL, SQLTools với PostgreSQL driver phù hợp.
-- SQL Server (mssql) có thể giữ nếu phục vụ dự án khác, nhưng cấm dùng làm công cụ chính cho WorkSphere, cấm tạo SQL Server connection cho WorkSphere, cấm chuyển schema sang SQL Server, cấm sửa migration PostgreSQL để tương thích mssql.
+- WorkSphere sử dụng PostgreSQL là database canonical và mặc định. Agent ưu tiên: PostgreSQL CLI/psql, Testcontainers PostgreSQL, SQLTools với PostgreSQL driver phù hợp.
+- SQL Server (mssql) đã cài và được phép sử dụng khi một nhiệm vụ WorkSphere cụ thể chứng minh cần thiết. "Không ưu tiên" không đồng nghĩa với "cấm sử dụng".
+- Tuyệt đối không tự chuyển schema, Flyway migration hoặc runtime database sang SQL Server; không sửa migration PostgreSQL chỉ để tương thích mssql.
 - Không lưu database password/credentials vào repository, workspace settings được Git theo dõi, screenshot, raw logs hay extension connection export.
 
 Workspace Settings và File sinh ra:

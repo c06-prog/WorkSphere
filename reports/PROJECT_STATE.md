@@ -34,7 +34,7 @@
 - Docker: verified (Docker Desktop 4.94.0, Engine 29.8.2, jenkins-lts running, worksphere-dev-pg available)
 - Tool Installation Authorization: enabled with safeguards (D-019, D-020, D-021, allowlist, user action protection)
 - Web Runtime and Browser Automation Authorization: enabled and active (D-026, D-027, Microsoft Edge headless priority, profile test isolation at D:\AI\Profiles\Edge\WorkSphere)
-- IDE Extension Discovery, Installation and Automation Authorization: enabled and active (D-033, D-034, Antigravity extensions inventory verified at C:\Users\dienm\.antigravity-ide\extensions with 10 verified extension suites, PostgreSQL prioritization over mssql)
+- IDE Extension Discovery, Installation and Automation Authorization: enabled and active (D-033, D-034, Antigravity extensions inventory verified at C:\Users\dienm\.antigravity-ide\extensions with 10 verified extension suites, PostgreSQL canonical/default, SQL Server permitted when specifically required)
 - Tool Registry: updated at reports/ENVIRONMENT_TOOL_REGISTRY.md (26 host tools + Section 3 with 10 verified Antigravity IDE extension suites)
 - Phase 7 (Task Management Module): COMPLETED, AUDITED, PATCHED, OPERATIONALLY VALIDATED
   - Task Core lifecycle, workflow state machine, optimistic locking, allowedActions computation: verified.
@@ -49,12 +49,13 @@
   - Safe validation: basename sanitization (RFC 5987 UTF-8 Content-Disposition), MIME/magic-byte checks (JPEG, PNG, WEBP, PDF), and in-memory ZipInputStream structure inspection for DOCX (`word/`) and XLSX (`xl/`): verified.
   - ZIP bomb & resource safety: entry count $\le$ 200, entry uncompressed size $\le$ 50MB, total uncompressed size $\le$ 100MB, compression ratio $\le$ 100.0, live ratio tracking via CountingInputStream, and strict traversal blocking (`..`, `\`, leading `/`, drive letter `C:`): verified.
   - SHA-256 integrity calculation and streaming download with `X-Content-Type-Options: nosniff`: verified.
-  - Upload (`POST /api/v1/files`), Download (`GET /api/v1/files/{fileId}/download`), and Soft Delete (`DELETE /api/v1/files/{fileId}`): verified.
+  - Upload (`POST /api/v1/files`), Download (`GET /api/v1/files/{fileId}/download`), and Soft Delete (`DELETE /api/v1/files/{fileId}` - returns 200 OK + `ApiResponse<Void>`, correcting prior memory references citing 204): verified.
   - Access control and authorization: unlinked files restricted to uploader/Admin, task-linked files restricted to active project members of the task's project, cross-project and inactive member downloads rejected: verified.
   - Linkage protection: files attached to tasks or service requests cannot be deleted via File API (HTTP 422 `FILE_ALREADY_LINKED`): verified.
   - Compensating cleanup: storage cleanup failure on rollback preserves primary persistence exception: verified.
   - Task Attachment integration: `TaskAttachment` entity, comment attachment integration (`attachmentFileIds`), atomic transaction, and N+1 safe `attachmentCount` batch query: verified.
   - Comprehensive report at reports/PHASE_08_REPORT.md.
+- Phase 9 Pre-Implementation Decisions: FINALIZED (D-035 Attachment projection, D-036 Single active assignment, D-037 Request number concurrency, D-038 Category hierarchy, D-039 File delete 200 OK)
 
 ## Latest Evidence
 
