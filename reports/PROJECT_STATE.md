@@ -3,19 +3,19 @@
 ## Git Checkpoint
 
 - Branch: main
-- Current Checkpoint: `41c648adee102ed8adbc796abe10308e608c68eb`
-- Latest Validated Implementation: `ed2599d7f34644a7b03a29ffdb607b52d427e68f`
-- Phase 8 Hardening Commit: `3a8cdde8deeb447af97149b1d3885814897203e5`
-- Phase 8 Implementation Base: `6a72c01d8f6f6d9684d24d2699b6742c2a513e78`
+- Current Checkpoint: `2034c4aa8fd1fc6d0720a8b8349868785158f4a6`
+- Latest Validated Implementation: `2034c4aa8fd1fc6d0720a8b8349868785158f4a6`
+- Phase 9 Hardening Commit: `2034c4aa8fd1fc6d0720a8b8349868785158f4a6`
+- Phase 9 Implementation Base: `e189306aa4d4a2f6700014d165f07d452d1cb16e`
 - Working tree at checkpoint: clean
 
 ## Latest Validated Implementation
 
-- Commit: `ed2599d7f34644a7b03a29ffdb607b52d427e68f`
-- Commit message: `fix(file): verify symlink and archive resource safety`
-- Hardening Base: `3a8cdde8deeb447af97149b1d3885814897203e5`
-- Implementation Base: `6a72c01d8f6f6d9684d24d2699b6742c2a513e78`
-- Phase 8 Report Checkpoint: `reports/PHASE_08_REPORT.md`
+- Commit: `2034c4aa8fd1fc6d0720a8b8349868785158f4a6`
+- Commit message: `fix(service-request): harden concurrency and rollback behavior`
+- Hardening Base: `2034c4aa8fd1fc6d0720a8b8349868785158f4a6`
+- Implementation Base: `e189306aa4d4a2f6700014d165f07d452d1cb16e`
+- Phase 9 Report Checkpoint: `reports/PHASE_09_REPORT.md`
 
 ## Validated Progress
 
@@ -56,50 +56,105 @@
   - Compensating cleanup: storage cleanup failure on rollback preserves primary persistence exception: verified.
   - Task Attachment integration: `TaskAttachment` entity, comment attachment integration (`attachmentFileIds`), atomic transaction, and N+1 safe `attachmentCount` batch query: verified.
   - Comprehensive report at reports/PHASE_08_REPORT.md.
-- Phase 9 (Service Request Module): COMPLETED, AUDITED, SECURITY VALIDATED
-  - Service Category: tree hierarchy, arbitrary depth (> 50 levels verified), cycle detection with Set<UUID> (`SERVICE_CATEGORY_CYCLE_DETECTED`), normalized code uniqueness, parent validation, activate/deactivate lifecycle, in-use guard.
-  - Request Number: format `SR-YYYY-NNNNNN` via PostgreSQL two-key advisory lock `(1301, year)` and sequence reset on new calendar year.
-  - Service Request Core: status workflow (7 states, 8 transitions), status history recorded in same transaction, pessimistic write locking, optimistic locking concurrency control.
-  - Service Assignment: single active assignee invariant (`0..1`), idempotent same-user assign, atomic reassign with unassigned_at timestamp, partial unique index `uk_service_assignments_one_active` final DB guard mapped to `SERVICE_ASSIGNMENT_CONFLICT` (HTTP 409).
-  - Reject Resolution: dedicated endpoint `POST /service-requests/{requestId}/reject-resolution` restricted to original requester, transitions `RESOLVED -> IN_PROGRESS`, retains active assignee, logs reason in status history.
-  - Comments: public vs internal notes, query-level visibility scoping (requesters cannot create or view internal notes).
-  - Attachments: validation for purpose `SERVICE_ATTACHMENT`, `ACTIVE` file status, uploader ownership, zero cross-request reuse, download access control, and D-035 projection.
-  - Rating: requester-only, request status `CLOSED`, score 1..5, guarded by `service_ratings.request_id` unique constraint (`SERVICE_RATING_ALREADY_EXISTS`, 409).
-  - Query-level Scoping: Spring Data JPA `Specification<ServiceRequest>` enforcing DB query scoping for Admins vs Non-Admins with matching count queries.
-  - Deferred Side Effects: `NOTIFICATION_SIDE_EFFECT_DEFERRED` logged cleanly without external broker dependencies.
-  - Comprehensive report at `reports/PHASE_09_REPORT.md`.
+- Phase 9 (Service Request Module): COMPLETED, AUDITED, HARDENED, CONCURRENCY AND TRANSACTION VALIDATED
+  - Service Category:
+    - Hierarchical categories with parent-child relationship.
+    - Code normalization (regex `^[A-Z0-9_]{2,50}$`) and uniqueness (`SERVICE_CATEGORY_CODE_ALREADY_EXISTS`, 409).
+    - Active/inactive lifecycle (`SERVICE_CATEGORY_ALREADY_ACTIVE`, `SERVICE_CATEGORY_ALREADY_INACTIVE`).
+    - Parent validation (`SERVICE_CATEGORY_PARENT_INVALID`).
+    - Set<UUID> cycle detection (`SERVICE_CATEGORY_CYCLE_DETECTED`).
+    - Valid depth greater than 50 verified without artificial recursion limit.
+    - Optimistic locking concurrency control.
+    - In-use protection preventing deactivation of categories in active requests (`SERVICE_CATEGORY_IN_USE`, 400).
+  - Service Request Core:
+    - Create, list, detail, and update while in OPEN state.
+    - Soft-delete filtering (`is_deleted = false`).
+    - Query-level authorization scoping via Spring Data JPA Specification (Admin global scope vs non-admin requester/assignee scope).
+    - Pagination, filtering (status, priority, category, search), and sorting with matching countQuery.
+    - Optimistic locking concurrency control via @Version (`OPTIMISTIC_LOCK_CONFLICT`, 409).
+  - Request Number:
+    - Canonical format: `SR-YYYY-NNNNNN` (e.g., `SR-2026-000001`).
+    - Injected `java.time.Clock` with business zone `Asia/Ho_Chi_Minh`.
+    - PostgreSQL two-key transactional advisory lock: `SELECT pg_advisory_xact_lock(1301, :year)` (module key `1301`).
+    - Year-scoped MAX + 1 allocation with automatic reset on new calendar year.
+    - Unique database constraint `uk_service_requests_request_number` as final engine guard.
+    - Non-gapless allocation mechanism (strictly not described as PostgreSQL sequence).
+  - Assignment:
+    - Active cardinality strictly 0..1 per Service Request.
+    - Row-level coordination lock via `PESSIMISTIC_WRITE` on `ServiceRequest`.
+    - Idempotent assignment for same active assignee.
+    - Reassignment history with `unassigned_at` timestamp and deactivation flush before new assignment insert.
+    - Partial unique index `uk_service_assignments_one_active` (migration `V013`) as final database guard.
+    - Exception translation mapping SQLState 23505 to `SERVICE_ASSIGNMENT_CONFLICT` (HTTP 409).
+    - Controlled concurrency validation with multiple competing workers (1 winner, 1 conflict).
+  - Workflow:
+    - Seven canonical states: `OPEN`, `ASSIGNED`, `IN_PROGRESS`, `WAITING_FOR_USER`, `RESOLVED`, `CLOSED`, `CANCELLED`.
+    - Allowed transitions strictly validated; RESOLVED requires resolution comment; CLOSED records `closed_at`; CANCELLED records `cancelled_at`.
+  - Status History:
+    - Same database transaction as request state mutation.
+    - changedBy from principal, changedAt from injected Clock.
+    - Atomic rollback verified on PostgreSQL via trigger failure injection.
+  - Reject Resolution:
+    - Dedicated endpoint: `POST /api/v1/service-requests/{requestId}/reject-resolution`.
+    - Requester-only access control (non-requester rejected with HTTP 403 Forbidden).
+    - Transitions from `RESOLVED` back to `IN_PROGRESS`.
+    - Resolution rejection reason required and recorded in status history.
+    - Active assignee retained.
+  - Comments:
+    - Public comments accessible to requester, assignee, and Admin.
+    - Internal notes (`is_internal = true`) restricted to active assignee and Admin.
+    - Requester denied from creating or viewing internal notes.
+    - Query-level visibility filtering before pagination and count metadata calculation.
+    - Previous assignee denied access.
+  - Attachments:
+    - Purpose `SERVICE_ATTACHMENT` only and `ACTIVE` StoredFile status.
+    - Ownership validation: must be uploaded by current user or Admin.
+    - Zero cross-request reuse.
+    - Linkage at Service Request level (`service_attachments` table has `request_id`, no `comment_id`).
+    - Download authorization inherited from Service Request relation (requester, active assignee, Admin).
+    - Implementation response projection per D-035 (no storage metadata leakage).
+  - Rating:
+    - Requester-only access control.
+    - Applicable strictly when request is in `CLOSED` state.
+    - Score range 1 to 5 stars.
+    - Single rating per request enforced by unique constraint `service_ratings.request_id`.
+    - Concurrent duplicate mapping to `SERVICE_RATING_ALREADY_EXISTS` (HTTP 409).
 
 ## Latest Evidence
 
-- Backend Test Suite on Host (Oracle JDK 27, Testcontainers postgres:15-alpine):
-  - Checkstyle: 0 violations
-  - Total tests: 210/210 PASS (183 regression suite + 27 Phase 9 tests)
-  - Failures: 0 | Errors: 0 | Skipped: 0
+- Host runtime: Oracle JDK 27
+- Project target: Java 21
+- Maven: 3.9.16
+- Spring Boot: 4.1.1 (verified directly from backend/pom.xml)
+- PostgreSQL: postgres:15-alpine via Testcontainers
+- Full backend suite: 210/210 PASS (183 regression + 27 Phase 9 tests)
+  - 0 failures, 0 errors, 0 skipped
   - Maven execution: BUILD SUCCESS (exit code 0)
+- Phase 9 test suites:
+  - ServiceCategoryMockMvcTest: 10/10 PASS
+  - ServiceRequestMockMvcTest: 17/17 PASS
+- Checkstyle: 0 violations
+- Concurrency evidence:
+  - Request-number allocation: 8 concurrent workers x 5 rounds (verified unique allocations and no duplicates)
+  - Service assignment: 2 concurrent workers x 5 rounds (verified 1 winner, 1 conflict, invariant preserved)
+  - Service rating: 2 concurrent workers x 5 rounds (verified 1 winner, 1 conflict, duplicate mapped to 409)
+- Rollback evidence:
+  - Status history rollback verified on PostgreSQL via temporary trigger failure injection
+  - ServiceRequest status, version, and timestamps unchanged; history count unchanged
 - Database & Migrations:
   - V001 to V015 applied and validated on PostgreSQL Testcontainers
   - Migrations 100% immutable and tracked (no V016 needed)
 - Canonical documents: unchanged 100% (10/10 canonical documents in docs/ preserved)
 - Working tree: clean
-- Security / Scoping Validation:
-  - Project read access scoped to active project members for non-admins
-  - Service request read access scoped to requester or active assignee for non-admins
-  - System Admin holds global service request and project read scope
-  - Query-level scoping via Specification with matching countQuery
+- HEAD equals origin/main before memory update
+- No Phase 10 source code implemented
+- No mobile implementation started
 
 ## Deferred Items & Known Gaps
 
-- [RESOLVED] PROJECT_READ_MEMBERSHIP_SCOPING_LEAK: Đã khắc phục theo Quyết định D-044. Triển khai lọc cấp CSDL qua JPQL EXISTS cho `GET /api/v1/projects` và kiểm tra active membership (`pm.is_active = true`) tại Application Service cho detail, members, và milestones. Toàn bộ kịch bản kiểm thử bảo mật độc lập đạt 183/183 PASS.
-- [RESOLVED] PROJECT_READ_PERMISSION_MATRIX_RISK: Đã khắc phục bằng bản di trú `V015__correct_project_read_permissions_and_validate_role_matrix.sql` cấp `PROJECT_READ` cho toàn bộ 4 System Roles (`ADMIN`, `PROJECT_MANAGER`, `TEAM_LEADER`, `EMPLOYEE`), cho phép active project members truy cập thông tin dự án qua cổng `@PreAuthorize("hasAuthority('PROJECT_READ')")`. Đã kiểm chứng qua integration test `projectMemberAccess_shouldSucceedForActiveMembers`.
-- [RESOLVED] ROLE_PERMISSION_SEED_SILENT_OMISSION_RISK: Đã khắc phục bằng strict validation guard (PostgreSQL `DO $$ ... END $$;`) trong V015, lập tức `RAISE EXCEPTION` nếu thiếu hụt hoặc sai lệch bất kỳ mapping nào.
-- [RESOLVED] ROLE_PERMISSION_MATRIX_EVIDENCE_GAP: Đã rà soát và điều chỉnh chính xác toàn bộ số section trong cột Canonical rationale tại `docs/02_USER_ROLES_AND_WORKFLOWS.md` Section 2.6 (Section 11 Project, Section 12 Task, Section 17 Admin, Section 18 Audit).
-- [RESOLVED] ROLE_PERMISSION_SEED_GAP_CONFIRMED: Đã khắc phục bằng bản di trú `V014__seed_role_permissions.sql` và `V015__correct_project_read_permissions_and_validate_role_matrix.sql` nạp 76 bản ghi liên kết chính thức cho 4 System Roles. Đã kiểm chứng qua `RolePermissionSeedIntegrationTest`.
-- [RESOLVED] TEST_AUTHORITY_FIXTURE_MASKS_SEED_GAP: Đã bổ sung `RolePermissionSeedIntegrationTest.java` chạy trên PostgreSQL Testcontainers sạch, đăng nhập thật qua `/api/v1/auth/login`, nhận JWT thật và gọi `@PreAuthorize` endpoints mà không có bất kỳ câu lệnh chèn fixture thủ công nào.
-- [RESOLVED] ROLE_PERMISSION_CANONICAL_MATRIX_GAP: Đã giải quyết bằng việc ban hành chính thức bảng ma trận phân quyền tại [02_USER_ROLES_AND_WORKFLOWS.md](file:///D:/WorkSphere/docs/02_USER_ROLES_AND_WORKFLOWS.md) Section 2.6.
-- [RESOLVED] SERVICE_AUTHORIZATION_MAPPING_GAP: Đã giải quyết bằng việc phân bổ thẩm quyền `SERVICE_REQUEST_ASSIGN` cho vai trò `ADMIN` trong MVP (Section 2.6 và V014).
-- [RESOLVED] SERVICE_ASSIGNMENT_ERROR_CODE_GAP: Đã giải quyết bằng việc cập nhật mã lỗi `SERVICE_ASSIGNMENT_CONFLICT` (HTTP 409 Conflict) vào [06_API_CONTRACT.md](file:///D:/WorkSphere/docs/06_API_CONTRACT.md) Section 13.6 và 20.6.
-- [RESOLVED] SERVICE_ASSIGNMENT_CONCURRENCY_SCHEMA_GAP: Đã giải quyết bằng bản di trú `V013__add_service_request_assignment_invariants.sql` tạo partial unique index `uk_service_assignments_one_active` trên `service_assignments(request_id) WHERE is_active = TRUE;`.
-- SERVICE_CATEGORY_ERROR_CODES: Đã đối chiếu toàn diện với Section 20.6. Tất cả các mã lỗi danh mục đều có sẵn trong canonical contract (`SERVICE_CATEGORY_*`), không có gap mã lỗi cho category.
+- NOTIFICATION_SIDE_EFFECT_DEFERRED: Phase 9 không triển khai Notification Module; không email, push notification hoặc WebSocket. Hoãn đến phase canonical tiếp theo nếu Roadmap quy định.
+- SERVICE_REQUEST_SLA_DEFERRED: Không có SLA engine, không tính business hours, không escalation, không pause/resume SLA.
+- SERVICE_ATTACHMENT_COMMENT_LINK_GAP: Bảng `service_attachments` chỉ liên kết với `request_id`. File gửi kèm khi tạo comment vẫn là attachment cấp Service Request; không có `comment_id` trong schema và không được mô tả là attachment riêng của comment.
 - FILE_ORPHAN_RECONCILIATION_GAP: Nếu metadata persistence và compensating physical cleanup cùng thất bại, physical file có thể trở thành orphan. Exception gốc được giữ nguyên, failure được log an toàn bằng fileId mà không lộ physical path. Cần reconciliation worker hoặc operational process trước khi đưa vào production.
 - FILE_STORAGE_TOCTOU_LOW: Existing symlink escape đã được chặn và kiểm thử thành công trên Linux container. Java NIO portable API không loại bỏ tuyệt đối TOCTOU trước actor đã có quyền can thiệp trực tiếp filesystem lưu trữ. Môi trường production phải bảo vệ storage root bằng phân quyền hệ điều hành phù hợp.
 - FILE_VIRUS_SCANNING_DEFERRED: ClamAV daemon hoãn đến môi trường production; kiểm tra in-flight qua magic bytes và ZIP entry inspection.
@@ -117,7 +172,7 @@
 
 ## Next Permitted Phase
 
-- **Giai đoạn 10: Asset Management Module** (theo đúng docs/08_DEVELOPMENT_ROADMAP.md Section 14, P0).
+- **Giai đoạn 10: Asset Module** (theo đúng `docs/08_DEVELOPMENT_ROADMAP.md` Section 14, P1).
 - Không bắt đầu triển khai Phase 10 trong phiên hiện tại.
 - Không bắt đầu triển khai React Native / mobile source trong giai đoạn này.
 
@@ -130,11 +185,11 @@
 
 ## Recent Git Log
 
+- 2034c4a fix(service-request): harden concurrency and rollback behavior
+- e189306 feat(service-request): implement service request module
+- fb8f41b fix(project): enforce member-scoped project reads
+- 3e05c7c fix(auth): grant project read to members and harden matrix validation
+- 1767951 fix(auth): seed canonical role permissions
+- b9bc66e docs(audit): audit role-permission seeds and identify phase 9 blockers
+- e811261 docs(design): finalize phase 9 locking and error semantics
 - 41c648a docs(design): harden phase 9 assignment concurrency decision
-- 6fa5d87 docs(agent): finalize phase 9 pre-implementation decisions and extension policy
-- 98fd768 docs(agent): authorize ide extension discovery, installation, and automation
-- 45faf1e docs(agent): checkpoint phase 8 completion
-- ed2599d fix(file): verify symlink and archive resource safety
-- 3a8cdde fix(file): harden storage security, zip bomb defense, and download authorization
-- 5d45728 docs(agent): authorize web runtime and browser automation
-- 6a72c01 feat(file): implement secure file storage module

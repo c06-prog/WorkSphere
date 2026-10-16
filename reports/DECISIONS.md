@@ -503,48 +503,67 @@ Current operating mode:
 
 ## D-045 Service Request Module Implementation (Phase 9)
 
-- **Bá»‘i cáº£nh**:
-  - Triá»ƒn khai Phase 9 - Service Request Module theo cÃ¡c tÃ i liá»‡u canonical vÃ  quyáº¿t Ä‘á»‹nh D-035 Ä‘áº¿n D-044.
-  - CSDL Ä‘Ã£ cÃ³ Ä‘áº§y Ä‘á»§ schema tá»« V007, V010, V013 vÃ  authorization foundation tá»« V014, V015 (khÃ´ng cáº§n táº¡o V016).
-- **Quyáº¿t Ä‘á»‹nh Thiáº¿t káº¿ & Hiá»‡n thá»±c**:
+- **Bối cảnh**:
+  - Triển khai Phase 9 - Service Request Module theo các tài liệu canonical và quyết định D-035 đến D-044.
+  - CSDL đã có đầy đủ schema từ V007, V010, V013 và authorization foundation từ V014, V015 (không cần tạo V016).
+- **Quyết định Thiết kế & Hiện thực**:
   1. **Service Category**:
-     - Há»— trá»£ phÃ¢n cáº¥p cÃ¢y danh má»¥c vá»›i Ä‘á»™ sÃ¢u tÃ¹y Ã½ (> 50 cáº¥p Ä‘Æ°á»£c kiá»ƒm chá»©ng há»£p lá»‡).
-     - Thuáº­t toÃ¡n phÃ¡t hiá»‡n chu trÃ¬nh (cycle detection) báº±ng `Set<UUID>` trong má»™t lÆ°á»£t duyá»‡t tá»« node cha lÃªn gá»‘c (`SERVICE_CATEGORY_CYCLE_DETECTED`).
-     - Chuáº©n hÃ³a mÃ£ Ä‘á»‹nh danh (`code`) theo regex `^[A-Z0-9_]{2,50}$` vÃ  Ä‘áº£m báº£o duy nháº¥t (`SERVICE_CATEGORY_CODE_ALREADY_EXISTS`, 409).
-     - RÃ ng buá»™c cha pháº£i tá»“n táº¡i, Ä‘ang hoáº¡t Ä‘á»™ng (`is_active = true`) vÃ  chÆ°a bá»‹ xoÃ¡ má»m (`SERVICE_CATEGORY_PARENT_INVALID`).
-     - Cháº·n vÃ´ hiá»‡u hÃ³a danh má»¥c Ä‘ang Ä‘Æ°á»£c sá»­ dá»¥ng bá»Ÿi cÃ¡c service request chÆ°a káº¿t thÃºc (`SERVICE_CATEGORY_IN_USE`, 400).
-  2. **Request Number Generation**:
-     - Äá»‹nh dáº¡ng: `SR-YYYY-NNNNNN` sinh tuáº§n tá»± dá»±a trÃªn nÄƒm há»‡ thá»‘ng tá»« injected `Clock` (Asia/Ho_Chi_Minh).
-     - Sá»­ dá»¥ng PostgreSQL advisory lock 2 khÃ³a: `SELECT pg_advisory_xact_lock(1301, :year)`.
-     - Phá»¥c há»“i vÃ  reset tuáº§n tá»± vá» 000001 an toÃ n khi sang nÄƒm dÆ°Æ¡ng lá»‹ch má»›i.
-  3. **Service Assignment Lifecycle & Invariants**:
-     - Äáº£m báº£o báº¥t biáº¿n tá»‘i Ä‘a 1 ngÆ°á»i xá»­ lÃ½ hoáº¡t Ä‘á»™ng (`0..1`) trÃªn má»—i request.
-     - Sá»­ dá»¥ng pessimistic write lock (`PESSIMISTIC_WRITE` vá»›i lock timeout) trÃªn `ServiceRequest` trÆ°á»›c khi phÃ¢n cÃ´ng.
-     - PhÃ¢n cÃ´ng láº¡i cÃ¹ng ngÆ°á»i xá»­ lÃ½ lÃ  idempotent (HTTP 200 OK, khÃ´ng táº¡o báº£n ghi trÃ¹ng láº·p).
-     - TÃ¡i phÃ¢n cÃ´ng cho ngÆ°á»i khÃ¡c: ÄÃ³ng báº£n ghi cÅ© (`is_active = FALSE`, `unassigned_at = Clock.instant()`) vÃ  thÃªm báº£n ghi má»›i trong cÃ¹ng transaction.
-     - Database final guard: Partial unique index `uk_service_assignments_one_active` (tá»« V013) Ä‘Æ°á»£c map chÃ­nh xÃ¡c qua SQLException SQLState 23505 sang `SERVICE_ASSIGNMENT_CONFLICT` (HTTP 409 Conflict).
-  4. **Status Workflow & History**:
-     - 7 tráº¡ng thÃ¡i chuáº©n: `OPEN`, `ASSIGNED`, `IN_PROGRESS`, `WAITING_FOR_USER`, `RESOLVED`, `CLOSED`, `CANCELLED`.
-     - Chuyá»ƒn sang `RESOLVED` báº¯t buá»™c cÃ³ ghi chÃº/giáº£i phÃ¡p (`comment`).
-     - Tráº¡ng thÃ¡i káº¿t thÃºc: `CLOSED` (ghi nháº­n `closed_at`), `CANCELLED` (ghi nháº­n `cancelled_at`).
-     - Má»i bÆ°á»›c chuyá»ƒn tráº¡ng thÃ¡i há»£p lá»‡ Ä‘á»u ghi nháº­n lá»‹ch sá»­ vÃ o `service_status_histories` trong cÃ¹ng transaction vá»›i `changedBy` tá»« principal vÃ  `changedAt` tá»« injected `Clock`.
+     - Hỗ trợ phân cấp cây danh mục với độ sâu tùy ý (> 50 cấp được kiểm chứng hợp lệ mà không bị giới hạn đệ quy tùy tiện).
+     - Thuật toán phát hiện chu trình (cycle detection) bằng `Set<UUID> visited` trong một lượt duyệt từ node cha lên gốc (`SERVICE_CATEGORY_CYCLE_DETECTED`, 400).
+     - Chuẩn hóa mã định danh (`code`) theo regex `^[A-Z0-9_]{2,50}$` và đảm bảo duy nhất (`SERVICE_CATEGORY_CODE_ALREADY_EXISTS`, 409).
+     - Ràng buộc cha phải tồn tại, đang hoạt động (`is_active = true`) và chưa bị xoá mềm (`SERVICE_CATEGORY_PARENT_INVALID`, 400).
+     - Chặn vô hiệu hóa danh mục đang được sử dụng bởi các service request chưa kết thúc (`SERVICE_CATEGORY_IN_USE`, 400).
+     - Điều khiển đồng thời bằng optimistic locking (`@Version`).
+  2. **Service Request Number Allocation**:
+     - Định dạng canonical: `SR-YYYY-NNNNNN` (ví dụ `SR-2026-000001`).
+     - Xác định năm nghiệp vụ (`:year`) từ `java.time.Clock` được inject kết hợp business zone `Asia/Ho_Chi_Minh`, không lấy từ client.
+     - Sử dụng PostgreSQL two-key transactional advisory lock: `SELECT pg_advisory_xact_lock(1301, :year)` với module key `1301`.
+     - Phân bổ số thứ tự bằng Year-scoped MAX + 1:
+       `SELECT COALESCE(MAX(CAST(SUBSTRING(request_number FROM 9) AS INTEGER)), 0) + 1 FROM service_requests WHERE request_number LIKE 'SR-' || :year || '-%'`
+     - Tự động reset chuỗi số về `000001` khi bước sang năm dương lịch mới.
+     - Ràng buộc duy nhất `uk_service_requests_request_number` (tạo từ V010) là hàng rào bảo vệ cuối cùng ở tầng database.
+     - Cơ chế sinh số là year-scoped transactional allocation, tuyệt đối không mô tả là PostgreSQL sequence.
+     - Hệ thống không bảo đảm chuỗi số gapless tuyệt đối (non-gapless sequence).
+     - Kiểm thử đồng thời: 8 concurrent workers x 5 rounds trên PostgreSQL Testcontainers xác nhận 100% số sinh ra là duy nhất và không có trùng lặp.
+  3. **Service Assignment Concurrency & Invariants**:
+     - Bất biến cardinality: Mỗi Service Request tại một thời điểm chỉ có tối đa một kỹ thuật viên hoạt động (`active cardinality = 0..1`).
+     - Sử dụng bản ghi `ServiceRequest` làm row coordination lock thông qua `PESSIMISTIC_WRITE` (`@Lock(LockModeType.PESSIMISTIC_WRITE)`).
+     - Phân công lại cùng người xử lý đang active là thao tác idempotent (HTTP 200 OK, không tạo bản ghi trùng lặp).
+     - Tái phân công cho người khác: Đóng bản ghi cũ (`is_active = FALSE`, `unassigned_at = Clock.instant()`), thực hiện flush (`saveAndFlush`) trước khi chèn bản ghi mới trong cùng transaction.
+     - Hàng rào database cuối cùng: Partial unique index `uk_service_assignments_one_active` trên `service_assignments(request_id) WHERE is_active = TRUE` (migration `V013`).
+     - Bắt chính xác lỗi vi phạm qua SQLException SQLState `23505` và tên constraint `uk_service_assignments_one_active`, map sang `SERVICE_ASSIGNMENT_CONFLICT` (HTTP 409 Conflict).
+     - Kiểm thử đồng thời có kiểm soát: 2 concurrent workers x 5 rounds xác nhận 1 winner và 1 conflict HTTP 409, bất biến CSDL được bảo toàn tuyệt đối.
+  4. **Status Workflow & History Transaction Atomicity**:
+     - 7 trạng thái canonical: `OPEN`, `ASSIGNED`, `IN_PROGRESS`, `WAITING_FOR_USER`, `RESOLVED`, `CLOSED`, `CANCELLED`.
+     - Chuyển sang `RESOLVED` bắt buộc có ghi chú/giải pháp (`comment`).
+     - Trạng thái kết thúc: `CLOSED` (ghi nhận `closed_at`), `CANCELLED` (ghi nhận `cancelled_at`).
+     - Mọi bước chuyển trạng thái hợp lệ đều ghi nhận lịch sử vào `service_status_histories` trong cùng database transaction (`@Transactional`).
+     - Client không được phép cung cấp `changedBy` hoặc `changedAt`; các trường này bắt buộc lấy từ Security Principal và injected `Clock`.
+     - Kiểm thử rollback trên PostgreSQL: Bằng trigger giả lập lỗi tạm thời trên `service_status_histories`, toàn bộ transaction bị rollback, `ServiceRequest` giữ nguyên trạng thái, version, timestamps và số lượng bản ghi lịch sử không thay đổi.
   5. **Reject Resolution Endpoint**:
-     - Endpoint chuyÃªn biá»‡t: `POST /service-requests/{requestId}/reject-resolution`.
-     - RÃ ng buá»™c quyá»n sá»Ÿ há»¯u: Chá»‰ ngÆ°á»i táº¡o yÃªu cáº§u (`requester`) má»›i Ä‘Æ°á»£c gá»i; ngÆ°á»i khÃ¡c bá»‹ cháº·n 403 Forbidden.
-     - Chá»‰ cho phÃ©p khi yÃªu cáº§u Ä‘ang á»Ÿ `RESOLVED`, chuyá»ƒn vá» `IN_PROGRESS`, giá»¯ nguyÃªn ngÆ°á»i xá»­ lÃ½ Ä‘ang hoáº¡t Ä‘á»™ng vÃ  ghi lÃ½ do vÃ o lá»‹ch sá»­.
-  6. **Comments & Internal Notes**:
-     - PhÃ¢n loáº¡i rÃµ bÃ¬nh luáº­n cÃ´ng khai vÃ  ghi chÃº ná»™i bá»™ (`is_internal = true`).
-     - NgÆ°á»i táº¡o yÃªu cáº§u khÃ´ng Ä‘Æ°á»£c phÃ©p táº¡o hoáº·c xem ghi chÃº ná»™i bá»™ (lá»c triá»‡t Ä‘á»ƒ á»Ÿ táº§ng query database).
-  7. **Attachments & File Integration**:
-     - TÃ¡i sá»­ dá»¥ng File Module Phase 8; tá»‡p pháº£i upload trÆ°á»›c vá»›i má»¥c Ä‘Ã­ch `SERVICE_ATTACHMENT` vÃ  tráº¡ng thÃ¡i `ACTIVE`.
-     - Kiá»ƒm tra quyá»n sá»Ÿ há»¯u tá»‡p (ngÆ°á»i táº£i lÃªn hoáº·c Admin) vÃ  cáº¥m tÃ¡i sá»­ dá»¥ng chÃ©o giá»¯a cÃ¡c service request khÃ¡c nhau.
-     - Download authorization thá»«a káº¿ quyá»n truy cáº­p service request (requester, active assignee, admin); ngÆ°á»i khÃ´ng liÃªn quan bá»‹ 403 Forbidden.
-     - Chiáº¿u response theo chuáº©n D-035: khÃ´ng Ä‘á»ƒ lá»™ thÃ´ng tin Ä‘Æ°á»ng dáº«n lÆ°u trá»¯ ná»™i bá»™.
+     - Endpoint chuyên biệt: `POST /api/v1/service-requests/{requestId}/reject-resolution`.
+     - Ràng buộc quyền sở hữu: Chỉ người tạo yêu cầu (`requester`) mới được gọi; người khác bị chặn HTTP 403 Forbidden.
+     - Chỉ cho phép khi yêu cầu đang ở `RESOLVED`, chuyển về `IN_PROGRESS`, giữ nguyên người xử lý đang hoạt động và ghi lý do vào lịch sử.
+  6. **Comments & Internal Notes Visibility**:
+     - Phân loại rõ bình luận công khai và ghi chú nội bộ (`is_internal = true`).
+     - Người tạo yêu cầu (`requester`) chỉ xem và tạo bình luận công khai, bị cấm tuyệt đối tạo hoặc xem ghi chú nội bộ.
+     - Kỹ thuật viên đang hoạt động (`active assignee`) và Quản trị viên (`ADMIN`) có quyền xem và tạo ghi chú nội bộ.
+     - Kỹ thuật viên trước đó đã bị thu hồi phân công (`previous assignee`) bị tước toàn bộ quyền truy cập (HTTP 403 Forbidden).
+     - Lọc phạm vi hiển thị thực hiện hoàn toàn tại tầng CSDL (query-level filtering) trước khi tính toán phân trang và metadata `totalElements`/`totalPages`.
+  7. **Service Attachment Semantics & File Integration**:
+     - Bảng `service_attachments` quản lý liên kết ở cấp Service Request (`request_id`, không có `comment_id` trong schema).
+     - Khi gửi `attachmentFileIds` trong bình luận, hệ thống tạo liên kết tệp ở cấp Service Request; bình luận không sở hữu tệp đính kèm.
+     - Tái sử dụng File Module Phase 8: Tệp phải được tải lên trước với mục đích `SERVICE_ATTACHMENT` và trạng thái `ACTIVE`.
+     - Kiểm tra quyền sở hữu tệp (người tải lên hoặc Admin) và cấm tái sử dụng chéo giữa các service request khác nhau.
+     - Download authorization thừa kế quyền truy cập service request (requester, active assignee, admin); người không liên quan bị 403 Forbidden.
+     - Chiếu response theo chuẩn D-035: không để lộ thông tin đường dẫn lưu trữ nội bộ và không ngụ ý quyền sở hữu tệp thuộc về bình luận.
   8. **Service Rating**:
-     - Chá»‰ ngÆ°á»i táº¡o yÃªu cáº§u Ä‘Æ°á»£c Ä‘Ã¡nh giÃ¡ khi yÃªu cáº§u Ä‘Ã£ á»Ÿ tráº¡ng thÃ¡i `CLOSED`.
-     - Äiá»ƒm sá»‘ tá»« 1 Ä‘áº¿n 5; tá»‘i Ä‘a 1 Ä‘Ã¡nh giÃ¡ cho má»—i yÃªu cáº§u, báº£o vá»‡ bá»Ÿi unique constraint `service_ratings.request_id` (`SERVICE_RATING_ALREADY_EXISTS`, 409).
+     - Chỉ người tạo yêu cầu (`requester`) được đánh giá khi yêu cầu đã ở trạng thái `CLOSED`.
+     - Điểm số từ 1 đến 5 sao; tối đa 1 đánh giá cho mỗi yêu cầu.
+     - Hàng rào CSDL: Unique constraint `service_ratings.request_id` ngăn chặn đánh giá trùng lặp.
+     - Đánh giá đồng thời bị chặn và map chính xác sang `SERVICE_RATING_ALREADY_EXISTS` (HTTP 409 Conflict), kiểm chứng qua 2 workers x 5 rounds.
   9. **Query-Level Scoping**:
-     - Sá»­ dá»¥ng Spring Data JPA `Specification<ServiceRequest>` Ä‘á»ƒ lá»c hoÃ n toÃ n táº¡i cÃ¢u lá»‡nh SQL trong database (Admin xem táº¥t cáº£; ngÆ°á»i khÃ¡c chá»‰ xem yÃªu cáº§u do mÃ¬nh táº¡o hoáº·c Ä‘Æ°á»£c phÃ¢n cÃ´ng).
-     - Metadata phÃ¢n trang vÃ  Ä‘áº¿m dÃ²ng báº£o toÃ n scope tuyá»‡t Ä‘á»‘i.
+     - Sử dụng Spring Data JPA `Specification<ServiceRequest>` để lọc hoàn toàn tại câu lệnh SQL trong database (Admin xem tất cả; người khác chỉ xem yêu cầu do mình tạo hoặc được phân công).
+     - Metadata phân trang và đếm dòng bảo toàn scope tuyệt đối.
   10. **Deferred Side Effects**:
-      - Ghi nháº­n `NOTIFICATION_SIDE_EFFECT_DEFERRED` vÃ o nháº­t kÃ½ há»‡ thá»‘ng; khÃ´ng táº¡o module notification hoáº·c phá»¥ thuá»™c giáº£ láº­p.
+      - Ghi nhận `NOTIFICATION_SIDE_EFFECT_DEFERRED` vào nhật ký hệ thống; không tạo module notification hoặc phụ thuộc giả lập.
