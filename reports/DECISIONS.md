@@ -322,7 +322,7 @@ Current operating mode:
   - `sizeBytes` (Long): Dung lượng tệp tính bằng byte (thống nhất tuyệt đối theo naming convention thực tế của `FileUploadResponse` và `StoredFile`, không dùng `fileSize`).
   - `downloadUrl` (String): Đường dẫn tải tệp `/api/v1/files/{fileId}/download`.
   - `uploadedBy` (UUID): ID người tải tệp lên.
-  - `createdAt` (Instant): Thời điểm đính kèm tệp vào yêu cầu dịch vụ.
+  - `createdAt` (Instant): Thời điểm đính kèm tệp vào yêu cầu dịch vụ (lấy từ trường `service_attachments.created_at`, phân biệt rõ ràng với `StoredFile.createdAt` là thời điểm tệp vật lý được tải lên hệ thống).
 - Cấu trúc này khớp 100% với naming convention thực tế của `FileUploadResponse` và `StoredFile` từ Phase 8.
 - Đây là implementation response projection nhúng trong `ServiceRequestDetailResponse.attachments`, không mở thêm endpoint REST mới, không làm thay đổi hợp đồng canonical.
 
@@ -343,38 +343,50 @@ Current operating mode:
   - Tạo migration `V013__add_service_request_assignment_invariants.sql` khi bắt đầu triển khai Phase 9 (không tạo trong đợt decision này).
   - Tuyệt đối không sửa `V001`-`V012`.
   - Không âm thầm xóa hoặc deactivate dữ liệu cũ; bắt buộc chạy preflight query kiểm tra vi phạm theo Runbook `reports/runbooks/V013_SERVICE_ASSIGNMENT_UNIQUENESS_PLAN.md`.
-- **Giao thức Reassignment Transaction**:
-  1. Khóa bản ghi `ServiceRequest` hoặc active assignment set bằng cơ chế transaction phù hợp.
-  2. Tìm active assignment hiện tại của request.
-  3. Nếu cùng `assigneeId`: Xử lý idempotent, trả về kết quả hiện tại mà không tạo row trùng lặp.
-  4. Nếu khác `assigneeId`:
-     - Cập nhật bản ghi cũ: `old.is_active = FALSE`, `old.unassigned_at = server Clock time`.
+- **Giao thức Khóa và Reassignment Transaction**:
+  1. **Row coordination lock**: Khóa bản ghi `ServiceRequest` bằng `ServiceRequestRepository.findByIdForUpdate(UUID id)` với `@Lock(LockModeType.PESSIMISTIC_WRITE)` và timeout 5000ms (`jakarta.persistence.lock.timeout` = 5000) hoặc native `SELECT ... FOR UPDATE`. Không dựa vào khóa row `service_assignments` vì bản ghi assignment có thể chưa tồn tại khi yêu cầu mới được tạo.
+  2. **Thứ tự giao dịch (Transaction Ordering)**: Luôn khóa `ServiceRequest` trước, sau đó mới truy vấn / ghi `service_assignments` để loại bỏ nguy cơ deadlock chéo bảng.
+  3. **Nguyên tắc giữ lock**: Tuyệt đối không giữ lock trong các thao tác File I/O, gửi email, push notification hay gọi network bên ngoài. Các tác vụ này phải thực hiện bất đồng bộ sau khi transaction đã commit.
+  4. **Kiểm tra quyền actor**: Xác thực actor có quyền `SERVICE_REQUEST_ASSIGN`.
+  5. **Xác thực assignee mới**: Kiểm tra user tồn tại, đang hoạt động (`ACTIVE`), không bị xóa mềm.
+  6. **Tìm active assignment hiện tại**: `findActiveByRequestId(requestId)`.
+  7. **Idempotency**: Nếu `assigneeId` mới trùng với `assigneeId` hiện tại đang active, trả về kết quả hiện tại mà không tạo row trùng lặp.
+  8. **Cập nhật & Chèn mới**:
+     - Nếu khác `assigneeId`: Set `old.is_active = FALSE`, `old.unassigned_at = server Clock time`.
      - Thực hiện flush (`saveAndFlush`) để giải phóng slot active trong partial index.
      - Tạo bản ghi mới: `id = UUID.randomUUID()`, `requestId`, `assigneeId = newAssigneeId`, `assignedBy = principal.userId()`, `assignedAt = server Clock time`, `isActive = TRUE`.
-  5. Cam kết toàn bộ trong cùng `@Transactional`. `assigned_by` lấy từ Security Principal, không tin cậy dữ liệu client gửi lên.
-  6. Trong môi trường đồng thời, chỉ một transaction thành công; transaction kia bị chặn bởi partial unique index.
-- **Authorization & Canonical Roles**:
-  - Tuyệt đối không tự ý tạo thêm system role mới. Không sử dụng tên vai trò chung chung như "Manager" trong source.
-  - Phân quyền mức endpoint `@PreAuthorize` bắt buộc sử dụng các permission canonical đã định nghĩa trong `docs/06_API_CONTRACT.md` (ví dụ: `SERVICE_REQUEST_ASSIGN`, `SERVICE_REQUEST_READ`, `SERVICE_REQUEST_UPDATE`, `SERVICE_CATEGORY_MANAGE`).
-  - Business service kiểm tra quyền nghiệp vụ dựa trên mối quan hệ tài nguyên thực tế (`requester`, `active assignee`, hoặc `resource ownership`).
-  - Các vai trò như `TEAM_LEADER` hoặc `ADMIN` chỉ được kiểm tra nếu bảng phân quyền `V011` và canonical docs thực sự cấp quyền hạn tương ứng cho ngữ cảnh đó.
+  9. Cam kết toàn bộ trong cùng `@Transactional`. `assigned_by` lấy từ Security Principal, không tin cậy dữ liệu client gửi lên.
+  10. Trong môi trường đồng thời, chỉ một transaction thành công; transaction kia bị chặn bởi partial unique index.
 - **Error Mapping & Khoảng trống mã lỗi**:
-  - Khi partial unique index `uk_service_assignments_one_active` bị vi phạm, bắt chính xác ngoại lệ thông qua kiểm tra SQLState `23505` và tên constraint `uk_service_assignments_one_active`. Không map mù quáng mọi `DataIntegrityViolationException`.
-  - Kiểm tra hợp đồng: `docs/06_API_CONTRACT.md` Section 13.6 và 20.6 **chưa định nghĩa mã lỗi** cho trường hợp xung đột phân công đồng thời (như `SERVICE_ALREADY_ASSIGNED` hay `SERVICE_ASSIGNMENT_CONFLICT`).
-  - Ghi nhận: **`SERVICE_ASSIGNMENT_ERROR_CODE_GAP`**. Agent không tự ý phát minh mã lỗi ngoài canonical docs khi chưa có quyết định từ người dùng/canonical.
+  - Khi partial unique index `uk_service_assignments_one_active` bị vi phạm: Duyệt qua `SQLException` cause chain, bắt buộc SQLState phải là `23505`, và tên constraint phải khớp chính xác `uk_service_assignments_one_active`. Không sử dụng `message.contains("service_assignments")` làm fallback rộng. Không map các lỗi Foreign Key (23503) hay Not Null (23502) thành xung đột phân công. Toàn bộ transaction phải rollback.
+  - **Đề xuất thiết kế mã lỗi**: `SERVICE_ASSIGNMENT_CONFLICT` (HTTP 409 Conflict, Message: "Yêu cầu dịch vụ đang có thao tác phân công đồng thời hoặc đã được phân công cho người khác").
+    - Khác biệt với validation error (400 `VALIDATION_ERROR`): Định dạng UUID và thông tin assignee hợp lệ về mặt cú pháp.
+    - Khác biệt với optimistic lock (409 `OPTIMISTIC_LOCK_CONFLICT`): Bị kích hoạt bởi partial unique index trên `service_assignments`, không phải do lệch `@Version` trên `service_requests`.
+    - Khác biệt với assignee inactive/not found: Trả về `USER_NOT_FOUND` hoặc `USER_INACTIVE`.
+  - **Quy tắc Governance**: Theo quy định `AGENTS.md` và `docs/10_AI_AGENT_INSTRUCTIONS.md`, Agent không được tự ý đưa mã lỗi mới vào production code khi tài liệu canonical chưa cập nhật. Tiếp tục ghi nhận: **`SERVICE_ASSIGNMENT_ERROR_CODE_GAP`**. Test plan ghi nhận kỳ vọng HTTP 409 dưới dạng pending decision.
 
-## D-037 Request Number Concurrency, Clock Injection, and Non-Gapless Sequence
+## D-037 Request Number Concurrency, Two-Key Advisory Lock, and Non-Gapless Sequence
 
 - Format canonical là `SR-YYYY-NNNNNN` (ví dụ: `SR-2026-000001`).
-- Áp dụng phương án **PostgreSQL Transactional Advisory Lock** (`pg_advisory_xact_lock(hashtext('SR-' || current_year))`) kết hợp truy vấn max trong cùng `@Transactional` tạo request:
-  `SELECT coalesce(max(cast(substring(request_number from 9) as integer)), 0) + 1 FROM service_requests WHERE request_number LIKE 'SR-' || current_year || '-%'`.
-- Yêu cầu kỹ thuật thực thi:
-  1. Namespace khóa phân tách theo từng năm (`current_year`).
-  2. Giá trị năm (`current_year`) bắt buộc lấy từ `java.time.Clock` được inject vào service để hỗ trợ kiểm thử thời gian; múi giờ chốt chuẩn theo `ZoneId.of("Asia/Ho_Chi_Minh")` (hoặc cấu hình hệ thống).
-  3. Ràng buộc `uk_service_requests_request_number` (tạo từ `V010`) là hàng rào duy nhất cuối cùng ở mức database.
-  4. Kiểm thử đồng thời (concurrent create test) bắt buộc chạy đa luồng thực tế với các transaction và EntityManager độc lập, không dùng chung context luồng.
-  5. Kiểm thử kịch bản chuyển giao năm (year rollover) và kiểm thử transaction rollback.
-  6. **Tính chất Non-Gapless**: Hệ thống không tuyên bố chuỗi số là "gapless tuyệt đối". Khi một transaction sinh số bị rollback, số thứ tự đó có thể để lại khoảng trống (gap); định dạng nghiệp vụ không yêu cầu tính gapless tuyệt đối.
+- Áp dụng phương án **PostgreSQL Two-Key Transactional Advisory Lock**:
+  ```sql
+  SELECT pg_advisory_xact_lock(1301, :year);
+  ```
+  1. `1301` là integer constant đại diện cho module Service Request numbering, loại bỏ hoàn toàn nguy cơ đụng độ chuỗi băm (hash collision) của 64-bit `hashtext`.
+  2. `:year` lấy từ `java.time.Clock` được inject kết hợp business ZoneId (`ZoneId.of("Asia/Ho_Chi_Minh")`), không lấy year từ client.
+  3. Truy vấn sequence sau khóa trong cùng transaction:
+     ```sql
+     SELECT COALESCE(MAX(CAST(SUBSTRING(request_number FROM 9) AS INTEGER)), 0) + 1
+     FROM service_requests
+     WHERE request_number LIKE 'SR-' || :year || '-%';
+     ```
+  4. Đã kiểm chứng thực tế trên PostgreSQL 15: `SUBSTRING('SR-2026-000001' FROM 9)` trả về chuỗi `000001` và `CAST(... AS INTEGER)` trả về `1`.
+  5. Khóa giao dịch tự động giải phóng khi commit hoặc rollback.
+  6. Ràng buộc `uk_service_requests_request_number` (tạo từ `V010`) là hàng rào duy nhất cuối cùng ở mức database.
+  7. Kiểm thử đồng thời (concurrent create test) bắt buộc chạy đa luồng thực tế với các transaction và EntityManager độc lập, không dùng chung context luồng.
+  8. Kiểm thử kịch bản chuyển giao năm (year rollover) và kiểm thử transaction rollback.
+  9. **Tính chất Non-Gapless**: Hệ thống không tuyên bố chuỗi số là "gapless tuyệt đối". Khi một transaction sinh số bị rollback, số thứ tự đó có thể để lại khoảng trống (gap); định dạng nghiệp vụ không yêu cầu tính gapless tuyệt đối.
+  10. Nếu advisory lock query gặp database timeout: Sử dụng infrastructure error mapping hiện có, không phát minh mã lỗi nghiệp vụ mới.
 
 ## D-038 Service Category Hierarchy and Cycle Prevention
 
@@ -386,5 +398,39 @@ Current operating mode:
 
 - Xác nhận chính thức rằng mã nguồn `FileController.java` và test suite `FileMockMvcTest.java` hiện thực endpoint `DELETE /api/v1/files/{fileId}` trả về **HTTP 200 OK** kèm body `ApiResponse<Void>` (chứa `success: true`).
 - Đính chính các ghi chú trong báo cáo bộ nhớ trước đây từng ghi nhầm là `204 No Content`. Không sửa `FileController` hay `PHASE_08_REPORT.md`.
+
+## D-040 Service Category Canonical Error Codes
+
+- Xác minh đối chiếu với [06_API_CONTRACT.md](file:///D:/WorkSphere/docs/06_API_CONTRACT.md) Section 20.6:
+  1. `SERVICE_CATEGORY_NOT_FOUND` (HTTP 404): Có trong canonical contract (YES). Dùng cho `GET/PUT/PATCH /admin/service-categories/{id}` và `POST /service-requests` khi categoryId không tồn tại.
+  2. `SERVICE_CATEGORY_CODE_ALREADY_EXISTS` (HTTP 409): Có trong canonical contract (YES). Thay thế cho tên ad-hoc `SERVICE_CATEGORY_CODE_DUPLICATE`.
+  3. `SERVICE_CATEGORY_PARENT_INVALID` (HTTP 400): Có trong canonical contract (YES). Dùng khi danh mục cha không tồn tại hoặc không hợp lệ, thay thế tên ad-hoc `PARENT_CATEGORY_NOT_FOUND`.
+  4. `SERVICE_CATEGORY_CYCLE_DETECTED` (HTTP 400): Có trong canonical contract (YES). Dùng khi phát hiện chu trình danh mục, thay thế tên ad-hoc `CATEGORY_CYCLE_DETECTED`.
+  5. `SERVICE_CATEGORY_ALREADY_INACTIVE` (HTTP 400): Có trong canonical contract (YES). Dùng khi deactivate danh mục đã ngưng hoạt động.
+  6. `SERVICE_CATEGORY_ALREADY_ACTIVE` (HTTP 400): Có trong canonical contract (YES). Dùng khi activate danh mục đang hoạt động.
+  7. `SERVICE_CATEGORY_IN_USE` (HTTP 400): Có trong canonical contract (YES). Dùng khi thao tác vi phạm ràng buộc danh mục đang được sử dụng.
+- **Kết luận**: Tất cả các mã lỗi cần thiết cho Service Category đều đã có sẵn trong canonical contract dưới tên chuẩn `SERVICE_CATEGORY_*`. Không tồn tại `SERVICE_CATEGORY_ERROR_CODE_GAP` nếu implementation tuân thủ đúng tên canonical.
+
+## D-041 Authorization Role-Permission Audit and Mapping Gap
+
+- **Kiểm kê thực tế**:
+  - Flyway migration `V011__seed_roles_and_permissions.sql` đã seed các bảng `roles` (`EMPLOYEE`, `TEAM_LEADER`, `PROJECT_MANAGER`, `ADMIN`) và `permissions` (`SERVICE_REQUEST_READ`, `SERVICE_REQUEST_CREATE`, `SERVICE_REQUEST_UPDATE`, `SERVICE_REQUEST_ASSIGN`, `SERVICE_REQUEST_UPDATE_STATUS`, `SERVICE_CATEGORY_MANAGE`), nhưng **CHƯA TỪNG** seed dữ liệu vào bảng liên kết `role_permissions`.
+  - Do đó, trong schema mặc định, không có role nào được liên kết tự động với `SERVICE_REQUEST_ASSIGN` thông qua cơ sở dữ liệu.
+- **Ma trận phân quyền thực tế cho Service Request API**:
+  - `GET /service-categories`: Yêu cầu `AUTHENTICATED`. Mọi người dùng đã đăng nhập đều có quyền.
+  - `GET/POST/PUT/PATCH /admin/service-categories/**`: Yêu cầu global permission `SERVICE_CATEGORY_MANAGE` (thường gắn với Admin).
+  - `POST /service-requests`: Yêu cầu global permission `SERVICE_REQUEST_CREATE`.
+  - `GET /service-requests`: Yêu cầu global permission `SERVICE_REQUEST_READ` kết hợp kiểm tra quan hệ nghiệp vụ: Người dùng thông thường chỉ xem yêu cầu do chính mình tạo (`requester`) hoặc được giao xử lý (`active assignee`); người có thẩm quyền quản trị mới xem toàn bộ.
+  - `GET /service-requests/{id}`: Yêu cầu `SERVICE_REQUEST_READ` kết hợp kiểm tra quan hệ nghiệp vụ (requester, active assignee, hoặc admin).
+  - `PUT /service-requests/{id}`: Yêu cầu global permission `SERVICE_REQUEST_UPDATE` kết hợp kiểm tra người gọi phải là `requester` và trạng thái yêu cầu còn cho phép sửa (`OPEN`).
+  - `POST /service-requests/{id}/assignments`: Yêu cầu global permission `SERVICE_REQUEST_ASSIGN`.
+  - `PUT /service-requests/{id}/status`: Yêu cầu global permission `SERVICE_REQUEST_UPDATE_STATUS` kết hợp kiểm tra quyền sở hữu xử lý (`active assignee` hoặc admin).
+  - `POST /service-requests/{id}/reject-resolution`: Yêu cầu `AUTHENTICATED` và kiểm tra tài nguyên nghiêm ngặt: Người gọi bắt buộc phải là chính `requester` (căn cứ [06_API_CONTRACT.md](file:///D:/WorkSphere/docs/06_API_CONTRACT.md) Section 13.7.1).
+  - `POST /service-requests/{id}/rating`: Yêu cầu người gọi là `requester` và request đã `CLOSED`.
+- **Đánh giá vai trò TEAM_LEADER**:
+  - Căn cứ [02_USER_ROLES_AND_WORKFLOWS.md](file:///D:/WorkSphere/docs/02_USER_ROLES_AND_WORKFLOWS.md) Section 2.2, `TEAM_LEADER` chỉ quản lý công việc dự án/nhóm (`TASK_ASSIGN`), không được cấp thẩm quyền quản lý hoặc phân công yêu cầu dịch vụ (`SERVICE_REQUEST_ASSIGN`).
+  - Tuyệt đối không suy diễn cho phép `TEAM_LEADER` phân công Service Request chỉ vì tên vai trò.
+- **Ghi nhận khoảng trống**:
+  - Ghi nhận: **`SERVICE_AUTHORIZATION_MAPPING_GAP`**. Bảng `role_permissions` chưa có seed cho các quyền Service Request trong Flyway migrations. Trong test suite Phase 9, quyền phải được cấp minh thị qua fixture; trên production cần một migration seed `role_permissions` chính thức trước khi đưa vào vận hành thực tế.
 
 

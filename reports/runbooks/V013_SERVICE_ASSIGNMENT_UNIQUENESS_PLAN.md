@@ -71,25 +71,53 @@ ORDER BY active_count DESC, request_id;
 
 ---
 
-## E. Giao thức Reassignment tại tầng Application Service
+## E. Giao thức Khóa và Reassignment tại tầng Application Service
 
 Để bảo đảm không gây xung đột với partial unique index khi chuyển giao người xử lý:
 
-1. **Khóa transaction**: Lock bản ghi `ServiceRequest` hoặc active assignment bằng transaction phù hợp (`@Transactional`).
-2. **Kiểm tra idempotent**: Nếu `newAssigneeId` trùng với active assignee hiện tại, trả về kết quả hiện tại mà không tạo thêm bản ghi.
-3. **Deactivate phân công cũ**:
+1. **Khóa bản ghi phối hợp (Coordination Row Lock)**:
+   - Sử dụng `ServiceRequestRepository.findByIdForUpdate(requestId)` với `@Lock(LockModeType.PESSIMISTIC_WRITE)` và `jakarta.persistence.lock.timeout` = 5000 (hoặc native `SELECT ... FOR UPDATE`).
+   - Khóa bản ghi `ServiceRequest` thay vì `service_assignments` vì bản ghi assignment có thể chưa tồn tại khi yêu cầu mới được tạo.
+2. **Thứ tự giao dịch (Transaction Ordering)**:
+   - Luôn khóa `ServiceRequest` trước, sau đó mới truy vấn/thao tác `service_assignments` để loại bỏ triệt để nguy cơ deadlock chéo bảng.
+3. **Nguyên tắc an toàn khi giữ lock**:
+   - Tuyệt đối không thực hiện thao tác File I/O, gửi email, push notification hay gọi network bên ngoài trong khi đang giữ pessimistic lock. Các tác vụ này phải được đẩy sang xử lý bất đồng bộ sau khi giao dịch đã commit.
+4. **Kiểm tra quyền actor**:
+   - Xác thực actor có permission `SERVICE_REQUEST_ASSIGN`.
+5. **Kiểm tra idempotent**:
+   - Nếu `newAssigneeId` trùng với active assignee hiện tại, trả về kết quả hiện tại mà không tạo thêm bản ghi trùng lặp.
+6. **Deactivate phân công cũ**:
    - `oldAssignment.setActive(false);`
    - `oldAssignment.setUnassignedAt(serverClock.instant());`
-   - Gọi `saveAndFlush(oldAssignment);` để cập nhật trạng thái xuống DB và giải phóng slot active trong partial index.
-4. **Tạo phân công mới**:
+   - Gọi `saveAndFlush(oldAssignment);` để cập nhật trạng thái xuống DB và giải phóng slot active trong partial unique index.
+7. **Tạo phân công mới**:
    - Khởi tạo `ServiceAssignment` mới với `is_active = true`, `assigned_at = serverClock.instant()`, `assigned_by = principal.userId()`.
    - Lưu qua repository: `saveAndFlush(newAssignment);`.
-5. **Ủy thác xử lý lỗi**: Bắt cụ thể `DataIntegrityViolationException`, kiểm tra SQLState `23505` và tên constraint `uk_service_assignments_one_active`.
+8. **Hàng rào Database cuối cùng**:
+   - Partial unique index `uk_service_assignments_one_active` bảo đảm không bao giờ có 2 active assignment đồng thời ngay cả khi có tranh chấp ngoài luồng khóa.
 
 ---
 
-## F. Ghi nhận khoảng trống mã lỗi (Error Code Gap)
+## F. Xử lý lỗi vi phạm Partial Unique Index & Khoảng trống mã lỗi
 
-- Tài liệu [06_API_CONTRACT.md](file:///D:/WorkSphere/docs/06_API_CONTRACT.md) Section 13.6 và 20.6 hiện chưa định nghĩa mã lỗi nghiệp vụ chuẩn cho trường hợp tranh chấp phân công đồng thời (như `SERVICE_ALREADY_ASSIGNED` hoặc `SERVICE_ASSIGNMENT_CONFLICT`).
-- Ghi nhận: **`SERVICE_ASSIGNMENT_ERROR_CODE_GAP`**.
-- Đề xuất bổ sung vào API Contract trong đợt cập nhật tài liệu tiếp theo để thống nhất mã lỗi trả về (HTTP 409 Conflict).
+1. **Bắt và ánh xạ ngoại lệ vi phạm constraint**:
+   - Khi constraint `uk_service_assignments_one_active` bị vi phạm, hệ thống phải:
+     - Duyệt chuỗi nguyên nhân ngoại lệ (`SQLException` cause chain).
+     - Kiểm tra SQLState bắt buộc phải là `23505` (`unique_violation`).
+     - Tên constraint phải khớp chính xác `uk_service_assignments_one_active`.
+     - Cấm dùng kiểm tra lỏng lẻo `message.contains("service_assignments")`.
+     - Không được ánh xạ các lỗi Foreign Key (`23503`) hay Not Null (`23502`) thành lỗi xung đột phân công.
+     - Toàn bộ transaction phải rollback ngay lập tức.
+2. **Đề xuất thiết kế mã lỗi nghiệp vụ**:
+   - **Tên mã lỗi**: `SERVICE_ASSIGNMENT_CONFLICT`
+   - **HTTP Status**: `409 Conflict`
+   - **Thông điệp tiếng Việt**: "Yêu cầu dịch vụ đang có thao tác phân công đồng thời hoặc đã được phân công cho người khác."
+   - **Phân biệt ranh giới**:
+     - *Khác với lỗi validation* (HTTP 400 `VALIDATION_ERROR`): Định dạng request và assigneeId hoàn toàn hợp lệ về mặt cú pháp.
+     - *Khác với lỗi optimistic lock* (HTTP 409 `OPTIMISTIC_LOCK_CONFLICT`): Phát sinh do vi phạm unique index trên bảng con `service_assignments`, không phải do lệch version trên `service_requests`.
+     - *Khác với lỗi assignee không tồn tại/không hoạt động*: Trả về `USER_NOT_FOUND` (404) hoặc `USER_INACTIVE` (400).
+3. **Quy tắc Governance & Trạng thái hiện tại**:
+   - Tài liệu [06_API_CONTRACT.md](file:///D:/WorkSphere/docs/06_API_CONTRACT.md) Section 13.6 và 20.6 hiện chưa có mã lỗi `SERVICE_ASSIGNMENT_CONFLICT`.
+   - Theo quy tắc `AGENTS.md` và [10_AI_AGENT_INSTRUCTIONS.md](file:///D:/WorkSphere/docs/10_AI_AGENT_INSTRUCTIONS.md), Agent không được tự ý phát minh mã lỗi mới trong production code khi chưa cập nhật canonical docs.
+   - Ghi nhận: **`SERVICE_ASSIGNMENT_ERROR_CODE_GAP`**.
+   - Trong test plan và tài liệu thiết kế, ghi nhận HTTP 409 Conflict dưới dạng pending canonical decision.
