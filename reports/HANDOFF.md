@@ -29,7 +29,7 @@
   - Injected `java.time.Clock` with business zone `Asia/Ho_Chi_Minh`.
   - Year-scoped MAX + 1 sequence allocation; resets safely on new calendar year.
   - Unique database constraint `uk_service_requests_request_number` as final engine guard.
-  - Mechanism is transactional year-scoped allocation (strictly not a PostgreSQL sequence; non-gapless).
+  - Mechanism is transactional year-scoped allocation (strictly not a PostgreSQL sequence; allocation series is not guaranteed gapless).
   - Concurrency validated: 8 concurrent workers x 5 rounds on PostgreSQL Testcontainers.
 - **Service Assignment**:
   - Single active assignee invariant (`0..1`).
@@ -38,7 +38,7 @@
   - Reassignment deactivates old record (`is_active = FALSE`, `unassigned_at = Clock.instant()`) and flushes before inserting new record.
   - Partial unique index `uk_service_assignments_one_active` (migration `V013`) as final DB guard.
   - Database conflict mapped to `SERVICE_ASSIGNMENT_CONFLICT` (HTTP 409 Conflict).
-  - Concurrency validated: 2 concurrent workers x 5 rounds (1 winner, 1 conflict).
+  - Concurrency validated: 2 concurrent workers x 5 rounds (verified serialized 200 or 409 conflict, no HTTP 500, exactly 1 active assignment preserved).
 - **Status Workflow & History**:
   - Seven canonical states: `OPEN`, `ASSIGNED`, `IN_PROGRESS`, `WAITING_FOR_USER`, `RESOLVED`, `CLOSED`, `CANCELLED`.
   - Allowed transitions strictly validated; RESOLVED requires resolution comment; CLOSED records `closed_at`; CANCELLED records `cancelled_at`.
@@ -85,6 +85,13 @@
 - `TEAM_API_CONTRACT_GAP`: Team REST controllers hoãn vì `06_API_CONTRACT.md` chưa định nghĩa endpoints.
 - `DASHBOARD_AGGREGATED_API_GAP`: API `GET /api/v1/dashboard/me` chưa có backend controller.
 - `PUT_ME_PASSWORD_TEST_GAP`: Test coverage cho luồng đổi mật khẩu người dùng hiện tại tiếp tục hoãn.
+
+## Phase 10 Pre-Implementation Status & Gaps
+
+- `API_CONTRACT_GAP`: **RESOLVED BY CANONICAL PATCH** (`docs/06_API_CONTRACT.md` Sections 14.0.6, 14.4, 14.5, 14.6, 14.7, 14.9, 20.7 updated with DTOs, Repair History API, error codes, and category in-use policy).
+- `ASSET_CODE_POLICY_GAP`: **RESOLVED BY D-046** (client-input, trim, uppercase, regex `^[A-Z0-9][A-Z0-9_-]{1,49}$`, immutable, globally unique).
+- `ASSET_SERVICE_REQUEST_INTEGRATION_GAP`: **RESOLVED BY D-046** (reference-only linkage, active assigned asset for user, no auto status change, no auto repair history).
+- `SCHEMA_GAP`: **DESIGN RESOLVED; IMPLEMENTATION PENDING V016** (`reports/runbooks/V016_ASSET_INVARIANTS_AND_INDEXES_PLAN.md` created; migration source V016 not created yet).
 
 ## Next Permitted Phase
 

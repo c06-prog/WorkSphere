@@ -78,7 +78,7 @@
     - PostgreSQL two-key transactional advisory lock: `SELECT pg_advisory_xact_lock(1301, :year)` (module key `1301`).
     - Year-scoped MAX + 1 allocation with automatic reset on new calendar year.
     - Unique database constraint `uk_service_requests_request_number` as final engine guard.
-    - Non-gapless allocation mechanism (strictly not described as PostgreSQL sequence).
+    - Allocation series is not guaranteed gapless (strictly not described as PostgreSQL sequence).
   - Assignment:
     - Active cardinality strictly 0..1 per Service Request.
     - Row-level coordination lock via `PESSIMISTIC_WRITE` on `ServiceRequest`.
@@ -86,7 +86,7 @@
     - Reassignment history with `unassigned_at` timestamp and deactivation flush before new assignment insert.
     - Partial unique index `uk_service_assignments_one_active` (migration `V013`) as final database guard.
     - Exception translation mapping SQLState 23505 to `SERVICE_ASSIGNMENT_CONFLICT` (HTTP 409).
-    - Controlled concurrency validation with multiple competing workers (1 winner, 1 conflict).
+    - Controlled concurrency validation with multiple competing workers (two requests may both succeed with 200 if row lock serializes them, or concurrent race yields 409 SERVICE_ASSIGNMENT_CONFLICT; no HTTP 500; exactly 1 active assignment preserved).
   - Workflow:
     - Seven canonical states: `OPEN`, `ASSIGNED`, `IN_PROGRESS`, `WAITING_FOR_USER`, `RESOLVED`, `CLOSED`, `CANCELLED`.
     - Allowed transitions strictly validated; RESOLVED requires resolution comment; CLOSED records `closed_at`; CANCELLED records `cancelled_at`.
@@ -136,7 +136,7 @@
 - Checkstyle: 0 violations
 - Concurrency evidence:
   - Request-number allocation: 8 concurrent workers x 5 rounds (verified unique allocations and no duplicates)
-  - Service assignment: 2 concurrent workers x 5 rounds (verified 1 winner, 1 conflict, invariant preserved)
+  - Service assignment: 2 concurrent workers x 5 rounds (verified serialized 200 or 409 conflict, no HTTP 500, exactly 1 active assignment preserved)
   - Service rating: 2 concurrent workers x 5 rounds (verified 1 winner, 1 conflict, duplicate mapped to 409)
 - Rollback evidence:
   - Status history rollback verified on PostgreSQL via temporary trigger failure injection
@@ -169,6 +169,13 @@
   - TEAM_API_CONTRACT_GAP: Team và Team Member domain/repository/service đã hoàn thành nhưng chưa có REST controller vì 06_API_CONTRACT.md chưa định nghĩa endpoints.
   - DASHBOARD_AGGREGATED_API_GAP: API GET /api/v1/dashboard/me có trong hợp đồng nhưng chưa có backend controller.
   - PUT_ME_PASSWORD_TEST_GAP: Test coverage cho luồng đổi mật khẩu người dùng hiện tại tiếp tục hoãn.
+
+## Phase 10 Pre-Implementation Status & Gaps
+
+- `API_CONTRACT_GAP`: **RESOLVED BY CANONICAL PATCH** (`docs/06_API_CONTRACT.md` Sections 14.0.6, 14.4, 14.5, 14.6, 14.7, 14.9, 20.7 updated with DTOs, Repair History API, error codes, and category in-use policy).
+- `ASSET_CODE_POLICY_GAP`: **RESOLVED BY D-046** (client-input, trim, uppercase, regex `^[A-Z0-9][A-Z0-9_-]{1,49}$`, immutable, globally unique).
+- `ASSET_SERVICE_REQUEST_INTEGRATION_GAP`: **RESOLVED BY D-046** (reference-only linkage, active assigned asset for user, no auto status change, no auto repair history).
+- `SCHEMA_GAP`: **DESIGN RESOLVED; IMPLEMENTATION PENDING V016** (`reports/runbooks/V016_ASSET_INVARIANTS_AND_INDEXES_PLAN.md` created; migration source V016 not created yet).
 
 ## Next Permitted Phase
 

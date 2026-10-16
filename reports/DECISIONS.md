@@ -1,4 +1,4 @@
-﻿# WorkSphere Decisions
+# WorkSphere Decisions
 
 ## D-001 Architecture
 
@@ -523,7 +523,7 @@ Current operating mode:
      - Tự động reset chuỗi số về `000001` khi bước sang năm dương lịch mới.
      - Ràng buộc duy nhất `uk_service_requests_request_number` (tạo từ V010) là hàng rào bảo vệ cuối cùng ở tầng database.
      - Cơ chế sinh số là year-scoped transactional allocation, tuyệt đối không mô tả là PostgreSQL sequence.
-     - Hệ thống không bảo đảm chuỗi số gapless tuyệt đối (non-gapless sequence).
+     - Chuỗi phân bổ số không đảm bảo gapless tuyệt đối (allocation series is not guaranteed gapless).
      - Kiểm thử đồng thời: 8 concurrent workers x 5 rounds trên PostgreSQL Testcontainers xác nhận 100% số sinh ra là duy nhất và không có trùng lặp.
   3. **Service Assignment Concurrency & Invariants**:
      - Bất biến cardinality: Mỗi Service Request tại một thời điểm chỉ có tối đa một kỹ thuật viên hoạt động (`active cardinality = 0..1`).
@@ -532,7 +532,7 @@ Current operating mode:
      - Tái phân công cho người khác: Đóng bản ghi cũ (`is_active = FALSE`, `unassigned_at = Clock.instant()`), thực hiện flush (`saveAndFlush`) trước khi chèn bản ghi mới trong cùng transaction.
      - Hàng rào database cuối cùng: Partial unique index `uk_service_assignments_one_active` trên `service_assignments(request_id) WHERE is_active = TRUE` (migration `V013`).
      - Bắt chính xác lỗi vi phạm qua SQLException SQLState `23505` và tên constraint `uk_service_assignments_one_active`, map sang `SERVICE_ASSIGNMENT_CONFLICT` (HTTP 409 Conflict).
-     - Kiểm thử đồng thời có kiểm soát: 2 concurrent workers x 5 rounds xác nhận 1 winner và 1 conflict HTTP 409, bất biến CSDL được bảo toàn tuyệt đối.
+     - Kiểm thử đồng thời có kiểm soát: 2 concurrent workers x 5 rounds xác nhận hai request có thể cùng trả về 200 nếu PESSIMISTIC_WRITE row lock tuần tự hóa thành công hoặc một request trả 409 SERVICE_ASSIGNMENT_CONFLICT khi xảy ra conflict; không có HTTP 500; CSDL luôn bảo toàn đúng duy nhất 1 active assignment.
   4. **Status Workflow & History Transaction Atomicity**:
      - 7 trạng thái canonical: `OPEN`, `ASSIGNED`, `IN_PROGRESS`, `WAITING_FOR_USER`, `RESOLVED`, `CLOSED`, `CANCELLED`.
      - Chuyển sang `RESOLVED` bắt buộc có ghi chú/giải pháp (`comment`).
@@ -567,3 +567,86 @@ Current operating mode:
      - Metadata phân trang và đếm dòng bảo toàn scope tuyệt đối.
   10. **Deferred Side Effects**:
       - Ghi nhận `NOTIFICATION_SIDE_EFFECT_DEFERRED` vào nhật ký hệ thống; không tạo module notification hoặc phụ thuộc giả lập.
+
+## D-046 Pre-Implementation Decisions: Asset Module (Phase 10)
+
+- **Bối cảnh & Trạng thái Gap**:
+  - Khảo sát và kiểm toán phạm vi Phase 10 (Asset Module) theo `docs/08_DEVELOPMENT_ROADMAP.md` Section 14, `docs/05_DATABASE_DESIGN.md` Section 10 và `docs/06_API_CONTRACT.md` Section 14.
+  - Trạng thái xử lý các khoảng trống thiết kế trước implementation:
+    - `API_CONTRACT_GAP`: **RESOLVED BY CANONICAL PATCH** (đã cập nhật `docs/06_API_CONTRACT.md` Section 14.0.6, 14.4, 14.5, 14.6, 14.7, 14.9, 20.7 với đầy đủ DTO tạo/sửa tài sản, Repair History API, và các mã lỗi liên quan).
+    - `ASSET_CODE_POLICY_GAP`: **RESOLVED BY D-046** (chuẩn hóa quy tắc mã tài sản và tính duy nhất toàn cục).
+    - `ASSET_SERVICE_REQUEST_INTEGRATION_GAP`: **RESOLVED BY D-046** (chuẩn hóa chính sách liên kết tham chiếu giữa Service Request và Asset).
+    - `SCHEMA_GAP`: **DESIGN RESOLVED; IMPLEMENTATION PENDING V016** (đã thiết kế DDL và runbook tiền kiểm tại `reports/runbooks/V016_ASSET_INVARIANTS_AND_INDEXES_PLAN.md`; bản di trú `V016` chưa được tạo trong migration source).
+- **Quyết định Thiết kế & Chuẩn hóa**:
+  1. **Chính sách mã tài sản (`assetCode`)**:
+     - Do client nhập trên giao diện tạo tài sản (`Create Asset Screen`), backend không tự động sinh sequence.
+     - Chuẩn hóa: Tự động loại bỏ khoảng trắng đầu/cuối (trim) và chuyển thành chữ in hoa (uppercase).
+     - Định dạng hợp lệ: Regex `^[A-Z0-9][A-Z0-9_-]{1,49}$` (độ dài từ 2 đến 50 ký tự, bắt đầu bằng chữ hoa hoặc chữ số, cho phép dấu gạch ngang và gạch dưới).
+     - Bất biến: Mã tài sản là bất biến vĩnh viễn sau khi tạo; endpoint `PUT /assets/{assetId}` không cho phép sửa đổi `assetCode`.
+     - Tính duy nhất: Bảo vệ bởi Unique Index `uk_assets_asset_code`. Tính duy nhất áp dụng toàn cục trên toàn bộ bảng `assets` (kể cả bản ghi đã xóa mềm `is_deleted = true`) nhằm đảm bảo tính toàn vẹn của lịch sử và audit trail thiết bị phần cứng.
+     - Xử lý trùng lặp: Trả về HTTP 409 `ASSET_CODE_ALREADY_EXISTS`.
+  2. **Chính sách mã loại tài sản (`category.code`) & Category In-Use**:
+     - Do quản trị viên nhập, trim và chuẩn hóa chữ in hoa.
+     - Định dạng hợp lệ: Regex `^[A-Z0-9_]{2,50}$`.
+     - Bất biến: Không cho phép đổi `code` khi cập nhật qua `PUT /admin/asset-categories/{categoryId}`.
+     - Tính duy nhất: Duy nhất toàn cục vĩnh viễn (`uk_asset_categories_code`), kể cả loại tài sản đã ngừng hoạt động hoặc xóa mềm.
+     - Xử lý trùng lặp: Trả về HTTP 409 `ASSET_CATEGORY_CODE_ALREADY_EXISTS`.
+     - **Chính sách In-Use**: Không cho phép dừng hoạt động (`deactivate`) nếu tồn tại bất kỳ tài sản nào chưa bị xóa mềm (`is_deleted = false`) đang tham chiếu đến loại tài sản này (`ASSET_CATEGORY_IN_USE`, HTTP 400). Tài sản ở trạng thái `RETIRED` vẫn là dữ liệu chưa xóa mềm và vẫn được tính là đang sử dụng (in-use).
+     - Loại tài sản inactive vẫn được hiển thị đầy đủ trong lịch sử và chi tiết tài sản đã tạo trước đó, nhưng không được phép chọn để tạo hoặc cập nhật tài sản mới (`ASSET_CATEGORY_ALREADY_INACTIVE`, HTTP 400).
+  3. **Khởi tạo và Cập nhật tài sản (Asset DTO & Initial Status)**:
+     - Tạo mới (`POST /assets`): Bắt buộc `assetCode`, `categoryId`, `name`. Các trường kỹ thuật / mua sắm / bảo hành là tùy chọn. Trạng thái khởi tạo của tài sản mới luôn luôn mặc định là `AVAILABLE`. Tuyệt đối không cho phép client tạo trực tiếp tài sản ở trạng thái `ASSIGNED` (việc phân công bắt buộc phải thực hiện qua endpoint phân công độc lập để bảo đảm transaction và lịch sử bàn giao).
+     - Cập nhật (`PUT /assets/{assetId}`): Cho phép cập nhật thông tin mô tả, linh kiện, bảo hành, vị trí và trạng thái kho (`AVAILABLE`, `MAINTENANCE`, `BROKEN`, `RETIRED`). Không cho phép đổi `assetCode` và không cho phép thay đổi người nhận tài sản qua endpoint này. Bắt buộc kiểm tra Optimistic Locking bằng `version`.
+  4. **Ma trận chuyển đổi trạng thái tài sản (Asset Status Transition Matrix)**:
+     - Đúng 5 trạng thái canonical: `AVAILABLE`, `ASSIGNED`, `MAINTENANCE`, `BROKEN`, `RETIRED`.
+     - `AVAILABLE -> ASSIGNED`: Chỉ duy nhất qua endpoint cấp phát `POST /assets/{id}/assignments`.
+     - `ASSIGNED -> AVAILABLE / MAINTENANCE / BROKEN / RETIRED`: Chỉ duy nhất qua endpoint trả tài sản `PUT /assets/{id}/assignments/{aid}/return`.
+     - `AVAILABLE <-> MAINTENANCE`, `AVAILABLE <-> BROKEN`, `BROKEN -> MAINTENANCE`: Thực hiện qua `PUT /assets/{id}` khi tài sản lưu kho và không có phân công hoạt động.
+     - `RETIRED`: Trạng thái kết thúc (terminal state). Mọi thao tác chuyển khỏi `RETIRED` đều bị nghiêm cấm (`ASSET_RETIRED`, HTTP 400).
+     - Chuyển đổi trạng thái không thuộc ma trận trả về HTTP 400 `ASSET_STATUS_TRANSITION_INVALID`.
+  5. **Bất biến phân công và ngữ nghĩa tương tranh (Asset Assignment Concurrency Semantics)**:
+     - Mỗi tài sản chỉ có tối đa duy nhất 1 phân công hoạt động (`status = 'ACTIVE'`). Đối tượng nhận là người dùng (`assigned_to`).
+     - Giao thức khóa: Khóa hàng `Asset` bằng `PESSIMISTIC_WRITE` (`findByIdForUpdate`) trước khi tạo hoặc đóng phân công.
+     - Quy trình chuyển giao: Không hỗ trợ reassign trực tiếp đè lên người khác. Bắt buộc phải thực hiện trả tài sản cũ (`return`), đưa tài sản về trạng thái kho phù hợp, sau đó mới tạo phân công mới.
+     - Tuần tự hóa và kiểm tra nghiệp vụ: Hai request đồng thời có thể được tuần tự hóa bởi row lock; request đến sau thấy tài sản đã chuyển khỏi `AVAILABLE` hoặc đã có phân công hoạt động và bị từ chối với HTTP 400 `ASSET_NOT_AVAILABLE` hoặc `ASSET_ALREADY_ASSIGNED`.
+     - Hàng rào database cuối cùng: Partial Unique Index `uk_asset_assignments_one_active` trên `asset_assignments(asset_id) WHERE status = 'ACTIVE'` (tạo qua migration `V016`).
+     - Bắt lỗi vi phạm SQLState `23505` với constraint `uk_asset_assignments_one_active` và map sang `ASSET_ASSIGNMENT_CONFLICT` (HTTP 409 Conflict).
+     - Tuyệt đối không có HTTP 500. Sau mọi tương tranh, cơ sở dữ liệu luôn bảo đảm đúng duy nhất 1 phân công ở trạng thái `ACTIVE`.
+     - Không ép buộc kịch bản kiểm thử đồng thời Phase 10 phải luôn trả về đúng 1 success (200) + 1 conflict (409) (kết quả có thể là serialized 200 + 400 hoặc 200 + 409).
+  6. **Quản lý lịch sử sửa chữa (Repair History API - Option B: ADMIN_MANAGED)**:
+     - Bản ghi lịch sử sửa chữa là **AUDIT RECORD** dùng để ghi nhận sự kiện sửa chữa, bảo dưỡng, kiểm định hoặc nâng cấp thiết bị; không phải workflow điều phối hay state machine quản lý tiến độ.
+     - `POST /assets/{assetId}/repair-histories`: Quản trị viên (`ASSET_MANAGE`) ghi nhận lịch sử bảo dưỡng, kiểm định, sửa chữa hoặc nâng cấp thiết bị (chi phí >= 0, `completed_at >= started_at`).
+     - `GET /assets/{assetId}/repair-histories`: Xem danh sách lịch sử sửa chữa của tài sản (Admin xem toàn bộ; Non-admin chỉ xem nếu tài sản đang được cấp cho mình).
+     - `serviceRequestId` không bắt buộc; dùng để tham chiếu đến yêu cầu dịch vụ liên quan nếu có.
+     - `completedAt` không bắt buộc; nếu có phải lớn hơn hoặc bằng `startedAt`.
+     - Phase 10 không quản lý lifecycle "đang sửa → hoàn thành" của ticket sửa chữa (hoãn sang phase sau nếu cần).
+     - Không tự động tạo bản ghi từ Service Request.
+     - Tính bất biến: Bản ghi lịch sử sửa chữa là audit trail, không hỗ trợ sửa (PUT) hoặc xóa (DELETE) trong MVP.
+  7. **Chính sách tích hợp Service Request (Service Request Integration Policy)**:
+     - Việc tạo Service Request có gắn `assetId` là quan hệ tham chiếu phục vụ báo hỏng thiết bị, không tự ý thay đổi `Asset.status` và không tự động sinh `AssetRepairHistory`.
+     - Người tạo yêu cầu thông thường chỉ được phép chọn tài sản đang được cấp phát cho chính mình (`status = 'ACTIVE'`).
+     - Quản trị viên có thể chọn bất kỳ tài sản hợp lệ nào trong hệ thống.
+     - Khi yêu cầu dịch vụ được xử lý xong, quản trị viên có thể tạo bản ghi trong `AssetRepairHistory` và tham chiếu đến `serviceRequestId` đó.
+  8. **Phân quyền đọc và phân vùng dữ liệu cấp CSDL (Asset Read Scoping)**:
+     - Quản trị viên (`ADMIN`): Xem toàn bộ tài sản trong hệ thống.
+     - Người dùng thông thường (`PROJECT_MANAGER`, `TEAM_LEADER`, `EMPLOYEE`): Có quyền `ASSET_READ` nhưng bị giới hạn nghiêm ngặt ở phạm vi tài sản đang được cấp phát cho bản thân (`assigned_to = currentUserId` và `status = 'ACTIVE'`).
+     - Lọc dữ liệu `GET /assets` và `GET /assets/my-assets` thực thi 100% tại câu lệnh SQL JPQL thông qua Spring Data JPA Specification kết hợp `EXISTS (SELECT 1 FROM AssetAssignment aa WHERE aa.assetId = a.id AND aa.assignedTo = :userId AND aa.status = 'ACTIVE')`. Truy vấn đếm (`countQuery`) đồng bộ điều kiện, đảm bảo metadata phân trang chính xác tuyệt đối.
+     - Truy cập trái phép tài sản của người khác trên `GET /assets/{assetId}` bị chặn với HTTP 403 Forbidden (`ASSET_ACCESS_DENIED`).
+  9. **Kế hoạch di trú CSDL V016 (V016 Migration Plan & Preflight)**:
+     - SCHEMA_GAP: DESIGN RESOLVED; IMPLEMENTATION PENDING V016.
+     - Không sửa đổi các bản di trú V001–V015 để bảo toàn checksum Flyway.
+     - Bản di trú `V016__add_asset_assignment_and_category_invariants.sql` sẽ bổ sung:
+       1. Partial Unique Index: `uk_asset_assignments_one_active` trên `asset_assignments(asset_id) WHERE status = 'ACTIVE'`.
+       2. Unique Index: `uk_asset_categories_code` trên `asset_categories(code)`.
+       3. Query Indexes: `idx_asset_assignments_assigned_to` và `idx_asset_assignments_asset_id`.
+     - Bắt buộc thực thi Runbook tiền kiểm `reports/runbooks/V016_ASSET_INVARIANTS_AND_INDEXES_PLAN.md` trước khi deploy. Nếu tiền kiểm phát hiện trùng lặp dữ liệu, lập tức dừng triển khai (NO-GO) và báo cáo Business Owner.
+     - Không tạo file migration V016 trong nhiệm vụ chốt thiết kế hiện tại.
+  10. **Chuẩn hóa mã lỗi nghiệp vụ tài sản**:
+      - `ASSET_ASSIGNMENT_CONFLICT` (HTTP 409): Xung đột tương tranh vi phạm invariant phân công duy nhất tại CSDL.
+      - `ASSET_NOT_AVAILABLE` (HTTP 400): Thao tác cấp phát trên tài sản không ở trạng thái AVAILABLE.
+      - `ASSET_ALREADY_ASSIGNED` (HTTP 400): Thao tác cấp phát khi tài sản đã có active assignment theo kiểm tra nghiệp vụ.
+      - `ASSET_STATUS_TRANSITION_INVALID` (HTTP 400): Chuyển đổi trạng thái tài sản không thuộc ma trận chuyển đổi hợp lệ.
+      - `ASSET_ASSIGNMENT_NOT_ACTIVE` (HTTP 400): Thao tác trả tài sản trên phân công đã kết thúc.
+      - `ASSET_ACCESS_DENIED` (HTTP 403): Người dùng thông thường truy cập tài sản không được cấp cho mình.
+      - `ASSET_REPAIR_HISTORY_NOT_FOUND` (HTTP 404): Không tìm thấy lịch sử sửa chữa.
+      - `ASSET_CATEGORY_IN_USE` (HTTP 400): Dừng hoạt động danh mục đang được tham chiếu bởi tài sản chưa xóa mềm.
+      - `ASSET_CATEGORY_ALREADY_INACTIVE` (HTTP 400): Thao tác trên loại tài sản đã dừng hoạt động.

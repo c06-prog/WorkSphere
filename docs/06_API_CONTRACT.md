@@ -2234,8 +2234,10 @@ ASSET_CATEGORY_MANAGE
 Quy tắc:
 
 - Không xoá vật lý loại tài sản.
-- Không làm mất quan hệ với tài sản hiện có.
-- Loại đã dừng hoạt động không xuất hiện trong dropdown thông thường.
+- Không cho phép dừng hoạt động (`deactivate`) nếu tồn tại bất kỳ tài sản nào chưa bị xóa mềm (`is_deleted = false`) đang tham chiếu đến loại tài sản này (`ASSET_CATEGORY_IN_USE`, HTTP 400).
+- Tài sản ở trạng thái `RETIRED` vẫn là dữ liệu chưa xóa mềm và vẫn được tính là đang sử dụng (in-use).
+- Loại tài sản đã dừng hoạt động (`active = false`) vẫn được hiển thị đầy đủ thông tin trong lịch sử và chi tiết tài sản đã tạo trước đó.
+- Loại tài sản đã dừng hoạt động không xuất hiện trong dropdown thông thường và không được chọn để tạo mới hoặc cập nhật tài sản khác (`ASSET_CATEGORY_ALREADY_INACTIVE`, HTTP 400).
 
 Response:
 
@@ -2360,6 +2362,81 @@ Quyền:
 ASSET_MANAGE
 ```
 
+Request:
+
+```json
+{
+  "assetCode": "LAP-00001",
+  "categoryId": "UUID",
+  "name": "Laptop Dell Latitude 5420",
+  "description": "Thiết bị cấp phát cho kỹ sư phần mềm",
+  "serialNumber": "SN-DELL-987654",
+  "manufacturer": "Dell",
+  "model": "Latitude 5420",
+  "purchaseDate": "2026-01-15",
+  "purchasePrice": 25000000.00,
+  "warrantyEndDate": "2029-01-15",
+  "location": "Văn phòng Tầng 3"
+}
+```
+
+Validation:
+
+```text
+assetCode: bắt buộc, từ 2 đến 50 ký tự, định dạng ^[A-Z0-9][A-Z0-9_-]{1,49}$, duy nhất toàn hệ thống
+categoryId: bắt buộc, UUID của loại tài sản đang hoạt động (is_active = true)
+name: bắt buộc, tối đa 200 ký tự
+description: không bắt buộc, text
+serialNumber: không bắt buộc, tối đa 150 ký tự, duy nhất trong hệ thống khi có giá trị
+manufacturer: không bắt buộc, tối đa 150 ký tự
+model: không bắt buộc, tối đa 150 ký tự
+purchaseDate: không bắt buộc, định dạng YYYY-MM-DD
+purchasePrice: không bắt buộc, số thực lớn hơn hoặc bằng 0
+warrantyEndDate: không bắt buộc, định dạng YYYY-MM-DD
+location: không bắt buộc, tối đa 255 ký tự
+```
+
+Quy tắc nghiệp vụ:
+
+- Trạng thái khởi tạo của tài sản mới luôn mặc định là `AVAILABLE`.
+- Client không được phép tự chỉ định trạng thái khác hoặc gán người nhận trong request tạo mới.
+- Việc phân công tài sản cho người dùng bắt buộc thực hiện độc lập qua endpoint `POST /assets/{assetId}/assignments`.
+
+Response:
+
+```text
+201 Created
+```
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "UUID",
+    "assetCode": "LAP-00001",
+    "name": "Laptop Dell Latitude 5420",
+    "category": {
+      "id": "UUID",
+      "code": "LAPTOP",
+      "name": "Máy tính xách tay"
+    },
+    "serialNumber": "SN-DELL-987654",
+    "manufacturer": "Dell",
+    "model": "Latitude 5420",
+    "status": "AVAILABLE",
+    "location": "Văn phòng Tầng 3",
+    "warrantyEndDate": "2029-01-15",
+    "currentAssignment": null,
+    "repairHistories": [],
+    "relatedServiceRequests": [],
+    "version": 0
+  },
+  "message": "Tạo tài sản thành công",
+  "timestamp": "ISO-8601",
+  "traceId": "string"
+}
+```
+
 ### 14.5. Cập nhật tài sản
 
 ```http
@@ -2370,6 +2447,41 @@ Quyền:
 
 ```text
 ASSET_MANAGE
+```
+
+Request:
+
+```json
+{
+  "categoryId": "UUID",
+  "name": "Laptop Dell Latitude 5420 (Cập nhật)",
+  "description": "Đã nâng cấp RAM lên 32GB",
+  "serialNumber": "SN-DELL-987654",
+  "manufacturer": "Dell",
+  "model": "Latitude 5420",
+  "purchaseDate": "2026-01-15",
+  "purchasePrice": 27000000.00,
+  "warrantyEndDate": "2029-01-15",
+  "status": "AVAILABLE",
+  "location": "Văn phòng Tầng 4",
+  "version": 0
+}
+```
+
+Quy tắc:
+
+- Không cho phép chỉnh sửa `assetCode` (mã tài sản là bất biến sau khi tạo).
+- Không cho phép gán hoặc thay đổi người nhận tài sản qua endpoint này (phải sử dụng endpoint cấp phát / trả tài sản chuyên biệt).
+- Cập nhật trạng thái `status` qua endpoint này chỉ được phép đối với các trạng thái kho lưu giữ (`AVAILABLE`, `MAINTENANCE`, `BROKEN`, `RETIRED`) tuân thủ ma trận chuyển đổi trạng thái hợp lệ.
+- Chuyển đổi trạng thái không thuộc ma trận chuyển đổi hợp lệ trả về HTTP 400 `ASSET_STATUS_TRANSITION_INVALID`.
+- Cấm tuyệt đối chuyển sang `ASSIGNED` qua endpoint này.
+- Cấm tuyệt đối chuyển khỏi `ASSIGNED` khi tài sản đang có phân công hoạt động (`ACTIVE`).
+- Bắt buộc kiểm tra Optimistic Locking bằng `version`.
+
+Response:
+
+```text
+200 OK
 ```
 
 ### 14.6. Cấp phát tài sản
@@ -2394,10 +2506,31 @@ Request:
 }
 ```
 
+Quy tắc:
+
+- Chỉ tài sản đang ở trạng thái `AVAILABLE` mới được cấp phát. Nếu tài sản ở trạng thái khác, trả về HTTP 400 `ASSET_NOT_AVAILABLE`.
+- Nếu tài sản đã có phân công đang hoạt động theo kiểm tra nghiệp vụ, trả về HTTP 400 `ASSET_ALREADY_ASSIGNED`.
+- Phân công thành công chuyển trạng thái tài sản sang `ASSIGNED`.
+- Tại một thời điểm, mỗi tài sản chỉ có tối đa duy nhất 1 phân công hoạt động (`status = 'ACTIVE'`).
+- Không hỗ trợ chuyển giao (reassign) trực tiếp sang người khác; bắt buộc thực hiện thủ tục trả tài sản cũ trước khi cấp phát cho người mới.
+- Khóa hàng `Asset` bằng `PESSIMISTIC_WRITE` phối hợp tuần tự hóa các yêu cầu cạnh tranh. Nếu xảy ra xung đột vi phạm ràng buộc phân công duy nhất tại cơ sở dữ liệu, trả về HTTP 409 `ASSET_ASSIGNMENT_CONFLICT`. Không có lỗi HTTP 500.
+
+Response:
+
+```text
+201 Created
+```
+
 ### 14.7. Trả tài sản
 
 ```http
 PUT /assets/{assetId}/assignments/{assignmentId}/return
+```
+
+Quyền:
+
+```text
+ASSET_MANAGE
 ```
 
 Request:
@@ -2408,6 +2541,18 @@ Request:
   "resultingAssetStatus": "AVAILABLE",
   "version": 2
 }
+```
+
+Quy tắc:
+
+- Chỉ áp dụng đối với phân công đang ở trạng thái `ACTIVE`. Nếu phân công đã kết thúc, trả về HTTP 400 `ASSET_ASSIGNMENT_NOT_ACTIVE`.
+- Trạng thái bàn giao `resultingAssetStatus` phải được chọn từ: `AVAILABLE`, `MAINTENANCE`, `BROKEN`, `RETIRED`. Nếu chỉ định giá trị không hợp lệ hoặc vi phạm ma trận chuyển đổi, trả về HTTP 400 `ASSET_STATUS_TRANSITION_INVALID`.
+- Trả thành công chuyển trạng thái phân công sang `RETURNED` (hoặc `DAMAGED`, `LOST` nếu tương ứng điều kiện trả), ghi nhận `returned_at` và `return_condition`. Trạng thái tài sản chuyển sang `resultingAssetStatus`.
+
+Response:
+
+```text
+200 OK
 ```
 
 ### 14.8. Báo hỏng tài sản
@@ -2422,6 +2567,113 @@ category phù hợp
 ```
 
 Backend tạo Service Request có liên kết tài sản.
+
+### 14.9. Lịch sử sửa chữa và bảo trì tài sản
+
+Lịch sử sửa chữa là **AUDIT RECORD** dùng để ghi nhận sự kiện sửa chữa, bảo dưỡng, kiểm định hoặc nâng cấp thiết bị; không phải workflow điều phối hay state machine quản lý tiến độ.
+Phase 10 không quản lý vòng đời chuyển trạng thái "đang sửa → hoàn thành" của ticket sửa chữa (nếu nghiệp vụ yêu cầu, hoãn sang phase/canonical patch tiếp theo). Không tự động sinh bản ghi từ Service Request.
+
+#### 14.9.1. Ghi nhận lịch sử sửa chữa
+
+```http
+POST /assets/{assetId}/repair-histories
+```
+
+Quyền:
+
+```text
+ASSET_MANAGE
+```
+
+Request:
+
+```json
+{
+  "serviceRequestId": "UUID",
+  "repairType": "REPAIR",
+  "description": "Thay bàn phím và bảo dưỡng quạt tản nhiệt",
+  "vendorName": "Trung tâm bảo hành Dell",
+  "cost": 1500000.00,
+  "startedAt": "2026-10-10T08:00:00Z",
+  "completedAt": "2026-10-12T17:00:00Z",
+  "result": "Thiết bị hoạt động tốt sau khi thay thế linh kiện"
+}
+```
+
+Validation:
+
+```text
+repairType: bắt buộc, thuộc một trong: MAINTENANCE, REPAIR, INSPECTION, UPGRADE
+description: bắt buộc, text mô tả chi tiết nội dung bảo dưỡng/sửa chữa
+serviceRequestId: không bắt buộc, nếu có phải là UUID của yêu cầu dịch vụ hợp lệ liên kết cùng assetId
+vendorName: không bắt buộc, tối đa 255 ký tự
+cost: không bắt buộc, số thực lớn hơn hoặc bằng 0
+startedAt: bắt buộc, mốc thời gian ISO-8601
+completedAt: không bắt buộc, nếu có phải lớn hơn hoặc bằng startedAt
+result: không bắt buộc, tối đa 1000 ký tự
+```
+
+Quy tắc:
+
+- Bản ghi lịch sử sửa chữa là **AUDIT RECORD** bất biến ghi nhận sự kiện thực tế; không hỗ trợ cập nhật (PUT) hoặc xóa (DELETE) sau khi tạo trong MVP.
+- Quản trị viên (`ADMIN` / `ASSET_MANAGE`) chủ động tạo bản ghi qua endpoint này.
+- `serviceRequestId` không bắt buộc; dùng để tham chiếu đến yêu cầu dịch vụ liên quan nếu có.
+- `completedAt` không bắt buộc; nếu có phải lớn hơn hoặc bằng `startedAt`.
+- Không tự động tạo bản ghi từ Service Request lifecycle.
+
+Response:
+
+```text
+201 Created
+```
+
+#### 14.9.2. Danh sách lịch sử sửa chữa của tài sản
+
+```http
+GET /assets/{assetId}/repair-histories
+```
+
+Quyền:
+
+```text
+ASSET_READ
+```
+
+Quy tắc truy cập:
+
+- Quản trị viên (`ADMIN`) có quyền xem lịch sử sửa chữa của bất kỳ tài sản nào.
+- Người dùng thông thường chỉ có quyền xem lịch sử sửa chữa nếu tài sản đang được cấp phát cho chính mình (`assignedTo = currentUserId`). Nếu không, trả về HTTP 403 Forbidden (`ASSET_ACCESS_DENIED`).
+
+Response:
+
+```text
+200 OK
+```
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "UUID",
+      "assetId": "UUID",
+      "serviceRequestId": "UUID",
+      "repairType": "REPAIR",
+      "description": "Thay bàn phím và bảo dưỡng quạt tản nhiệt",
+      "vendorName": "Trung tâm bảo hành Dell",
+      "cost": 1500000.00,
+      "startedAt": "2026-10-10T08:00:00Z",
+      "completedAt": "2026-10-12T17:00:00Z",
+      "result": "Thiết bị hoạt động tốt sau khi thay thế linh kiện",
+      "createdBy": "UUID",
+      "createdAt": "ISO-8601"
+    }
+  ],
+  "message": null,
+  "timestamp": "ISO-8601",
+  "traceId": "string"
+}
+```
 
 ---
 
@@ -2946,14 +3198,19 @@ SERVICE_ALREADY_CANCELLED
 
 ```text
 ASSET_NOT_FOUND
+ASSET_ACCESS_DENIED
 ASSET_CODE_ALREADY_EXISTS
 ASSET_SERIAL_ALREADY_EXISTS
 ASSET_NOT_AVAILABLE
 ASSET_ALREADY_ASSIGNED
+ASSET_ASSIGNMENT_CONFLICT
 ASSET_ASSIGNMENT_NOT_FOUND
+ASSET_ASSIGNMENT_NOT_ACTIVE
+ASSET_STATUS_TRANSITION_INVALID
 ASSET_RETIRED
 ASSET_IN_MAINTENANCE
 ASSET_BROKEN
+ASSET_REPAIR_HISTORY_NOT_FOUND
 ```
 
 ```text
