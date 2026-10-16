@@ -710,3 +710,67 @@ Current operating mode:
      - Test V016MigrationTest.testV016IndexesExist kiểm tra chính xác 100% các tên index này trên PostgreSQL pg_indexes.
   6. **Cơ chế trích xuất tên ràng buộc CSDL qua Reflection (Technical Note)**:
      - Ghi nhận `POSTGRES_CONSTRAINT_METADATA_REFLECTION_LOW`: Dependency `org.postgresql:postgresql` nằm ở phạm vi runtime scope trong `pom.xml`. Triển khai sử dụng reflection có kiểm soát để đọc `getServerErrorMessage().getConstraint()` với fallback an toàn về message; không fallback rộng theo tên bảng; không phải blocker.
+
+## D-049: Chốt kiến trúc, ma trận sự kiện Notification, Dashboard Projection và Kế hoạch di trú V017 (Phase 11 Pre-Implementation Policies)
+
+- **Ngày quyết định**: 2026-10-16.
+- **Phạm vi**: Backend Module Notification và Reporting/Dashboard (Phase 11) - Khảo sát và chốt chính sách canonical trước triển khai.
+- **Tình trạng**: APPROVED / CANONICAL ALIGNED.
+- **Bối cảnh**: Kiểm toán sơ bộ Phase 11 phát hiện các khoảng trống: `DASHBOARD_AGGREGATED_API_GAP`, `NOTIFICATION_EVENT_MATRIX_GAP`, `NOTIFICATION_IDEMPOTENCY_GAP`, `NOTIFICATION_RETENTION_POLICY_GAP`, `DASHBOARD_METRIC_SCOPE_GAP`, `DASHBOARD_TIME_POLICY_GAP`. Cần chốt dứt điểm các quyết định kiến trúc trước khi bắt đầu viết code Phase 11.
+- **Nội dung quyết định**:
+  1. **Mô hình phân phối thông báo (Delivery Model)**:
+     - Chốt mô hình: `DATABASE IN-APP NOTIFICATION CENTER ONLY`.
+     - Không triển khai Push Notification thực tế (FCM/APNs), Email delivery, WebSocket/SSE hay message broker (Kafka/RabbitMQ) trong MVP.
+     - `notification_preferences`: `inAppEnabled` được thực thi trực tiếp khi tạo thông báo; `pushEnabled` và `emailEnabled` được lưu trữ qua API nhưng không tạo delivery side-effect trong Phase 11.
+  2. **Mô hình giao dịch (Transaction Model)**:
+     - Bản ghi thông báo được tạo trong cùng transaction với sự kiện nghiệp vụ gốc.
+     - Nếu ghi thông báo thất bại, toàn bộ transaction nghiệp vụ sẽ rollback để bảo đảm tính toàn vẹn.
+     - Không sử dụng AFTER_COMMIT listener khi chưa có outbox/retry.
+  3. **Ma trận sự kiện và người nhận (Event & Recipient Matrix)**:
+     - Giữ nguyên 8 canonical notification types: `PROJECT_MEMBER_ADDED`, `TASK_ASSIGNED`, `TASK_STATUS_CHANGED`, `TASK_DUE_SOON`, `TASK_OVERDUE`, `SERVICE_REQUEST_UPDATED`, `ASSET_ASSIGNED`, `COMMENT_ADDED`.
+     - Áp dụng nguyên tắc loại trừ actor (actor exclusion) khi actor trùng với recipient để tránh tự gửi thông báo cho chính mình.
+     - `COMMENT_ADDED` áp dụng cho bình luận công khai trên Task và Service Request; không áp dụng cho ghi chú nội bộ (internal notes) của Service Request.
+     - Giải quyết triệt để: `NOTIFICATION_EVENT_MATRIX_GAP`.
+  4. **Bất biến lũy đẳng và Kế hoạch di trú V017 (Idempotency & V017 Plan)**:
+     - Bổ sung trường `event_key VARCHAR(255) NOT NULL` vào bảng `notifications`.
+     - Thiết lập Unique Index: `uk_notifications_recipient_event` trên `notifications(recipient_id, event_key)`.
+     - Định dạng eventKey chuẩn hóa theo mẫu: `{EVENT_TYPE}:{entityId}:{context}:{version}`.
+     - Ghi nhận trùng `(recipient_id, event_key)` được xử lý là thành công lũy đẳng (idempotent success), không ghi đúp và không ném lỗi nghiệp vụ.
+     - Bổ sung composite index `idx_notifications_recipient_created_at` trên `(recipient_id, created_at DESC)` phục vụ phân trang và truy vấn Top-N.
+     - Lập runbook tiền kiểm và di trú an toàn `reports/runbooks/V017_NOTIFICATION_IDEMPOTENCY_PLAN.md`.
+     - Giải quyết triệt để: `NOTIFICATION_IDEMPOTENCY_GAP` và `SCHEMA_GAP`.
+  5. **Chính sách lưu trữ thông báo (Retention Policy)**:
+     - Không tự động xóa, không cung cấp endpoint archive, không chạy cleanup scheduler trong Phase 11.
+     - Thông báo đã đọc được lưu trữ nguyên vẹn: `NOTIFICATION_RETENTION_CLEANUP_DEFERRED`.
+  6. **Phân quyền và bảo mật thông báo**:
+     - Người dùng chỉ được truy cập và cập nhật thông báo của chính mình (`recipient_id = principal.userId`).
+     - Đánh dấu đã đọc (`PUT /notifications/{id}/read`): Nếu thông báo không tồn tại hoặc thuộc người khác, trả về HTTP 404 `NOTIFICATION_NOT_FOUND` (không dùng 403 để tránh lộ thông tin).
+     - Xem chi tiết thông báo được thực hiện bằng điều hướng sâu (deep link) phía mobile; không mở endpoint riêng `GET /notifications/{id}`.
+  7. **Tùy chọn thông báo (Notification Preferences)**:
+     - `GET /notification-preferences`: Trả về danh sách cấu hình cho đủ 8 canonical types. Nếu chưa có trong DB, trả về mặc định: `inAppEnabled=true`, `pushEnabled=true`, `emailEnabled=false`.
+     - `PUT /notification-preferences`: Upsert danh sách; validate type canonical (`NOTIFICATION_TYPE_INVALID`) và chặn trùng type trong payload (`NOTIFICATION_PREFERENCE_DUPLICATE_TYPE`).
+  8. **Phạm vi Dashboard cá nhân (Personal Dashboard Scope)**:
+     - Endpoint `GET /dashboard/me` luôn là Dashboard cá nhân cho mọi vai trò (kể cả `ADMIN`).
+     - Task metrics: Chỉ đếm task đang được phân công trực tiếp cho principal (`assignee_id = principal.userId` và `is_deleted = false`).
+     - Service Request metrics: Hợp của `requester_id = principal.userId` hoặc `assigned_to = principal.userId` (không đếm trùng).
+     - Project metrics: Chỉ đếm dự án có active membership của principal.
+     - Notification metrics: Chỉ đếm thông báo có `recipient_id = principal.userId`.
+     - Giải quyết triệt để: `DASHBOARD_METRIC_SCOPE_GAP`.
+  9. **Chính sách thời gian Dashboard (Dashboard Time Policy)**:
+     - Inject bean `java.time.Clock`, sử dụng `Instant` UTC.
+     - `overdue`: `due_date < now` và chưa kết thúc (`status NOT IN ('COMPLETED', 'CANCELLED')`).
+     - `dueSoon`: `now <= due_date < now + 72 hours` và chưa kết thúc.
+     - `overdue` và `dueSoon` loại trừ lẫn nhau, không đếm trùng.
+     - Giải quyết triệt để: `DASHBOARD_TIME_POLICY_GAP`.
+  10. **Schema Projection cho Dashboard (Dashboard Projections)**:
+      - `upcomingTasks`: Top 5 task sắp đến hạn của principal, sắp xếp `dueDate ASC, id ASC`. Item schema gồm: `id, projectId, projectName, title, status, priority, dueDate`.
+      - `recentNotifications`: Top 5 thông báo mới nhất của principal, sắp xếp `createdAt DESC, id DESC`. Item schema gồm: `id, type, title, message, referenceType, referenceId, read, createdAt`.
+      - Trả về `[]` khi rỗng.
+      - Giải quyết triệt để: `DASHBOARD_AGGREGATED_API_GAP`.
+  11. **Hoãn Dashboard dự án (Project Dashboard Deferral)**:
+      - `GET /projects/{projectId}/dashboard` được giữ lại dưới dạng placeholder contract: `PROJECT_DASHBOARD_PROJECTION_DEFERRED`.
+      - Hoãn triển khai chi tiết sang giai đoạn mở rộng; không tạo stub hay fake payload trong Phase 11; không phải là blocker cho Personal Dashboard.
+  12. **Chuẩn hóa mã lỗi mới**:
+      - `NOTIFICATION_NOT_FOUND` (HTTP 404)
+      - `NOTIFICATION_TYPE_INVALID` (HTTP 400)
+      - `NOTIFICATION_PREFERENCE_DUPLICATE_TYPE` (HTTP 400)

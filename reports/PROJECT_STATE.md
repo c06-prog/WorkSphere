@@ -142,7 +142,7 @@
     - PostgreSQL Testcontainers migration tests: 8/8 PASS; duplicate data preserved on transaction rollback.
   - Read Authorization & Scoping:
     - `ADMIN`: can read all non-deleted assets across the system.
-    - Non-admin: restricted strictly to assets with active assignment to caller principal (`assigned_to = principal.userId AND status = 'ACTIVE'`).
+    - Non-admin (`EMPLOYEE`, `TEAM_LEADER`, `PROJECT_MANAGER`): restricted strictly to assets with active assignment to caller principal (`assigned_to = principal.userId AND status = 'ACTIVE'`).
     - Database query scoping via Spring Data JPA Specification subqueries; count and pagination match scoped dataset; client assignedTo cannot expand scope; previous/returned assignee loses access; unauthorized detail access rejected with `ASSET_ACCESS_DENIED` (HTTP 403).
   - Assignment & Concurrency:
     - Active assignment cardinality 0..1.
@@ -231,13 +231,19 @@
 - DATA_INTEGRITY_ERROR_MAPPING_FALLBACK_LOW: Exception mapping cho task_assignments có thể nâng cấp sang trích xuất constraint PostgreSQL driver tương tự Asset module.
 - TEMPORARY_PASSWORD_FLOW_GAP: Luồng kích hoạt và endpoint thiết lập mật khẩu lần đầu tiếp tục hoãn.
 - TEAM_API_CONTRACT_GAP: Team REST controllers hoãn vì `06_API_CONTRACT.md` chưa định nghĩa endpoints.
-- DASHBOARD_AGGREGATED_API_GAP: API `GET /api/v1/dashboard/me` chưa có backend controller.
+- DASHBOARD_AGGREGATED_API_GAP: DESIGN RESOLVED via Decision D-049 & docs/06_API_CONTRACT.md (Top 5 upcomingTasks & recentNotifications schema finalized; Project Dashboard deferred as PROJECT_DASHBOARD_PROJECTION_DEFERRED). Implementation pending Phase 11.
+- NOTIFICATION_IDEMPOTENCY_GAP: DESIGN RESOLVED via Decision D-049 (event_key VARCHAR(255) NOT NULL & uk_notifications_recipient_event; preflight runbook V017_NOTIFICATION_IDEMPOTENCY_PLAN.md created). Implementation pending V017 migration.
+- NOTIFICATION_EVENT_MATRIX_GAP: DESIGN RESOLVED via Decision D-049 & docs/02_USER_ROLES_AND_WORKFLOWS.md Section 8 (canonical matrix finalized).
+- NOTIFICATION_RETENTION_CLEANUP_DEFERRED: Phase 11 retains read notifications; auto-delete/cleanup scheduler deferred.
+- DASHBOARD_METRIC_SCOPE_GAP: DESIGN RESOLVED via Decision D-049 & docs/06_API_CONTRACT.md (personal dashboard strictly scoped to principal active assignment, requester/assignee SR, active project membership).
+- DASHBOARD_TIME_POLICY_GAP: DESIGN RESOLVED via Decision D-049 (overdue: due_date < now; dueSoon: now <= due_date < now + 72 hours, mutually exclusive, Clock injected).
 - PUT_ME_PASSWORD_TEST_GAP: Test coverage cho luồng đổi mật khẩu người dùng hiện tại tiếp tục hoãn.
 
 ## Next Permitted Phase
 
 - **Giai đoạn 11: Notification và Dashboard** (theo đúng `docs/08_DEVELOPMENT_ROADMAP.md` Section 15, P1).
-- Không bắt đầu triển khai Phase 11 trong phiên hiện tại.
+- Canonical decisions, event matrix, dashboard projections and V017 plan finalized (Decision D-049).
+- Không bắt đầu triển khai Phase 11 source trong task quyết định hiện tại.
 - Không bắt đầu triển khai React Native / mobile source trong giai đoạn này.
 
 ## Trust Rules

@@ -1371,6 +1371,7 @@ Các trường:
 ```text
 id              UUID PRIMARY KEY
 recipient_id    UUID NOT NULL
+event_key       VARCHAR(255) NOT NULL
 type            VARCHAR(50) NOT NULL
 title           VARCHAR(255) NOT NULL
 message         VARCHAR(2000) NOT NULL
@@ -1403,12 +1404,21 @@ SERVICE_REQUEST
 ASSET
 ```
 
+Ràng buộc:
+
+```text
+CONSTRAINT fk_notifications_recipient FOREIGN KEY (recipient_id) REFERENCES users(id)
+UNIQUE (recipient_id, event_key) (uk_notifications_recipient_event)
+```
+
 Index:
 
 ```text
-idx_notifications_recipient_id
-idx_notifications_recipient_read
-idx_notifications_created_at
+idx_notifications_recipient_id (recipient_id)
+idx_notifications_recipient_read (recipient_id, is_read)
+idx_notifications_created_at (created_at)
+uk_notifications_recipient_event (recipient_id, event_key) [Bổ sung qua V017]
+idx_notifications_recipient_created_at (recipient_id, created_at DESC) [Bổ sung qua V017]
 ```
 
 ### 11.2. Bảng `notification_preferences`
@@ -1434,6 +1444,12 @@ Ràng buộc:
 ```text
 UNIQUE (user_id, notification_type)
 ```
+
+*Ghi chú về phân phối và lưu trữ Phase 11*:
+- Phase 11 sử dụng In-app Database Notification Center.
+- `in_app_enabled` được kiểm tra trước khi ghi nhận thông báo.
+- `push_enabled` và `email_enabled` lưu trữ tùy chọn người dùng cho các pha tương lai; chưa tạo side-effect gửi push/email ở Phase 11.
+- Không tự động xóa hoặc lập lịch dọn dẹp thông báo trong Phase 11 (`NOTIFICATION_RETENTION_CLEANUP_DEFERRED`).
 
 ---
 

@@ -714,6 +714,25 @@ Quyền:
 AUTHENTICATED
 ```
 
+Quy tắc phân quyền và phạm vi dữ liệu:
+- Endpoint luôn trả về Dashboard cá nhân cho mọi vai trò (kể cả `ADMIN`).
+- `tasks`: Chỉ đếm các công việc đang được phân công trực tiếp cho người dùng hiện tại (`assignee_id = principal.userId` và `is_deleted = false`). Không đếm toàn bộ công việc của dự án chỉ vì người dùng có vai trò PM hay Admin.
+- `serviceRequests`: Đếm các yêu cầu dịch vụ do người dùng tạo (`requester_id = principal.userId`) hoặc đang được phân công xử lý trực tiếp (`assigned_to = principal.userId`). Không đếm trùng lặp nếu người dùng vừa là người tạo vừa là người xử lý.
+- `projects`: Chỉ đếm các dự án mà người dùng hiện tại đang là thành viên hoạt động (`user_id = principal.userId` trong `project_members`).
+- `recentNotifications`: Chỉ trả về thông báo gửi cho chính người dùng (`recipient_id = principal.userId`).
+- Nếu cần Dashboard quản trị toàn hệ thống, tính năng sẽ được thiết kế ở endpoint riêng biệt và không đưa vào `/dashboard/me`.
+
+Quy tắc thời gian (Time Policy):
+- Sử dụng bean `java.time.Clock` được inject trong hệ thống; mọi tính toán dựa trên `Instant` UTC.
+- `overdue`: `due_date < now` và `status NOT IN ('COMPLETED', 'CANCELLED')`.
+- `dueSoon`: `now <= due_date < now + 72 hours` (ngưỡng 72 giờ tính từ thời điểm hiện tại) và `status NOT IN ('COMPLETED', 'CANCELLED')`.
+- `overdue` và `dueSoon` là hai tập hợp không giao nhau (không đếm trùng).
+
+Quy tắc Projection danh sách:
+- `upcomingTasks`: Danh sách tối đa 5 công việc (Top 5) sắp đến hạn của người dùng (`now <= due_date`, chưa kết thúc), sắp xếp theo `dueDate ASC`, tie-breaker `id ASC`.
+- `recentNotifications`: Danh sách tối đa 5 thông báo (Top 5) mới nhất của người dùng, sắp xếp theo `createdAt DESC`, tie-breaker `id DESC`.
+- Khi không có dữ liệu, trả về mảng rỗng `[]`.
+
 Response:
 
 ```json
@@ -738,8 +757,29 @@ Response:
       "active": 3,
       "onHold": 1
     },
-    "upcomingTasks": [],
-    "recentNotifications": []
+    "upcomingTasks": [
+      {
+        "id": "UUID",
+        "projectId": "UUID",
+        "projectName": "WorkSphere Mobile App",
+        "title": "Hoàn thiện màn hình Dashboard",
+        "status": "IN_PROGRESS",
+        "priority": "HIGH",
+        "dueDate": "2026-10-18T17:00:00Z"
+      }
+    ],
+    "recentNotifications": [
+      {
+        "id": "UUID",
+        "type": "TASK_ASSIGNED",
+        "title": "Bạn được giao công việc mới",
+        "message": "Xây dựng màn hình đăng nhập",
+        "referenceType": "TASK",
+        "referenceId": "UUID",
+        "read": false,
+        "createdAt": "2026-10-16T14:30:00Z"
+      }
+    ]
   },
   "message": null,
   "timestamp": "ISO-8601",
@@ -763,6 +803,15 @@ PROJECT_READ
 
 - Người dùng là thành viên dự án.
 - Hoặc có quyền quản trị phù hợp.
+
+Trạng thái triển khai:
+
+```text
+PROJECT_DASHBOARD_PROJECTION_DEFERRED
+```
+
+- Endpoint này được giữ làm placeholder contract và hoãn triển khai trong Phase 11.
+- Phase 11 tập trung hoàn thiện Personal Dashboard (`GET /dashboard/me`). Không tạo controller stub hay trả payload giả lập trong Phase 11.
 
 ---
 
@@ -2683,6 +2732,11 @@ Response:
 
 ## 15. NOTIFICATION API
 
+Mô hình phân phối Phase 11:
+- Hệ thống trung tâm thông báo nội bộ (In-app Database Notification Center).
+- Không tích hợp Push Notification thực tế (FCM/APNs) và Email delivery trong Phase 11. Các thuộc tính `pushEnabled` và `emailEnabled` được lưu trữ tùy chọn nhưng chưa kích hoạt kênh gửi ngoài.
+- Client sử dụng `referenceType` và `referenceId` từ item thông báo để điều hướng trực tiếp (deep link) đến màn hình chi tiết đối tượng liên quan (Project, Task, Service Request, Asset). Không có endpoint riêng `GET /notifications/{id}`.
+
 ### 15.1. Danh sách thông báo
 
 ```http
@@ -2704,6 +2758,9 @@ read
 type
 sort=createdAt,desc
 ```
+
+Quy tắc phân quyền:
+- Chỉ trả về danh sách thông báo gửi cho chính người dùng hiện tại (`recipient_id = principal.userId`).
 
 Response item:
 
@@ -2729,7 +2786,24 @@ PUT /notifications/{notificationId}/read
 Quyền:
 
 ```text
-Chủ sở hữu thông báo
+NOTIFICATION_UPDATE
+```
+
+Quy tắc xử lý và bảo mật:
+- Người dùng chỉ có quyền đánh dấu đã đọc thông báo của chính mình.
+- Nếu `notificationId` không tồn tại HOẶC thuộc về người dùng khác, API trả về HTTP 404 với mã lỗi `NOTIFICATION_NOT_FOUND` (không trả về 403 để tránh lộ sự tồn tại của thông báo giữa các người dùng).
+- Thao tác mang tính lũy đẳng (idempotent): Nếu thông báo đã ở trạng thái đã đọc (`is_read = true`), API vẫn trả về HTTP 200 OK thành công.
+
+Response:
+
+```json
+{
+  "success": true,
+  "data": null,
+  "message": null,
+  "timestamp": "ISO-8601",
+  "traceId": "string"
+}
 ```
 
 ### 15.3. Đánh dấu tất cả đã đọc
@@ -2738,10 +2812,40 @@ Chủ sở hữu thông báo
 PUT /notifications/read-all
 ```
 
+Quyền:
+
+```text
+NOTIFICATION_UPDATE
+```
+
+Quy tắc xử lý:
+- Cập nhật toàn bộ thông báo có `is_read = false` của người dùng hiện tại sang `is_read = true` và ghi nhận `read_at`.
+- Thao tác mang tính lũy đẳng (idempotent): Nếu không có thông báo nào chưa đọc, API vẫn trả về HTTP 200 OK thành công với `updatedCount = 0`.
+
+Response:
+
+```json
+{
+  "success": true,
+  "data": {
+    "updatedCount": 5
+  },
+  "message": null,
+  "timestamp": "ISO-8601",
+  "traceId": "string"
+}
+```
+
 ### 15.4. Số thông báo chưa đọc
 
 ```http
 GET /notifications/unread-count
+```
+
+Quyền:
+
+```text
+NOTIFICATION_READ
 ```
 
 Response:
@@ -2765,6 +2869,47 @@ GET /notification-preferences
 PUT /notification-preferences
 ```
 
+Quyền:
+
+```text
+AUTHENTICATED
+```
+
+#### GET /notification-preferences
+
+Trả về danh sách cấu hình nhận thông báo của người dùng hiện tại cho toàn bộ 8 loại thông báo canonical:
+`PROJECT_MEMBER_ADDED`, `TASK_ASSIGNED`, `TASK_STATUS_CHANGED`, `TASK_DUE_SOON`, `TASK_OVERDUE`, `SERVICE_REQUEST_UPDATED`, `COMMENT_ADDED`, `ASSET_ASSIGNED`.
+
+Nếu chưa có bản ghi trong CSDL cho một loại thông báo, hệ thống tự động trả về giá trị mặc định:
+- `inAppEnabled`: `true`
+- `pushEnabled`: `true`
+- `emailEnabled`: `false`
+
+Response:
+
+```json
+{
+  "success": true,
+  "data": {
+    "preferences": [
+      {
+        "notificationType": "TASK_ASSIGNED",
+        "inAppEnabled": true,
+        "pushEnabled": true,
+        "emailEnabled": false
+      }
+    ]
+  },
+  "message": null,
+  "timestamp": "ISO-8601",
+  "traceId": "string"
+}
+```
+
+#### PUT /notification-preferences
+
+Cập nhật danh sách cấu hình nhận thông báo của người dùng hiện tại (upsert theo `(user_id, notification_type)`).
+
 Request cập nhật:
 
 ```json
@@ -2777,6 +2922,23 @@ Request cập nhật:
       "emailEnabled": false
     }
   ]
+}
+```
+
+Validation:
+- `notificationType` phải thuộc danh mục canonical. Nếu không hợp lệ, trả về HTTP 400 `NOTIFICATION_TYPE_INVALID`.
+- Không được chứa các phần tử có `notificationType` trùng lặp trong cùng request. Nếu trùng lặp, trả về HTTP 400 `NOTIFICATION_PREFERENCE_DUPLICATE_TYPE`.
+- `pushEnabled` và `emailEnabled` chỉ lưu trữ tùy chọn; không tạo delivery side-effect trong Phase 11.
+
+Response:
+
+```json
+{
+  "success": true,
+  "data": null,
+  "message": null,
+  "timestamp": "ISO-8601",
+  "traceId": "string"
 }
 ```
 
@@ -3236,6 +3398,14 @@ FILE_EXTENSION_NOT_ALLOWED
 FILE_UPLOAD_FAILED
 FILE_ALREADY_LINKED
 FILE_ACCESS_DENIED
+```
+
+### 20.9. Thông báo
+
+```text
+NOTIFICATION_NOT_FOUND
+NOTIFICATION_TYPE_INVALID
+NOTIFICATION_PREFERENCE_DUPLICATE_TYPE
 ```
 
 ---

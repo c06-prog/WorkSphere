@@ -791,40 +791,45 @@ P1
 
 ### 15.2. Notification
 
-- Notification Entity.
-- Tạo thông báo từ hành động nghiệp vụ.
-- Danh sách.
-- Đánh dấu đã đọc.
-- Đánh dấu tất cả đã đọc.
-- Unread Count.
-- Notification Preference.
-- Reference Type và Reference ID.
+- Notification Entity và Repositories.
+- Di trú CSDL: Bản di trú `V017__add_notification_idempotency_and_query_indexes.sql` bổ sung cột `event_key` và unique index `uk_notifications_recipient_event` chống trùng lặp, cùng composite index `idx_notifications_recipient_created_at`.
+- Mô hình phân phối: In-app Database Notification Center. Kênh Push/Email lưu trữ preference, hoãn delivery side-effect (`push_enabled`, `email_enabled`).
+- Tạo thông báo từ hành động nghiệp vụ (Project Member, Task Assigned/Status/DueSoon/Overdue, Service Request Assigned/Status, Asset Assigned, Comment).
+- Cơ chế lũy đẳng (Idempotency) dựa trên `(recipient_id, event_key)`.
+- Danh sách thông báo (`GET /notifications`).
+- Đánh dấu đã đọc (`PUT /notifications/{id}/read` - trả về 404 nếu không sở hữu).
+- Đánh dấu tất cả đã đọc (`PUT /notifications/read-all`).
+- Đếm thông báo chưa đọc (`GET /notifications/unread-count`).
+- Cấu hình nhận thông báo (`GET /notification-preferences`, `PUT /notification-preferences`).
+- Điều hướng sâu (Deep Link) qua `referenceType` và `referenceId`; không mở endpoint riêng `GET /notifications/{id}`.
+- Chính sách lưu trữ: Hoãn xóa/dọn dẹp tự động (`NOTIFICATION_RETENTION_CLEANUP_DEFERRED`).
 
 ### 15.3. Dashboard
 
-- Dashboard cá nhân.
-- Task Summary.
-- Project Summary.
-- Service Request Summary.
-- Công việc sắp đến hạn.
-- Công việc quá hạn.
-- Thông báo gần nhất.
+- Dashboard cá nhân (`GET /dashboard/me`) cho mọi vai trò (kể cả Admin):
+  - Task Summary (chỉ task được giao cho principal: `todo`, `inProgress`, `inReview`, `completed`, `overdue`, `dueSoon`).
+  - Project Summary (chỉ dự án principal là thành viên hoạt động: `active`, `onHold`).
+  - Service Request Summary (yêu cầu do principal tạo hoặc được giao xử lý: `open`, `inProgress`, `waitingForUser`, `resolved`).
+  - Danh sách công việc sắp đến hạn (`upcomingTasks`: Top 5, hạn trong vòng 72 giờ, sắp xếp `dueDate ASC, id ASC`).
+  - Danh sách thông báo gần nhất (`recentNotifications`: Top 5, sắp xếp `createdAt DESC, id DESC`).
+- Hoãn triển khai Dashboard dự án (`PROJECT_DASHBOARD_PROJECTION_DEFERRED`).
 
 ### 15.4. Kiểm thử
 
-- Tạo thông báo khi giao task.
-- Tạo thông báo khi đổi trạng thái.
-- Người dùng chỉ xem thông báo của mình.
-- Đánh dấu đã đọc.
-- Dashboard chỉ tính dữ liệu được phép xem.
-- Số liệu dashboard khớp dữ liệu thật.
+- Tạo thông báo khi giao task và đổi trạng thái.
+- Phân quyền thông báo: người dùng chỉ xem và cập nhật thông báo của chính mình (chặn truy cập chéo bằng 404).
+- Kiểm thử lũy đẳng: ghi trùng sự kiện không sinh thêm bản ghi.
+- Dashboard tính toán chính xác số liệu theo phân quyền CSDL; cô lập dữ liệu giữa các người dùng.
+- Kiểm thử ngưỡng thời gian `dueSoon` (72 giờ) và `overdue` bằng mock Clock.
 
 ### 15.5. Điều kiện hoàn thành
 
-- Notification API hoạt động.
-- Dashboard hoạt động.
-- Quyền dữ liệu đúng.
-- Test vượt qua.
+- Di trú V017 áp dụng thành công.
+- Notification API hoạt động đầy đủ, đúng contract.
+- Dashboard cá nhân hoạt động với số liệu khớp dữ liệu thực tế.
+- Quyền dữ liệu và bảo mật được thực thi 100% tại tầng CSDL.
+- Toàn bộ test suite vượt qua với kết quả BUILD SUCCESS.
+- Không có lỗi Checkstyle.
 
 ---
 

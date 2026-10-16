@@ -48,7 +48,7 @@
   - Transaction atomicity & rollback verified on PostgreSQL via BEFORE UPDATE trigger failure injection on target asset row; asset remains ASSIGNED, assignment remains ACTIVE, versions unchanged, returnedAt remains null. Response on error is verified safe (no leak of SQL, trigger, or stack trace).
 - **Read Scoping & Security**:
   - System Admin has global asset visibility.
-  - Non-admin (EMPLOYEE, etc.) restricted to actively assigned assets (`assigned_to = principal.userId` and assignment `status = 'ACTIVE'`).
+  - Non-admin (EMPLOYEE, TEAM_LEADER, PROJECT_MANAGER) restricted to actively assigned assets (`assigned_to = principal.userId` and assignment `status = 'ACTIVE'`).
   - `/api/v1/assets/my-assets` strictly locked to caller principal; unauthorized detail access returns `ASSET_ACCESS_DENIED` (HTTP 403).
 - **Related Service Requests Projection**:
   - Detail response includes non-deleted related Service Requests matching Phase 9 authorization: caller sees request if caller is Admin, or requester, or has active `ServiceAssignment` (`is_active = true`). Soft-deleted requests excluded. Exact IDs and request numbers asserted.
@@ -80,13 +80,19 @@
 - `DATA_INTEGRITY_ERROR_MAPPING_FALLBACK_LOW`: Exception mapping cho task_assignments có thể nâng cấp sang trích xuất constraint PostgreSQL driver tương tự Asset module.
 - `TEMPORARY_PASSWORD_FLOW_GAP`: Luồng kích hoạt và endpoint thiết lập mật khẩu lần đầu tiếp tục hoãn.
 - `TEAM_API_CONTRACT_GAP`: Team REST controllers hoãn vì `06_API_CONTRACT.md` chưa định nghĩa endpoints.
-- `DASHBOARD_AGGREGATED_API_GAP`: API `GET /api/v1/dashboard/me` chưa có backend controller.
+- `DASHBOARD_AGGREGATED_API_GAP`: DESIGN RESOLVED via Decision D-049 & docs/06_API_CONTRACT.md (Top 5 upcomingTasks & recentNotifications schema finalized; Project Dashboard deferred as PROJECT_DASHBOARD_PROJECTION_DEFERRED). Implementation pending Phase 11.
+- `NOTIFICATION_IDEMPOTENCY_GAP`: DESIGN RESOLVED via Decision D-049 (event_key VARCHAR(255) NOT NULL & uk_notifications_recipient_event; preflight runbook V017_NOTIFICATION_IDEMPOTENCY_PLAN.md created). Implementation pending V017 migration.
+- `NOTIFICATION_EVENT_MATRIX_GAP`: DESIGN RESOLVED via Decision D-049 & docs/02_USER_ROLES_AND_WORKFLOWS.md Section 8 (canonical matrix finalized).
+- `NOTIFICATION_RETENTION_CLEANUP_DEFERRED`: Phase 11 retains read notifications; auto-delete/cleanup scheduler deferred.
+- `DASHBOARD_METRIC_SCOPE_GAP`: DESIGN RESOLVED via Decision D-049 & docs/06_API_CONTRACT.md (personal dashboard strictly scoped to principal active assignment, requester/assignee SR, active project membership).
+- `DASHBOARD_TIME_POLICY_GAP`: DESIGN RESOLVED via Decision D-049 (overdue: due_date < now; dueSoon: now <= due_date < now + 72 hours, mutually exclusive, Clock injected).
 - `PUT_ME_PASSWORD_TEST_GAP`: Test coverage cho luồng đổi mật khẩu người dùng hiện tại tiếp tục hoãn.
 
 ## Next Permitted Phase
 
 - **Giai đoạn 11: Notification và Dashboard** (theo đúng `docs/08_DEVELOPMENT_ROADMAP.md` Section 15, P1).
-- Không bắt đầu triển khai Phase 11 trong phiên hiện tại.
+- Canonical decisions, event matrix, dashboard projections and V017 plan finalized (Decision D-049).
+- Không bắt đầu triển khai Phase 11 source trong task quyết định hiện tại.
 - Không bắt đầu triển khai React Native / mobile source trong giai đoạn này.
 
 ## New Session Procedure

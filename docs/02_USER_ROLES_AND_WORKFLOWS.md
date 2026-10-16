@@ -673,24 +673,48 @@ Tài sản RETIRED không được cấp phát lại.
 
 ## 8. Luồng thông báo
 
-Hệ thống tạo thông báo khi:
+### 8.1. Mô hình phân phối và giao dịch
 
-- Người dùng được thêm vào dự án.
-- Người dùng được giao công việc.
-- Công việc thay đổi trạng thái.
-- Công việc sắp đến hạn.
-- Công việc bị quá hạn.
-- Yêu cầu dịch vụ được phân công.
-- Yêu cầu dịch vụ thay đổi trạng thái.
-- Có bình luận mới.
-- Dự án thay đổi trạng thái.
+- **Mô hình phân phối**: Hệ thống thông báo nội bộ trong ứng dụng (In-app Database Notification Center).
+- Không triển khai Push Notification thực tế (FCM/APNs), Email delivery, WebSocket/SSE hay message broker ngoài trong MVP.
+- Tùy chọn thông báo (`notification_preferences`): Thuộc tính `inAppEnabled` được thực thi trực tiếp tại backend khi tạo thông báo; các thuộc tính `pushEnabled` và `emailEnabled` được lưu trữ/cập nhật qua API nhưng không tạo side effect phân phối trong Phase 11.
+- **Mô hình giao dịch**: Bản ghi thông báo được tạo và ghi vào CSDL trong cùng transaction với sự kiện nghiệp vụ gốc. Nếu thao tác ghi thông báo thất bại, toàn bộ transaction nghiệp vụ sẽ rollback để bảo đảm tính toàn vẹn dữ liệu.
 
-Người dùng có thể:
+### 8.2. Ma trận sự kiện và người nhận thông báo (Event & Recipient Matrix)
 
-- Xem danh sách thông báo.
-- Xem chi tiết.
-- Đánh dấu một thông báo đã đọc.
-- Đánh dấu tất cả đã đọc.
+| Sự kiện nghiệp vụ | Thao tác nguồn | Người nhận (Recipient) | Loại trừ Actor | Loại thông báo (`type`) | `referenceType` | `referenceId` | Mẫu tiêu đề | Mẫu nội dung | Định dạng `eventKey` | Thời điểm kích hoạt |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Thêm thành viên dự án | `POST /projects/{id}/members` | Thành viên vừa được thêm (`userId`) | Loại trừ nếu actor == recipient | `PROJECT_MEMBER_ADDED` | `PROJECT` | `projectId` | Bạn đã được thêm vào dự án | Bạn đã được thêm vào dự án {projectName} | `PROJECT_MEMBER_ADDED:{projectId}:{memberId}` | Cùng transaction thêm member |
+| Giao công việc | `POST /tasks` hoặc `PUT /tasks/{id}/assign` | Người được giao việc (`assigneeId`) | Loại trừ nếu actor tự giao việc cho chính mình | `TASK_ASSIGNED` | `TASK` | `taskId` | Bạn được giao công việc mới | Bạn đã được phân công công việc: {taskTitle} | `TASK_ASSIGNED:{taskId}:{assigneeId}:{version}` | Cùng transaction giao task |
+| Thay đổi trạng thái công việc | `PUT /tasks/{id}/status` | Assignee, Task creator (reporter), PM/Leader dự án có quyền review (deduplicated) | Loại trừ actor thực hiện thao tác | `TASK_STATUS_CHANGED` | `TASK` | `taskId` | Công việc thay đổi trạng thái | Công việc {taskTitle} đã chuyển sang trạng thái {status} | `TASK_STATUS_CHANGED:{taskId}:{status}:{version}` | Cùng transaction đổi trạng thái |
+| Công việc sắp đến hạn | Quét định kỳ (Scheduler) | Người được giao việc (`assigneeId`) | Không áp dụng (hệ thống) | `TASK_DUE_SOON` | `TASK` | `taskId` | Công việc sắp đến hạn | Công việc {taskTitle} sẽ đến hạn vào {dueDate} | `TASK_DUE_SOON:{taskId}:{dueDateEpochDay}` | Batch scheduler (chỉ gửi 1 lần/cửa sổ 72h) |
+| Công việc quá hạn | Quét định kỳ (Scheduler) | Người được giao việc (`assigneeId`) | Không áp dụng (hệ thống) | `TASK_OVERDUE` | `TASK` | `taskId` | Công việc quá hạn | Công việc {taskTitle} đã quá hạn hoàn thành | `TASK_OVERDUE:{taskId}:{dueDateEpochDay}` | Batch scheduler (chỉ gửi 1 lần khi quá hạn) |
+| Phân công yêu cầu dịch vụ | `PUT /service-requests/{id}/assign` | Kỹ thuật viên được phân công (`assignedTo`) | Loại trừ nếu actor == recipient | `SERVICE_REQUEST_UPDATED` | `SERVICE_REQUEST` | `requestId` | Bạn được phân công yêu cầu dịch vụ | Bạn được phân công xử lý yêu cầu: {requestTitle} | `SERVICE_REQUEST_UPDATED:{requestId}:ASSIGNED:{version}` | Cùng transaction phân công |
+| Cập nhật trạng thái yêu cầu dịch vụ | `PUT /service-requests/{id}/status` (RESOLVED, v.v.) | Người tạo yêu cầu (`requesterId`) | Loại trừ nếu actor == recipient | `SERVICE_REQUEST_UPDATED` | `SERVICE_REQUEST` | `requestId` | Yêu cầu dịch vụ được cập nhật | Yêu cầu {requestTitle} đã chuyển sang trạng thái {status} | `SERVICE_REQUEST_UPDATED:{requestId}:{status}:{version}` | Cùng transaction đổi trạng thái |
+| Cấp phát tài sản | `POST /assets/{id}/assignments` | Nhân viên nhận tài sản (`assignedTo`) | Loại trừ nếu actor == recipient | `ASSET_ASSIGNED` | `ASSET` | `assetId` | Bạn được cấp phát tài sản | Bạn đã được cấp phát tài sản: {assetName} ({assetCode}) | `ASSET_ASSIGNED:{assetId}:{assignmentId}` | Cùng transaction cấp phát tài sản |
+| Bình luận công khai | Tạo bình luận trên Task hoặc Service Request | Bên liên quan (Assignee, Reporter/Requester phía đối diện) | Loại trừ actor tạo bình luận | `COMMENT_ADDED` | `TASK` hoặc `SERVICE_REQUEST` | `referenceId` | Có bình luận mới | {actorName} đã bình luận trên {title} | `COMMENT_ADDED:{referenceType}:{commentId}` | Cùng transaction tạo bình luận |
+
+*Ghi chú*:
+- Ghi chú nội bộ (Internal Notes) của Service Request tuyệt đối không gửi thông báo cho requester.
+- Không phát tán thông báo tới toàn bộ thành viên dự án khi chỉ có thay đổi trạng thái của 1 task cá nhân.
+
+### 8.3. Tính lũy đẳng (Idempotency)
+
+- Mỗi thông báo được bảo vệ bằng cặp duy nhất `(recipient_id, event_key)`.
+- Khi xảy ra retry hoặc gửi lại request từ client, việc chèn bản ghi trùng `(recipient_id, event_key)` được xử lý là thành công lũy đẳng (idempotent success), không sinh thêm thông báo và không trả lỗi nghiệp vụ cho client.
+
+### 8.4. Thao tác và quyền truy cập
+
+- **Xem danh sách**: Người dùng chỉ xem được danh sách thông báo của chính mình qua `GET /notifications` (`recipient_id = principal.userId`).
+- **Xem chi tiết (Deep Link Navigation)**: Ứng dụng mobile sử dụng `referenceType` và `referenceId` trong payload thông báo để điều hướng trực tiếp đến màn hình chi tiết của đối tượng nghiệp vụ tương ứng (Project, Task, Service Request, Asset). Hệ thống không mở endpoint riêng `GET /notifications/{id}`.
+- **Đánh dấu đã đọc**: `PUT /notifications/{id}/read` mang tính lũy đẳng. Nếu thông báo không tồn tại hoặc thuộc về người dùng khác, hệ thống trả về HTTP 404 `NOTIFICATION_NOT_FOUND` để bảo mật thông tin.
+- **Đánh dấu tất cả đã đọc**: `PUT /notifications/read-all` cập nhật toàn bộ thông báo chưa đọc của chính principal.
+- **Đếm số lượng chưa đọc**: `GET /notifications/unread-count` đếm các thông báo có `is_read = false` của chính principal.
+- **Tùy chọn thông báo**: Quản lý tùy chọn nhận thông báo qua `GET` và `PUT /notification-preferences`.
+
+### 8.5. Chính sách lưu trữ (Retention Policy)
+
+- Trong Phase 11, thông báo đã đọc được lưu trữ vô thời hạn. Không tự động xóa vật lý, không có endpoint lưu trữ/archive, và không có scheduler dọn dẹp (`NOTIFICATION_RETENTION_CLEANUP_DEFERRED`).
 
 ---
 
