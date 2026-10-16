@@ -135,31 +135,31 @@
 - Maven: 3.9.16
 - Spring Boot: 4.1.1 (verified directly from backend/pom.xml)
 - PostgreSQL: postgres:15-alpine via Testcontainers
-- Full backend suite: 259/259 PASS (210 regression + 49 Phase 10 tests)
+- Full backend suite: 260/260 PASS (206/210 regression + 50 Phase 10 tests)
   - 0 failures, 0 errors, 0 skipped
   - Maven execution: BUILD SUCCESS (exit code 0)
-- Phase 10 test suites (49 tests):
+- Phase 10 test suites (50 tests):
   - `V016MigrationTest`: 8/8 PASS
   - `AssetCategoryMockMvcTest`: 9/9 PASS
   - `AssetCoreMockMvcTest`: 13/13 PASS
-  - `AssetAssignmentAndConcurrencyMockMvcTest`: 10/10 PASS (hardened concurrency assertions & return rollback test)
-  - `AssetRepairHistoryMockMvcTest`: 7/7 PASS
+  - `AssetAssignmentAndConcurrencyMockMvcTest`: 10/10 PASS (hardened concurrency assertions & return rollback test with response safety)
+  - `AssetRepairHistoryMockMvcTest`: 8/8 PASS (bao gồm kiểm thử chi phí null/optional)
   - `AssetServiceRequestIntegrationMockMvcTest`: 6/6 PASS
 - Checkstyle: 0 violations
 - Concurrency evidence:
-  - Asset assignment: 2 concurrent workers x 5 rounds on PostgreSQL Testcontainers (verified exactly 1 winner 201, loser strictly 400/409, no 500, exactly 1 active assignment preserved)
+  - Asset assignment: 2 concurrent workers x 5 rounds on PostgreSQL Testcontainers (verified exactly 1 winner 201 with matching assignedTo, loser strictly 400/409, no 500, exactly 1 active assignment preserved)
 - Rollback evidence:
-  - Asset return rollback verified on PostgreSQL via BEFORE UPDATE trigger failure injection; asset remains ASSIGNED, assignment remains ACTIVE, versions unchanged, returnedAt remains null.
+  - Asset return rollback verified on PostgreSQL via BEFORE UPDATE trigger failure injection; asset remains ASSIGNED, assignment remains ACTIVE, versions unchanged, returnedAt remains null, response payload safe.
 - Database & Migrations:
   - V001 to V016 applied and validated on PostgreSQL Testcontainers
-  - Migrations 100% immutable and tracked (V001-V016 intact)
-- Canonical documents: unchanged 100% (10/10 canonical documents in docs/ preserved)
+  - Migrations 100% immutable and tracked (V001-V016 intact; zero V017)
+- Canonical documents: Section 14.7 patched to clarify assignment lifecycle and schema-reserved states
 - Working tree: clean
-- HEAD equals origin/main before hardening commit
+- HEAD equals origin/main before audit commit
 
 ## Deferred Items & Known Gaps
 
-- ASSET_ASSIGNMENT_STATUS_CONTRACT_GAP: Giá trị enum `LOST` và `DAMAGED` trong `AssetAssignmentStatus` là schema-reserved enum values; API hoàn trả (`ReturnAssetRequest`) chỉ truyền `resultingAssetStatus` cho tài sản và luôn set trạng thái phân công là `RETURNED`. Chưa có luồng nghiệp vụ API trực tiếp tạo trạng thái phân công LOST/DAMAGED trong Phase 10 MVP.
+- ASSET_ASSIGNMENT_LOST_DAMAGED_WORKFLOW_DEFERRED: Giá trị enum `LOST` và `DAMAGED` trong `AssetAssignmentStatus` là schema-reserved enum values; `docs/06_API_CONTRACT.md` mục 14.7 đã chuẩn hóa phạm vi vòng đời Phase 10 là `ACTIVE -> RETURNED`; quy trình xử lý phân công thất thoát/hư hỏng hoãn lại rõ ràng, không còn unresolved contract gap.
 - NOTIFICATION_SIDE_EFFECT_DEFERRED: Phase 9/10 không triển khai Notification Module; không email, push notification hoặc WebSocket. Hoãn đến phase canonical tiếp theo nếu Roadmap quy định.
 - SERVICE_REQUEST_SLA_DEFERRED: Không có SLA engine, không tính business hours, không escalation, không pause/resume SLA.
 - SERVICE_ATTACHMENT_COMMENT_LINK_GAP: Bảng `service_attachments` chỉ liên kết với `request_id`. File gửi kèm khi tạo comment vẫn là attachment cấp Service Request; không có `comment_id` trong schema và không được mô tả là attachment riêng của comment.

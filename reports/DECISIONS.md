@@ -681,3 +681,29 @@ Current operating mode:
      - Độ lệch giữa mô tả văn bản và request payload được ghi nhận chính thức dưới dạng `ASSET_ASSIGNMENT_STATUS_CONTRACT_GAP` để đồng bộ ở phase nâng cao.
   6. **Định danh danh sách loại tài sản hoạt động (Authenticated Active Categories List)**:
      - Endpoint `GET /api/v1/asset-categories` nằm trong phạm vi bắt buộc xác thực (`.anyRequest().authenticated()`), trả về 401 Unauthorized nếu không có token. Do đó được định danh chuẩn xác là "Authenticated active-category list", không dùng từ "public".
+## D-048: Chốt chuẩn hóa hợp đồng phân công tài sản và hoàn tất kiểm toán cuối Phase 10 (Phase 10 Final Contract Alignment & Audit)
+
+- **Ngày quyết định**: 2026-10-16.
+- **Phạm vi**: Backend Module Quản lý Tài sản (Asset Management) - Kiểm toán cuối và chốt canonical contract.
+- **Tình trạng**: APPROVED / IMPLEMENTED.
+- **Bối cảnh**: Sau hardening Phase 10, cần chốt chính thức phạm vi vòng đời phân công tài sản trên tài liệu canonical docs/06_API_CONTRACT.md, đối chiếu mã lỗi trùng số serial, xác minh endpoint thu hồi chuẩn PUT, nullability chi phí sửa chữa, và bảo mật an toàn response khi xảy ra lỗi hạ tầng.
+- **Nội dung quyết định**:
+  1. **Chuẩn hóa vòng đời phân công tài sản trên Canonical Contract**:
+     - Cập nhật mục 14.7 của docs/06_API_CONTRACT.md:
+       - Vòng đời phân công được hỗ trợ trong Phase 10: ACTIVE -> RETURNED.
+       - Giá trị dự trữ schema, không mở qua API Phase 10: LOST, DAMAGED.
+       - Hoãn quy trình xử lý thất thoát/hư hỏng phân công sang phase tiếp theo theo mã: ASSET_ASSIGNMENT_LOST_DAMAGED_WORKFLOW_DEFERRED.
+       - Sau canonical patch, nội dung này không còn là contract gap chưa giải quyết mà là tính năng được thiết kế hoãn lại rõ ràng.
+  2. **Chuẩn hóa mã lỗi trùng số serial tài sản**:
+     - Thống nhất duy nhất mã canonical: ASSET_SERIAL_ALREADY_EXISTS (HTTP 409 Conflict).
+     - Không cho phép tồn tại biến thể khác (SERIAL_NUMBER_ALREADY_EXISTS).
+  3. **Xác minh chuẩn endpoint thu hồi và an toàn response lỗi**:
+     - Endpoint hoàn trả canonical là: PUT /api/v1/assets/{assetId}/assignments/{assignmentId}/return.
+     - Failure-injection test gọi đúng phương thức PUT và xác minh an toàn response: Khi gặp lỗi hạ tầng mô phỏng, backend trả về HTTP 500 với payload chuẩn (INTERNAL_ERROR), tuyệt đối không làm lộ SQL, stack trace, tên trigger function, hay chuỗi lỗi nội bộ PostgreSQL.
+  4. **Ánh xạ chi phí sửa chữa (Repair Cost Mapping)**:
+     - Cột asset_repair_histories.cost là NUMERIC(18,2) NULL (không bắt buộc / nullable).
+     - DTO CreateAssetRepairHistoryRequest chỉ ràng buộc @DecimalMin(value = '0.0') mà không bắt buộc @NotNull.
+     - Bổ sung test kiểm thử trực tiếp việc tạo lịch sử bảo dưỡng không truyền chi phí (cost = null) thành công.
+  5. **Xác minh tên Index V016**:
+     - Các chỉ mục thực tế của V016: uk_asset_assignments_one_active, uk_asset_categories_code, idx_asset_assignments_assigned_to, idx_asset_assignments_asset_id.
+     - Test V016MigrationTest.testV016IndexesExist kiểm tra chính xác 100% các tên index này trên PostgreSQL pg_indexes.

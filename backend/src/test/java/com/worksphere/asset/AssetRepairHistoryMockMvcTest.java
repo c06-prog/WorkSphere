@@ -423,4 +423,28 @@ public class AssetRepairHistoryMockMvcTest {
                         .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isMethodNotAllowed());
     }
+
+    @Test
+    @DisplayName("Tạo lịch sử bảo dưỡng thành công khi không truyền chi phí (cost is null/optional)")
+    void testCreateRepairHistoryWithNullCostSuccess() throws Exception {
+        CreateAssetRepairHistoryRequest request = new CreateAssetRepairHistoryRequest(
+                null,
+                AssetRepairType.INSPECTION,
+                "Kiểm định an toàn định kỳ không tính phí",
+                "Nội bộ",
+                null,
+                Instant.now(),
+                null,
+                "Đạt chuẩn"
+        );
+
+        mockMvc.perform(post("/api/v1/assets/{assetId}/repair-histories", testAsset.getId())
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.cost").doesNotExist())
+                .andExpect(jsonPath("$.data.description").value("Kiểm định an toàn định kỳ không tính phí"));
+    }
 }

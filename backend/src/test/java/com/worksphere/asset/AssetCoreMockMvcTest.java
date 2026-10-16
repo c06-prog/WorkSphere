@@ -496,8 +496,13 @@ public class AssetCoreMockMvcTest {
         com.fasterxml.jackson.databind.JsonNode empNode = objectMapper.readTree(empJson).path("data").path("relatedServiceRequests");
         assertThat(empNode.size()).isEqualTo(2);
         java.util.List<String> empSrNums = new java.util.ArrayList<>();
-        empNode.forEach(n -> empSrNums.add(n.path("requestNumber").asText()));
+        java.util.List<UUID> empSrIds = new java.util.ArrayList<>();
+        empNode.forEach(n -> {
+            empSrNums.add(n.path("requestNumber").asText());
+            empSrIds.add(UUID.fromString(n.path("id").asText()));
+        });
         assertThat(empSrNums).containsExactlyInAnyOrder("SR-REQ-01", "SR-REQ-02");
+        assertThat(empSrIds).containsExactlyInAnyOrder(sr1Id, sr2Id);
 
         // 2. Admin gọi GET /api/v1/assets/{id}: thấy tất cả non-deleted SR của asset này (SR1, SR2, SR3), không thấy SR4 (asset khác) và SR5 (đã xóa)
         MvcResult adminRes = mockMvc.perform(get("/api/v1/assets/" + asset.getId())
@@ -509,7 +514,12 @@ public class AssetCoreMockMvcTest {
         com.fasterxml.jackson.databind.JsonNode adminNode = objectMapper.readTree(adminJson).path("data").path("relatedServiceRequests");
         assertThat(adminNode.size()).isEqualTo(3);
         java.util.List<String> adminSrNums = new java.util.ArrayList<>();
-        adminNode.forEach(n -> adminSrNums.add(n.path("requestNumber").asText()));
+        java.util.List<UUID> adminSrIds = new java.util.ArrayList<>();
+        adminNode.forEach(n -> {
+            adminSrNums.add(n.path("requestNumber").asText());
+            adminSrIds.add(UUID.fromString(n.path("id").asText()));
+        });
         assertThat(adminSrNums).containsExactlyInAnyOrder("SR-REQ-01", "SR-REQ-02", "SR-REQ-03");
+        assertThat(adminSrIds).containsExactlyInAnyOrder(sr1Id, sr2Id, sr3Id);
     }
 }

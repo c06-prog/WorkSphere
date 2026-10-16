@@ -490,7 +490,8 @@ public class AssetAssignmentAndConcurrencyMockMvcTest {
                 assertThat(actives).as("Round " + round + " active assignments count").hasSize(1);
 
                 AssetAssignment activeAssignment = actives.get(0);
-                assertThat(activeAssignment.getAssignedTo()).isIn(employee1Id, employee2Id);
+                UUID expectedWinnerUser = r1Success ? employee1Id : employee2Id;
+                assertThat(activeAssignment.getAssignedTo()).isEqualTo(expectedWinnerUser);
                 assertThat(activeAssignment.getAssignedBy()).isEqualTo(adminUserId);
                 assertThat(activeAssignment.getAssignedAt()).isNotNull();
             }
@@ -550,11 +551,22 @@ public class AssetAssignmentAndConcurrencyMockMvcTest {
 
         try {
             ReturnAssetRequest returnReq = new ReturnAssetRequest("Thu hồi máy", AssetStatus.AVAILABLE, originalAssignmentVersion);
-            mockMvc.perform(put("/api/v1/assets/{assetId}/assignments/{assignmentId}/return", asset.getId(), assignmentId)
+            MvcResult failureResult = mockMvc.perform(put("/api/v1/assets/{assetId}/assignments/{assignmentId}/return", asset.getId(), assignmentId)
                             .header("Authorization", "Bearer " + adminToken)
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(returnReq)))
-                    .andExpect(status().isInternalServerError());
+                    .andExpect(status().isInternalServerError())
+                    .andExpect(jsonPath("$.code").value("INTERNAL_ERROR"))
+                    .andExpect(jsonPath("$.message").value("Đã xảy ra lỗi hệ thống"))
+                    .andReturn();
+
+            // Xác minh an toàn response: Không lộ stack trace, SQL, tên trigger function, hay thông tin nhạy cảm
+            String errorResponse = failureResult.getResponse().getContentAsString();
+            assertThat(errorResponse).doesNotContain("fail_asset_return_rollback_test");
+            assertThat(errorResponse).doesNotContain("Simulated failure");
+            assertThat(errorResponse).doesNotContain("BEFORE UPDATE ON assets");
+            assertThat(errorResponse).doesNotContain("SQLException");
+            assertThat(errorResponse).doesNotContain("PSQLException");
 
             // Đọc lại từ database qua fresh lookup để xác minh full rollback
             Asset afterFailureAsset = assetRepository.findById(asset.getId()).orElseThrow();

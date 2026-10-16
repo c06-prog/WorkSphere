@@ -2546,8 +2546,12 @@ Request:
 Quy tắc:
 
 - Chỉ áp dụng đối với phân công đang ở trạng thái `ACTIVE`. Nếu phân công đã kết thúc, trả về HTTP 400 `ASSET_ASSIGNMENT_NOT_ACTIVE`.
-- Trạng thái bàn giao `resultingAssetStatus` phải được chọn từ: `AVAILABLE`, `MAINTENANCE`, `BROKEN`, `RETIRED`. Nếu chỉ định giá trị không hợp lệ hoặc vi phạm ma trận chuyển đổi, trả về HTTP 400 `ASSET_STATUS_TRANSITION_INVALID`.
-- Trả thành công chuyển trạng thái phân công sang `RETURNED` (hoặc `DAMAGED`, `LOST` nếu tương ứng điều kiện trả), ghi nhận `returned_at` và `return_condition`. Trạng thái tài sản chuyển sang `resultingAssetStatus`.
+- Trả thành công chuyển trạng thái phân công sang `RETURNED`, ghi nhận `returned_at` và `return_condition`. Trạng thái tài sản chuyển sang `resultingAssetStatus`.
+- Vòng đời phân công được hỗ trợ trong Phase 10 (Supported assignment lifecycle):
+  `ACTIVE -> RETURNED`
+- Giá trị dự trữ schema, không mở qua API Phase 10 (Schema-reserved values, not exposed by Phase 10 API):
+  `LOST`, `DAMAGED`
+  (Quy trình xử lý phân công thất thoát/hư hỏng hoãn lại theo `ASSET_ASSIGNMENT_LOST_DAMAGED_WORKFLOW_DEFERRED`).
 
 Response:
 
