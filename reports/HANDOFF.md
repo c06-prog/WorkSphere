@@ -142,9 +142,13 @@
 ## Next Permitted Phase
 
 - **Giai đoạn 12: Khởi tạo ứng dụng mobile** (theo đúng `docs/08_DEVELOPMENT_ROADMAP.md` Section 16, P0, React Native và TypeScript).
-- Phase 11 (Notification và Personal Dashboard) đã hoàn thành, kiểm toán, làm cứng và đóng memory checkpoint (298/298 tests PASS, Checkstyle 0 violations).
-- Không tự ý triển khai Phase 12 nếu task chưa yêu cầu.
-- Không triển khai React Native / mobile source trong giai đoạn này.
+  - Phase 12A (Scaffold Baseline): PASS.
+  - Phase 12B (Theme & Navigation Shell): PASS & PATCHED.
+  - Phase 12C (10 Shared Components Foundation): PASS & PATCHED.
+  - Phase 12D (Network, Storage & Auth State Foundation): PASS (103/103 tests PASS, axios, react-native-keychain, async-storage, assembleDebug BUILD SUCCESSFUL, emulator smoke verified).
+  - Bước kế tiếp: Kiểm toán độc lập và hardening kết thúc Phase 12 (Phase 12 Final Audit / Hardening).
+  - Phase 13 (Authentication & Session State): Hoãn lại hoàn toàn, chưa bắt đầu.
+  - Checkpoint Phase 12 chưa đóng trước kiểm toán độc lập.
 
 ## New Session Procedure
 
