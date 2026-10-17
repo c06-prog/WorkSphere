@@ -3,6 +3,7 @@
 ## 1. Thông Tin Chung & Checkpoint
 - **Repository**: `D:\WorkSphere`
 - **Initial Checkpoint**: `c4bd8362c040d968a087898322780b0495fd6ff4` (`docs(design): harden phase 11 event and query policies`)
+- **Hardening Checkpoint**: `766d747ef4a429b3be5f7caccefca332fe304cbb` (`feat(notification): implement notification and personal dashboard`)
 - **Phạm vi triển khai**: Backend Java 21 / Spring Boot Modular Monolith.
 - **Quyết định kiến trúc & canonical nền tảng**: D-049 (Notification Idempotency & Transaction Safety) và D-050 (Event Matrix, Recipient Resolution & Dashboard Policies).
 
@@ -16,7 +17,7 @@
   5. Tạo unique constraint phục vụ idempotency: `CREATE UNIQUE INDEX uk_notifications_recipient_event ON notifications(recipient_id, event_key);`
   6. Tạo composite query index: `CREATE INDEX idx_notifications_recipient_created_at ON notifications(recipient_id, created_at DESC);`
   7. Giữ nguyên 3 chỉ mục sẵn có: `idx_notifications_recipient_id`, `idx_notifications_recipient_read`, `idx_notifications_created_at`.
-- **Preflight & Kiểm thử**: V017 migration test đã kiểm chứng việc chạy sạch từ V001 đến V017, validate thành công, backfill các hàng legacy đúng format `LEGACY_MIGRATION:{id}`, không có collision, chống trùng lặp theo `(recipient_id, event_key)` với mã lỗi Postgres `23505`, cho phép các recipient khác nhau có cùng `event_key`, bảo toàn rollback khi gặp lỗi preflight.
+- **Preflight & Kiểm thử**: V017 migration test đã kiểm chứng việc chạy sạch từ V001 đến V017, validate thành công, backfill các hàng legacy đúng format `LEGACY_MIGRATION:{id}`, bảo toàn 100% các cột nghiệp vụ cũ (title, message, reference fields, read status, timestamps), không có collision, chống trùng lặp theo `(recipient_id, event_key)` với mã lỗi Postgres `23505`, cho phép các recipient khác nhau có cùng `event_key`, và bảo toàn rollback transactional DDL/DML khi gặp lỗi preflight trên môi trường PostgreSQL Testcontainers.
 
 ## 3. Notification Domain & Idempotency
 - **Domain Entities & Enums**:
@@ -72,17 +73,18 @@ Mọi tích hợp đều tuân thủ loại trừ tác nhân (actor exclusion) v
    - Event Key: `ASSET_ASSIGNED:{assetId}:{assignmentId}`
    - Recipient: `assignedTo` user (loại trừ actor).
 
-## 6. Deadline Scanner & Scheduler
+## 6. Deadline Scanner & Keyset Pagination
 - **Cấu hình**:
   - `worksphere.notification.scheduling.enabled` (mặc định `true` cho production, `false` cho test profile).
   - `worksphere.notification.task-deadline-scan-delay: PT15M`.
   - `worksphere.notification.task-deadline-batch-size: 100`.
-- **Thực thi an toàn**:
-  - Tích hợp PostgreSQL advisory transaction lock: `pg_try_advisory_xact_lock(1101, 1)`. Nếu false, bỏ qua chu kỳ mà không báo lỗi.
-  - Phân trang xử lý batch 100 nhiệm vụ theo `due_date ASC, id ASC`.
+- **Thực thi an toàn & Chống Starvation**:
+  - Tích hợp PostgreSQL advisory transaction lock: `pg_try_advisory_xact_lock(1101, 1)`. Nếu false, bỏ qua chu kỳ mà không báo lỗi và không block phiên làm việc khác.
+  - Toàn bộ chu kỳ quét được bao bọc trong một transaction duy nhất bao trùm từ lúc lấy lock, duyệt keyset pages, chèn thông báo và commit.
+  - Phân trang Keyset pagination (`dueDate ASC, id ASC`) với cursor `(lastDueDate, lastTaskId)` giúp duyệt tuần tự toàn bộ danh sách task hợp lệ kể cả khi tổng số task vượt quá `batchSize`, triệt tiêu hoàn toàn nguy cơ starvation (`DEADLINE_SCANNER_BATCH_STARVATION_RISK`).
   - Chỉ quét các task chưa hoàn thành (loại trừ `COMPLETED`, `CANCELLED` và task bị xóa).
-  - Tự động sinh `TASK_DUE_SOON:{taskId}:{dueAtEpochMilli}` (trong vòng 24 giờ) và `TASK_OVERDUE:{taskId}:{dueAtEpochMilli}` (đã quá hạn).
-  - Injected `Clock` cho phép kiểm thử thời gian deterministic.
+  - Tự động sinh `TASK_DUE_SOON:{taskId}:{dueAtEpochMilli}` (theo chuẩn canonical: `now <= dueDate < now + 72 hours` với strict upper comparison `dueDate.isBefore(threshold)`) và `TASK_OVERDUE:{taskId}:{dueAtEpochMilli}` (`dueDate < now`).
+  - Injected `Clock` cho phép kiểm thử thời gian deterministic và dùng chung giá trị `now` thống nhất trong cả chu kỳ.
 
 ## 7. Personal Dashboard API
 - **Endpoint**: `GET /api/v1/dashboard/me` (Chỉ triển khai endpoint này; không tạo stub hay triển khai Project Dashboard `GET /projects/{projectId}/dashboard`).
@@ -95,17 +97,17 @@ Mọi tích hợp đều tuân thủ loại trừ tác nhân (actor exclusion) v
   - `recentNotifications`: Top 5 thông báo mới nhất của người dùng, sắp xếp `created_at DESC, id DESC`.
 
 ## 8. Kết Quả Kiểm Thử & Xác Minh
-- **Kiểm thử Phase 11 mới**:
-  - `V017MigrationTest`: 4 tests PASS (clean migrate, validate, backfill, unique constraint 23505).
+- **Kiểm thử Phase 11 (38 tests PASS)**:
+  - `V017MigrationTest`: 5 tests PASS (clean migrate, validate, backfill, unique constraint 23505, data preservation, preflight failure transactional DDL/DML rollback).
   - `NotificationMockMvcTest`: 6 tests PASS (own notifications, unread count, mark read idempotent, mark all read, permissions).
   - `NotificationPreferenceMockMvcTest`: 5 tests PASS (default preferences, upsert, validation duplicate/invalid type).
-  - `NotificationIdempotencyAndScannerTest`: 4 tests PASS (idempotent duplicate ignore, preference disabling, scanner overdue/duesoon, lock concurrency).
-  - `SourceNotificationIntegrationTest`: 6 tests PASS (project member, task assign/status/comment, service request assign/comment, asset assign, actor exclusion).
+  - `NotificationIdempotencyAndScannerTest`: 7 tests PASS (idempotent duplicate ignore, preference disabling, scanner overdue/duesoon, keyset pagination starvation prevention with 25 tasks, advisory lock contention skip, strict due-soon boundary checks).
+  - `SourceNotificationIntegrationTest`: 10 tests PASS (project member, task assign/status/comment, service request assign/comment, asset assign, actor exclusion, public SR comment actor scenarios, source transaction rollback on Task status change failure, source transaction rollback on Asset assignment failure, duplicate idempotent non-rollback).
   - `DashboardMockMvcTest`: 5 tests PASS (task summary, upcoming tasks top 5, service request distinct, project membership scoping, notifications top 5).
 - **Hồi quy toàn bộ hệ thống**:
-  - Tổng số tests: **290 / 290 PASS** (exit code 0, BUILD SUCCESS).
+  - Tổng số tests: **298 / 298 PASS** (exit code 0, BUILD SUCCESS).
   - Checkstyle: **0 violations** (`mvnw checkstyle:check`).
-  - Migrations: V001 đến V017 hợp lệ hoàn toàn.
+  - Migrations: V001 đến V017 hợp lệ hoàn toàn. Không có V018.
 
 ## 9. Các Kênh & Chức Năng Deferred
 Tuân thủ nghiêm ngặt phạm vi Phase 11, các chức năng sau được bảo toàn hoãn lại:

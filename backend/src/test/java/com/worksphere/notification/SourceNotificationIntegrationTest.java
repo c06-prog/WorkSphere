@@ -59,6 +59,12 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import com.worksphere.notification.domain.NotificationReferenceType;
+import com.worksphere.notification.application.NotificationEventDispatcher;
+import com.worksphere.notification.application.NotificationApplicationService;
+import com.worksphere.service_request.infrastructure.persistence.ServiceAssignmentRepository;
 
 @SpringBootTest
 @Testcontainers
@@ -126,6 +132,15 @@ public class SourceNotificationIntegrationTest {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    @Autowired
+    private ServiceAssignmentRepository serviceAssignmentRepository;
+
+    @Autowired
+    private NotificationEventDispatcher eventDispatcher;
+
+    @Autowired
+    private NotificationApplicationService notificationService;
+
     private UUID adminId;
     private UUID leaderId;
     private UUID employeeId;
@@ -148,6 +163,7 @@ public class SourceNotificationIntegrationTest {
         jdbcTemplate.update("DELETE FROM projects");
         jdbcTemplate.update("DELETE FROM service_assignments");
         jdbcTemplate.update("DELETE FROM service_comments");
+        jdbcTemplate.update("DELETE FROM service_status_histories");
         jdbcTemplate.update("DELETE FROM service_requests");
         jdbcTemplate.update("DELETE FROM service_categories");
         jdbcTemplate.update("DELETE FROM asset_repair_histories");
@@ -343,6 +359,228 @@ public class SourceNotificationIntegrationTest {
         assertThat(empNotifs).hasSize(1);
         assertThat(empNotifs.get(0).getTitle()).contains("cấp phát tài sản");
         assertThat(empNotifs.get(0).getMessage()).contains("MacBook Pro M3");
+    }
+
+    @Test
+    @DisplayName("Service Request: Public comment notifications for requester, assignee, admin and preference handling")
+    void testServiceRequestPublicCommentNotifications_AllActorScenarios() {
+        UUID catId = UUID.randomUUID();
+        ServiceCategory cat = ServiceCategory.create(catId, null, "CAT_SR_CMT", "SR Cat", "Desc", ServicePriority.MEDIUM, true, Instant.now());
+        serviceCategoryRepository.save(cat);
+
+        UUID requestId = UUID.randomUUID();
+        ServiceRequest sr = ServiceRequest.create(
+                requestId, "SR-2026-999001", catId, employeeId, null, "Network issue", "Desc",
+                ServicePriority.MEDIUM, employeeId, Instant.now()
+        );
+        serviceRequestRepository.save(sr);
+
+        // Assign to Leader
+        serviceRequestService.assignRequest(requestId, new AssignServiceRequestRequest(leaderId), adminPrincipal);
+        notificationRepository.deleteAll();
+
+        // Scenario A: Requester (employee) public comment -> Active assignee (leader) receives notification, requester excluded
+        serviceRequestService.createComment(requestId, new CreateServiceCommentRequest("Requester comment", false, null), employeePrincipal);
+
+        List<Notification> notifsA = notificationRepository.findAll();
+        assertThat(notifsA.stream().filter(n -> employeeId.equals(n.getRecipientId()))).isEmpty();
+        List<Notification> leaderNotifsA = notifsA.stream()
+                .filter(n -> leaderId.equals(n.getRecipientId()) && n.getType() == NotificationType.COMMENT_ADDED)
+                .toList();
+        assertThat(leaderNotifsA).hasSize(1);
+        assertThat(leaderNotifsA.get(0).getReferenceType()).isEqualTo(NotificationReferenceType.SERVICE_REQUEST);
+        assertThat(leaderNotifsA.get(0).getReferenceId()).isEqualTo(requestId);
+        assertThat(leaderNotifsA.get(0).getEventKey()).startsWith("COMMENT_ADDED:SERVICE_REQUEST:");
+
+        notificationRepository.deleteAll();
+
+        // Scenario B: Active assignee (leader) public comment -> Requester (employee) receives notification, leader excluded
+        serviceRequestService.createComment(requestId, new CreateServiceCommentRequest("Leader public update", false, null), leaderPrincipal);
+
+        List<Notification> notifsB = notificationRepository.findAll();
+        assertThat(notifsB.stream().filter(n -> leaderId.equals(n.getRecipientId()))).isEmpty();
+        List<Notification> empNotifsB = notifsB.stream()
+                .filter(n -> employeeId.equals(n.getRecipientId()) && n.getType() == NotificationType.COMMENT_ADDED)
+                .toList();
+        assertThat(empNotifsB).hasSize(1);
+        assertThat(empNotifsB.get(0).getReferenceType()).isEqualTo(NotificationReferenceType.SERVICE_REQUEST);
+        assertThat(empNotifsB.get(0).getReferenceId()).isEqualTo(requestId);
+
+        notificationRepository.deleteAll();
+
+        // Scenario C: Admin public comment -> Both requester and active assignee receive notification, admin excluded
+        serviceRequestService.createComment(requestId, new CreateServiceCommentRequest("Admin observation", false, null), adminPrincipal);
+
+        List<Notification> notifsC = notificationRepository.findAll();
+        assertThat(notifsC.stream().filter(n -> adminId.equals(n.getRecipientId()))).isEmpty();
+        assertThat(notifsC.stream().filter(n -> employeeId.equals(n.getRecipientId()) && n.getType() == NotificationType.COMMENT_ADDED)).hasSize(1);
+        assertThat(notifsC.stream().filter(n -> leaderId.equals(n.getRecipientId()) && n.getType() == NotificationType.COMMENT_ADDED)).hasSize(1);
+
+        notificationRepository.deleteAll();
+
+        // Scenario D: Internal note -> Requester NOT notified
+        serviceRequestService.createComment(requestId, new CreateServiceCommentRequest("Internal technician note", true, null), leaderPrincipal);
+        assertThat(notificationRepository.findAll().stream().filter(n -> employeeId.equals(n.getRecipientId()))).isEmpty();
+
+        notificationRepository.deleteAll();
+
+        // Scenario E: Preference disabled for employee -> comment still commits, no notification created, re-enabling does not backfill
+        jdbcTemplate.update("""
+                INSERT INTO notification_preferences (id, user_id, notification_type, in_app_enabled, push_enabled, email_enabled, updated_at)
+                VALUES (?, ?, 'COMMENT_ADDED', FALSE, TRUE, FALSE, NOW())
+                ON CONFLICT (user_id, notification_type) DO UPDATE SET in_app_enabled = FALSE
+                """, UUID.randomUUID(), employeeId);
+
+        serviceRequestService.createComment(requestId, new CreateServiceCommentRequest("New update after disabled", false, null), leaderPrincipal);
+
+        assertThat(notificationRepository.findAll().stream().filter(n -> employeeId.equals(n.getRecipientId()))).isEmpty();
+
+        // Re-enable preference
+        jdbcTemplate.update("UPDATE notification_preferences SET in_app_enabled = TRUE WHERE user_id = ? AND notification_type = 'COMMENT_ADDED'", employeeId);
+        // Assert no backfill
+        assertThat(notificationRepository.findAll().stream().filter(n -> employeeId.equals(n.getRecipientId()))).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Rollback: Database failure during notification insert rolls back Task status change transaction")
+    void testSourceTransactionRollbackOnNotificationFailure_TaskStatus() {
+        UUID taskId = UUID.randomUUID();
+        Task task = Task.create(
+                taskId, projectId, null, null, "Rollback Task Test", "Desc",
+                TaskPriority.HIGH, adminId, null, null, 60, adminId
+        );
+        taskRepository.save(task);
+        taskAssignmentRepository.save(TaskAssignment.create(UUID.randomUUID(), taskId, employeeId, adminId));
+
+        // Create temporary trigger failing TASK_STATUS_CHANGED notifications
+        jdbcTemplate.execute("""
+                CREATE OR REPLACE FUNCTION fail_task_status_notif() RETURNS TRIGGER AS $$
+                BEGIN
+                    IF NEW.event_key LIKE 'TASK_STATUS_CHANGED:%' THEN
+                        RAISE EXCEPTION 'Simulated notification DB failure';
+                    END IF;
+                    RETURN NEW;
+                END;
+                $$ LANGUAGE plpgsql;
+                """);
+        jdbcTemplate.execute("""
+                CREATE TRIGGER trg_fail_task_status_notif
+                BEFORE INSERT ON notifications
+                FOR EACH ROW EXECUTE FUNCTION fail_task_status_notif();
+                """);
+
+        try {
+            assertThatThrownBy(() ->
+                    taskService.changeStatus(taskId, new ChangeTaskStatusRequest(TaskStatus.IN_PROGRESS, "Starting work", 0L), employeePrincipal)
+            ).isInstanceOf(Exception.class);
+
+            // Verify ACID rollback in fresh direct SQL: status, version, history count, and notification count are unchanged
+            String status = jdbcTemplate.queryForObject("SELECT status FROM tasks WHERE id = ?", String.class, taskId);
+            assertThat(status).isEqualTo("TODO");
+
+            Long version = jdbcTemplate.queryForObject("SELECT version FROM tasks WHERE id = ?", Long.class, taskId);
+            assertThat(version).isEqualTo(0L);
+
+            Long historyCount = jdbcTemplate.queryForObject("SELECT count(*) FROM task_status_histories WHERE task_id = ?", Long.class, taskId);
+            assertThat(historyCount).isEqualTo(0L);
+
+            Long notifCount = jdbcTemplate.queryForObject("SELECT count(*) FROM notifications WHERE reference_id = ?", Long.class, taskId);
+            assertThat(notifCount).isEqualTo(0L);
+        } finally {
+            jdbcTemplate.execute("DROP TRIGGER IF EXISTS trg_fail_task_status_notif ON notifications");
+            jdbcTemplate.execute("DROP FUNCTION IF EXISTS fail_task_status_notif()");
+        }
+    }
+
+    @Test
+    @DisplayName("Rollback: Database failure during notification insert rolls back Asset assignment transaction")
+    void testSourceTransactionRollbackOnNotificationFailure_AssetAssignment() {
+        UUID catId = UUID.randomUUID();
+        AssetCategory cat = AssetCategory.create(catId, "ASSET_CAT_ROLLBACK", "Category Rollback", "Desc", true, Instant.now());
+        assetCategoryRepository.save(cat);
+
+        UUID assetId = UUID.randomUUID();
+        Asset asset = Asset.create(
+                assetId, "AST-RB-01", catId, "Dell XPS 15", "Desc",
+                "SN-RB-1111", "Dell", "15-inch", null, null, null, "Tech", adminId, Instant.now()
+        );
+        assetRepository.save(asset);
+
+        // Create temporary trigger failing ASSET_ASSIGNED notifications
+        jdbcTemplate.execute("""
+                CREATE OR REPLACE FUNCTION fail_asset_assign_notif() RETURNS TRIGGER AS $$
+                BEGIN
+                    IF NEW.event_key LIKE 'ASSET_ASSIGNED:%' THEN
+                        RAISE EXCEPTION 'Simulated asset notification DB failure';
+                    END IF;
+                    RETURN NEW;
+                END;
+                $$ LANGUAGE plpgsql;
+                """);
+        jdbcTemplate.execute("""
+                CREATE TRIGGER trg_fail_asset_assign_notif
+                BEFORE INSERT ON notifications
+                FOR EACH ROW EXECUTE FUNCTION fail_asset_assign_notif();
+                """);
+
+        try {
+            assertThatThrownBy(() ->
+                    assetService.assignAsset(assetId, new AssignAssetRequest(employeeId, null, "Assign test"), adminPrincipal)
+            ).isInstanceOf(Exception.class);
+
+            // Verify ACID rollback in fresh direct SQL: asset remains AVAILABLE, no assignment row committed
+            String assetStatus = jdbcTemplate.queryForObject("SELECT status FROM assets WHERE id = ?", String.class, assetId);
+            assertThat(assetStatus).isEqualTo("AVAILABLE");
+
+            Long assignmentCount = jdbcTemplate.queryForObject("SELECT count(*) FROM asset_assignments WHERE asset_id = ?", Long.class, assetId);
+            assertThat(assignmentCount).isEqualTo(0L);
+
+            Long notifCount = jdbcTemplate.queryForObject("SELECT count(*) FROM notifications WHERE reference_id = ?", Long.class, assetId);
+            assertThat(notifCount).isEqualTo(0L);
+        } finally {
+            jdbcTemplate.execute("DROP TRIGGER IF EXISTS trg_fail_asset_assign_notif ON notifications");
+            jdbcTemplate.execute("DROP FUNCTION IF EXISTS fail_asset_assign_notif()");
+        }
+    }
+
+    @Test
+    @DisplayName("Idempotency: Duplicate notification insert returns 0 and does not rollback source transaction")
+    void testDuplicateNotificationDoesNotRollbackSourceTransaction() {
+        UUID taskId = UUID.randomUUID();
+        Task task = Task.create(
+                taskId, projectId, null, null, "Duplicate Idempotent Task", "Desc",
+                TaskPriority.MEDIUM, adminId, null, null, 60, adminId
+        );
+        taskRepository.save(task);
+
+        UUID assignmentId = UUID.randomUUID();
+        String eventKey = "TASK_ASSIGNED:" + taskId + ":" + assignmentId;
+
+        // Pre-seed exact notification
+        notificationService.deliverInAppNotification(
+                employeeId, NotificationType.TASK_ASSIGNED,
+                "Pre-seeded", "Pre-seeded", NotificationReferenceType.TASK, taskId, eventKey
+        );
+        assertThat(notificationRepository.findAll().stream().filter(n -> eventKey.equals(n.getEventKey())).count()).isEqualTo(1L);
+
+        // Execute in transaction: save new assignment and call dispatcher with the duplicate eventKey
+        org.springframework.transaction.support.TransactionTemplate txTemplate =
+                new org.springframework.transaction.support.TransactionTemplate(transactionManager);
+
+        txTemplate.executeWithoutResult(status -> {
+            TaskAssignment assignment = TaskAssignment.create(assignmentId, taskId, employeeId, adminId);
+            taskAssignmentRepository.saveAndFlush(assignment);
+
+            // Duplicate dispatch (returns 0 affected rows)
+            eventDispatcher.onTaskAssigned(taskId, assignmentId, employeeId, adminId, task.getTitle());
+        });
+
+        // Verification: Assignment committed successfully, notification count is still exactly 1, no rollback!
+        Long assignCount = jdbcTemplate.queryForObject("SELECT count(*) FROM task_assignments WHERE id = ?", Long.class, assignmentId);
+        assertThat(assignCount).isEqualTo(1L);
+
+        long finalNotifCount = notificationRepository.findAll().stream().filter(n -> eventKey.equals(n.getEventKey())).count();
+        assertThat(finalNotifCount).isEqualTo(1L);
     }
 
     private void createTestUser(UUID userId, String username, String email, String roleCode) {

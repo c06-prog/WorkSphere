@@ -246,7 +246,7 @@
 ## Next Permitted Phase
 
 - **Giai đoạn 12: Báo cáo, Thống kê và Xuất dữ liệu** (theo đúng `docs/08_DEVELOPMENT_ROADMAP.md` Section 16, P1).
-- Phase 11: Notification and Personal Dashboard is COMPLETED and VALIDATED (290/290 tests PASS, Checkstyle 0 violations).
+- Phase 11: Notification and Personal Dashboard is COMPLETED, AUDITED, HARDENED and VALIDATED (298/298 tests PASS, Checkstyle 0 violations).
 - Không tự ý triển khai Phase 12 nếu task chưa yêu cầu.
 - Không triển khai React Native / mobile source trong giai đoạn này.
 

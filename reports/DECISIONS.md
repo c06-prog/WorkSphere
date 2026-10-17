@@ -823,3 +823,17 @@ Current operating mode:
      - Được định danh chính xác là: `CONTROLLED DETERMINISTIC DATA BACKFILL`.
      - Sử dụng deterministic legacy key: `LEGACY_MIGRATION:{notificationId}` bảo đảm zero collision.
      - Giữ nguyên toàn bộ 3 index hiện hữu (`idx_notifications_recipient_id`, `idx_notifications_recipient_read`, `idx_notifications_created_at`). Bổ sung `uk_notifications_recipient_event` và `idx_notifications_recipient_created_at`.
+
+## D-051: Làm cứng Deadline Scanner Keyset Pagination, Bằng chứng Transaction Rollback và Event Coverage (Phase 11 Hardening)
+
+- **Ngày quyết định**: 2026-10-17.
+- **Phạm vi**: Backend Module Notification và Personal Dashboard (Phase 11) - Hardening sau kiểm toán.
+- **Tình trạng**: APPROVED / IMPLEMENTED.
+- **Nội dung quyết định**:
+  1. **Keyset pagination cho TaskDeadlineScanner**: Triển khai phân trang keyset dựa trên con trỏ `(lastDueDate, lastTaskId)` sắp xếp `dueDate ASC, id ASC` trong cùng phạm vi transaction advisory lock `(1101, 1)`. Loại bỏ triệt để nguy cơ starvation khi số lượng task vượt quá `batchSize` (100).
+  2. **Chuẩn hóa boundary due-soon**: Sử dụng so sánh cận trên nghiêm ngặt `dueDate.isBefore(threshold)` cho `now <= dueDate < now + 72 hours`, loại trừ `dueDate == now + 72h`.
+  3. **Bằng chứng rollback giao dịch nguồn khi chèn Notification thất bại**: Kiểm thử PostgreSQL failure injection bằng trigger chứng minh tính nguyên tử ACID: khi chèn notification gặp lỗi CSDL, giao dịch thay đổi trạng thái Task hoặc cấp phát Asset được rollback hoàn toàn; không có dữ liệu nghiệp vụ nào bị commit dang dở.
+  4. **Xác minh không rollback khi chèn trùng lặp**: Khẳng định `affectedRows = 0` từ `ON CONFLICT DO NOTHING` là thành công lũy đẳng, không gây rollback giao dịch nguồn.
+  5. **Bao phủ kiểm thử sự kiện bình luận công khai Service Request**: Kiểm thử đầy đủ các kịch bản actor (requester, assignee, admin), loại trừ actor, ghi chú nội bộ không thông báo, và tắt tùy chọn `inAppEnabled` không backfill.
+  6. **Kiểm thử bảo toàn dữ liệu và rollback di trú V017**: Xác minh tính nguyên tử transactional DDL/DML của V017 trên PostgreSQL Testcontainers; preflight failure rollback bảo toàn trọn vẹn dữ liệu và cấu trúc trước V017.
+  7. **Hardening Test Cleanup Listener**: Kiểm tra sự tồn tại của bảng `notifications` và `notification_preferences` qua `to_regclass` trên PostgreSQL hoặc metadata JDBC trên non-Postgres; chỉ xóa đúng 2 bảng này; không làm thay đổi vòng đời của các test slice khác.

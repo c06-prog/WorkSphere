@@ -4,26 +4,23 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: KIỂM TOÁN VÀ LÀM CỨNG QUYẾT ĐỊNH PHASE 11 TRƯỚC IMPLEMENTATION
-- Base Phase 10 Implementation: `46b3b5ca7023f4b1c5e4633def1f0f8e16816602`
-- First Hardening Commit: `af165119efa9d2ed7c062a53eb10da2df757bc1a`
-- Latest Validated Phase 10 Implementation: `cd9c972cb18c0158807c47a260e21ddfca019427`
-- Phase 11 Design Finalization Checkpoint: `12100a9292da398a00b4a71837615a20757650ca`
-- Operational Documentation Checkpoint: reports/DECISIONS.md (D-046, D-047, D-048, D-049, D-050), reports/PHASE_10_REPORT.md, reports/PROJECT_STATE.md, reports/HANDOFF.md, reports/runbooks/V017_NOTIFICATION_IDEMPOTENCY_PLAN.md
-- Phase 10 Status: COMPLETED, AUDITED, HARDENED, AUTHORIZATION, CONCURRENCY AND TRANSACTION VALIDATED
-- Phase 11 Design Status: FINALIZED AND HARDENED (Decisions D-049, D-050)
+- Current Task: HARDENING PHASE 11 - DEADLINE SCANNER, TRANSACTION ROLLBACK VÀ EVENT COVERAGE
+- Base Phase 11 Implementation Checkpoint: `766d747ef4a429b3be5f7caccefca332fe304cbb`
+- Phase 11 Hardening Commit: Pending push
+- Operational Documentation Checkpoint: reports/DECISIONS.md (D-049, D-050, D-051), reports/PHASE_11_REPORT.md, reports/PROJECT_STATE.md, reports/HANDOFF.md
+- Phase 10 Status: COMPLETED, AUDITED, HARDENED
+- Phase 11 Status: COMPLETED, AUDITED, HARDENED (Decision D-051)
 - Working tree: clean (sau khi commit)
 - Build status: BUILD SUCCESS (Maven 3.9.16, Spring Boot 4.1.1, Java target 21, Checkstyle 0 violations)
 - Test status:
-  - Host Suite (Oracle JDK 27, Testcontainers PostgreSQL): 260/260 PASS (0 failures, 0 errors, 0 skipped)
-  - Regression Suite (Phase 0 - Phase 9): 206/210 PASS
-  - Phase 10 Asset Tests: 50/50 PASS across 6 test classes (run twice consecutively, 0 flakiness):
-    - `V016MigrationTest`: 8/8 PASS
-    - `AssetCategoryMockMvcTest`: 9/9 PASS
-    - `AssetCoreMockMvcTest`: 13/13 PASS
-    - `AssetAssignmentAndConcurrencyMockMvcTest`: 10/10 PASS
-    - `AssetRepairHistoryMockMvcTest`: 8/8 PASS
-    - `AssetServiceRequestIntegrationMockMvcTest`: 6/6 PASS
+  - Host Suite (Oracle JDK 27, Testcontainers PostgreSQL): 298/298 PASS (0 failures, 0 errors, 0 skipped)
+  - Targeted Phase 11 Suite: 38/38 PASS across 5 test classes (run twice consecutively, 0 flakiness):
+    - `V017MigrationTest`: 4/4 PASS
+    - `NotificationMockMvcTest`: 8/8 PASS
+    - `NotificationPreferenceMockMvcTest`: 5/5 PASS
+    - `NotificationIdempotencyAndScannerTest`: 6/6 PASS (includes keyset pagination starvation test with 25 tasks, advisory lock contention skip test, strict boundary tests)
+    - `SourceNotificationIntegrationTest`: 10/10 PASS (includes public SR comment coverage, failure-injection rollback tests on Task status change and Asset assignment, duplicate idempotent non-rollback test)
+    - `DashboardMockMvcTest`: 5/5 PASS
 
 ## Phase 10 Asset Management Module: COMPLETED & HARDENED
 
@@ -89,7 +86,7 @@
 ## Next Permitted Phase
 
 - **Giai đoạn 12: Báo cáo, Thống kê và Xuất dữ liệu** (theo đúng `docs/08_DEVELOPMENT_ROADMAP.md` Section 16, P1).
-- Phase 11 (Notification và Personal Dashboard) đã hoàn thành, kiểm thử 290/290 PASS, Checkstyle 0 violations.
+- Phase 11 (Notification và Personal Dashboard) đã hoàn thành và làm cứng (Decisions D-049, D-050, D-051), kiểm thử 298/298 PASS, 38 Phase 11 targeted tests PASS, Checkstyle 0 violations.
 - Không tự ý triển khai Phase 12 nếu task chưa yêu cầu.
 - Không triển khai React Native / mobile source trong giai đoạn này.
 
