@@ -282,23 +282,44 @@ Ngày xác minh: 15/10/2026.
 ---
 
 ### 2.12. Android SDK
-- **Mục đích**: Bộ công cụ phát triển phần mềm cho hệ điều hành Android.
+- **Mục đích**: Bộ công cụ phát triển phần mềm cho hệ điều hành Android phục vụ Phase 12 mobile initialization.
 - **Trạng thái**: `INSTALLED`
-- **Phiên bản**: Android 15 (API 35), Build-tools, Command-line Tools latest
+- **Android SDK Root**: `D:\AndroidSDK` (Được gán biến môi trường `$env:ANDROID_HOME`)
+- **Installed Platforms**:
+  - `platforms/android-35` (Android 15, API 35)
+  - `platforms/android-37.0` (Android API 37, Revision 2 - template compileSdk 37)
+- **Installed Build-Tools**:
+  - `build-tools/36.0.0`
+  - `build-tools/37.0.0` (Template prerequisite cho React Native 0.88.0)
+- **Installed NDK**:
+  - `ndk/27.1.12297006` (NDK Side-by-side 27.1.12297006 - template ndkVersion)
+- **Installed Platform-Tools**: `37.0.1` (`adb` 1.0.41)
+- **Installed Command-line Tools**: `cmdline-tools/latest` (v23.0.0)
+- **Node / npm Baseline**: Node `v24.19.0`, npm `11.17.0` (Node 24.x baseline tương thích `react-native@0.88.0` engine `^24.3.0`)
+- **Gradle JVM Candidates**:
+  - `D:\Android\jbr` (OpenJDK 25.0.3, Android Studio JBR - khuyến nghị cho Android build)
+  - `D:\Java` (Oracle JDK 27 - Launcher JVM 27)
 - **Publisher**: Google LLC
-- **Nguồn cài đặt**: Android SDK Manager
-- **License**: Android Software Development Kit License
+- **Nguồn cài đặt**: Android SDK Manager (`D:\AndroidSDK\cmdline-tools\latest\bin\sdkmanager.bat`)
+- **License**: Android Software Development Kit License (`D:\AndroidSDK\licenses\android-sdk-license`)
 - **Executable path**: `D:\AndroidSDK\cmdline-tools\latest\bin\sdkmanager.bat`
-- **Data path**: `D:\AndroidSDK` (Được gán biến môi trường `$env:ANDROID_HOME`)
+- **Data path**: `D:\AndroidSDK`
 - **Cache path**: `D:\AndroidSDK\.temp`
 - **Config path**: `C:\Users\dienm\.android`
 - **Log path**: N/A
 - **Cách mở**: Quản lý qua `sdkmanager` CLI hoặc Android Studio SDK Manager
-- **Lệnh kiểm tra**: `Get-ChildItem "D:\AndroidSDK"`
+- **Lệnh kiểm tra & xác minh**:
+  ```powershell
+  Get-ChildItem "D:\AndroidSDK\build-tools"
+  Get-ChildItem "D:\AndroidSDK\platforms"
+  Get-ChildItem "D:\AndroidSDK\ndk"
+  $env:JAVA_HOME = "D:\Android\jbr"
+  & "D:\AndroidSDK\cmdline-tools\latest\bin\sdkmanager.bat" --list_installed
+  ```
 - **Quyền Administrator**: Không cần
-- **Tích hợp WorkSphere**: Biên dịch và đóng gói ứng dụng React Native cho nền tảng Android
+- **Tích hợp WorkSphere**: Biên dịch, liên kết NDK và đóng gói ứng dụng React Native cho nền tảng Android trong Phase 12
 - **Ghi chú an toàn**: Cấm xóa hoặc di chuyển thư mục `D:\AndroidSDK`
-- **Ngày xác minh**: 15/10/2026
+- **Ngày xác minh**: 17/10/2026
 - **Cách tìm lại**: `$env:ANDROID_HOME`, `D:\AndroidSDK`
 
 ---
