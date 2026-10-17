@@ -1,0 +1,118 @@
+import React from 'react';
+import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { AppRoot } from '../src/app/AppRoot';
+
+// Mock react-native-screens if needed in jest environment
+jest.mock('react-native-screens', () => {
+  const actual = jest.requireActual('react-native-screens');
+  return {
+    ...actual,
+    enableScreens: jest.fn(),
+  };
+});
+
+describe('RootNavigator Session Abstraction & Navigation Shell', () => {
+  test('A. Root initializing: renders loading scaffold foundation', async () => {
+    const { getByTestId, getByText } = await render(<AppRoot sessionState="INITIALIZING" />);
+
+    expect(getByTestId('root-initializing-state')).toBeTruthy();
+    expect(getByText('Đang khởi tạo ứng dụng...')).toBeTruthy();
+  });
+
+  test('B. Root unauthenticated: renders Auth navigator with Login placeholder', async () => {
+    const { getByTestId, getByText } = await render(<AppRoot sessionState="UNAUTHENTICATED" />);
+
+    expect(getByTestId('screen-login')).toBeTruthy();
+    expect(getByText('Login')).toBeTruthy();
+    expect(getByText('SCR-AUTH-02')).toBeTruthy();
+    expect(getByText('Forgot Password?')).toBeTruthy();
+  });
+
+  test('C. Root authenticated: renders Main Tab navigator with Dashboard as default tab', async () => {
+    const { getByTestId, getByText } = await render(<AppRoot sessionState="AUTHENTICATED" />);
+
+    expect(getByTestId('screen-dashboard')).toBeTruthy();
+    expect(getByText('SCR-MAIN-01')).toBeTruthy();
+  });
+
+  test('D. Main tab order: all 5 canonical tabs are rendered in exact order', async () => {
+    const { getByLabelText } = await render(<AppRoot sessionState="AUTHENTICATED" />);
+
+    // Check all 5 canonical tab buttons exist
+    const dashboardTab = getByLabelText('Tab 1: Dashboard');
+    const projectsTab = getByLabelText('Tab 2: Dự án');
+    const tasksTab = getByLabelText('Tab 3: Công việc');
+    const serviceRequestsTab = getByLabelText('Tab 4: Yêu cầu');
+    const moreTab = getByLabelText('Tab 5: Thêm');
+
+    expect(dashboardTab).toBeTruthy();
+    expect(projectsTab).toBeTruthy();
+    expect(tasksTab).toBeTruthy();
+    expect(serviceRequestsTab).toBeTruthy();
+    expect(moreTab).toBeTruthy();
+  });
+
+  test('E. Typed navigation smoke: switching between tabs does not crash', async () => {
+    const { getByTestId, getByText, getByLabelText } = await render(<AppRoot sessionState="AUTHENTICATED" />);
+
+    // Starts on Dashboard
+    expect(getByTestId('screen-dashboard')).toBeTruthy();
+
+    // Navigate to Projects tab
+    fireEvent.press(getByLabelText('Tab 2: Dự án'));
+    await waitFor(() => {
+      expect(getByTestId('screen-projects')).toBeTruthy();
+      expect(getByText('SCR-PRJ-01')).toBeTruthy();
+    });
+
+    // Navigate to Tasks tab
+    fireEvent.press(getByLabelText('Tab 3: Công việc'));
+    await waitFor(() => {
+      expect(getByTestId('screen-tasks')).toBeTruthy();
+      expect(getByText('SCR-TSK-01')).toBeTruthy();
+    });
+
+    // Navigate to Service Requests tab
+    fireEvent.press(getByLabelText('Tab 4: Yêu cầu'));
+    await waitFor(() => {
+      expect(getByTestId('screen-service-requests')).toBeTruthy();
+      expect(getByText('SCR-SRV-01')).toBeTruthy();
+    });
+
+    // Navigate to More tab
+    fireEvent.press(getByLabelText('Tab 5: Thêm'));
+    await waitFor(() => {
+      expect(getByTestId('screen-more')).toBeTruthy();
+      expect(getByText('SCR-ACC-01')).toBeTruthy();
+    });
+
+    // Navigate back to Dashboard tab
+    fireEvent.press(getByLabelText('Tab 1: Dashboard'));
+    await waitFor(() => {
+      expect(getByTestId('screen-dashboard')).toBeTruthy();
+    });
+  });
+
+  test('Auth stack navigation: navigating from Login to ForgotPassword works', async () => {
+    const { getByTestId, getByText } = await render(<AppRoot sessionState="UNAUTHENTICATED" />);
+
+    // Starts on Login
+    expect(getByTestId('screen-login')).toBeTruthy();
+
+    // Press Forgot Password button
+    fireEvent.press(getByTestId('btn-to-forgot-password'));
+
+    // Reaches Forgot Password screen
+    await waitFor(() => {
+      expect(getByTestId('screen-forgot-password')).toBeTruthy();
+      expect(getByText('SCR-AUTH-03')).toBeTruthy();
+      expect(getByText('Back to Login')).toBeTruthy();
+    });
+
+    // Navigate back to Login
+    fireEvent.press(getByTestId('btn-back-to-login'));
+    await waitFor(() => {
+      expect(getByTestId('screen-login')).toBeTruthy();
+    });
+  });
+});

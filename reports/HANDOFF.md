@@ -4,16 +4,15 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: KHẮC PHỤC SIDE EFFECT MÔI TRƯỜNG VÀ ĐỒNG BỘ CI SAU PHASE 12A
+- Current Task: PHASE 12B - THEME FOUNDATION VÀ NAVIGATION SHELL
 - Phase 11 Status: COMPLETED, AUDITED, HARDENED (Checkstyle 0, Tests 298/298 PASS)
 - Phase 12 Tooling Checkpoint: `ab006e409a57bec93bd98b03b38d5188b98304f8`
 - Phase 12A Scaffold Baseline Checkpoint: `d61358e3e2322ae8933c6b241680ddc563594d6e`
-- Phase 12A Status: SCAFFOLD PASS, ANDROID ASSEMBLE DEBUG PASS, EMULATOR SMOKE PASS
-- Environment & CI Patch:
-  - Cấu hình npm cấp người dùng `allow-scripts=opencode-ai` đã được khôi phục và kiểm chứng tương thích (`npm ci` PASS exit code 0).
-  - Workflow CI `.github/workflows/ci.yml` được đồng bộ sang Node 24 qua `node-version-file: mobile/.node-version` kèm các bước kiểm thử chất lượng di động (`npm ci`, `npm run lint`, `npm run typecheck`, `npm test -- --runInBand`).
+- Phase 12A Environment/CI Patch: `dd6e9eef69876837bf9383e6137d3105daefaa5d`
+- Phase 12B Status: THEME FOUNDATION & NAVIGATION SHELL PASS (16/16 tests PASS, lint 0, typecheck 0, Android assembleDebug BUILD SUCCESS, Emulator smoke verified)
+- Next Permitted Substep: Phase 12C (10 Shared Components Foundation)
 - Phase 12 Checkpoint: CHƯA ĐÓNG (Phase 12 chưa hoàn tất).
-- Phase 12B (Application Shell, Navigation, Theme, Shared Foundation): CHƯA BẮT ĐẦU.
+- Phase 12C: CHƯA BẮT ĐẦU.
 - Phase 13: CHƯA BẮT ĐẦU.
 - Working tree: clean (sau khi commit)
 

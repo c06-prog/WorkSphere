@@ -295,16 +295,18 @@
 - TEMPORARY_PASSWORD_FLOW_GAP: Luồng kích hoạt và endpoint thiết lập mật khẩu lần đầu tiếp tục hoãn.
 - TEAM_API_CONTRACT_GAP: Team REST controllers hoãn vì `06_API_CONTRACT.md` chưa định nghĩa endpoints.
 - PUT_ME_PASSWORD_TEST_GAP: Test coverage cho luồng đổi mật khẩu người dùng hiện tại tiếp tục hoãn.
+- FONT_INTER_ASSET_BUNDLING_DEFERRED: Font chữ Inter hoãn tích hợp asset; mobile sử dụng fallback font hệ thống (Roboto / System) theo design token standard.
 
 ## Next Permitted Phase
 
 - **Giai đoạn 12: Khởi tạo ứng dụng mobile** (theo đúng `docs/08_DEVELOPMENT_ROADMAP.md` Section 16, P0, React Native và TypeScript).
   - Phase 12A (Scaffold Baseline): PASS, kiểm toán môi trường và đồng bộ CI Node 24 hoàn tất (`mobile/.node-version`).
   - Thiết lập npm cấp người dùng `allow-scripts=opencode-ai` đã được khôi phục an toàn, kiểm chứng `npm ci` tương thích hoàn toàn.
-  - Phase 12B (Application Shell, Navigation, Theme, Shared Foundation): Chưa bắt đầu.
+  - Phase 12B (Theme Foundation & Navigation Shell): PASS (16/16 tests PASS, lint 0, typecheck 0, Android assembleDebug BUILD SUCCESS, Emulator smoke verified).
+  - Bước kế tiếp được phép: Phase 12C (10 Shared Components Foundation).
   - Checkpoint Phase 12 chưa đóng, chưa hoàn tất Phase 12 toàn diện.
 - Phase 11 (Notification và Personal Dashboard) đã hoàn thành, kiểm toán, làm cứng và đóng memory checkpoint (298/298 tests PASS, Checkstyle 0 violations).
-- Không tự ý triển khai Phase 12B nếu task chưa yêu cầu.
+- Không tự ý triển khai Phase 12C nếu task chưa yêu cầu.
 
 ## Trust Rules
 
