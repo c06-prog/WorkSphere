@@ -4,12 +4,14 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: HARDENING PHASE 11 - DEADLINE SCANNER, TRANSACTION ROLLBACK VÀ EVENT COVERAGE
+- Current Task: ĐÓNG MEMORY CHECKPOINT PHASE 11 - NOTIFICATION VÀ PERSONAL DASHBOARD
+- Phase 11 Design Checkpoint: `c4bd8362c040d968a087898322780b0495fd6ff4`
 - Base Phase 11 Implementation Checkpoint: `766d747ef4a429b3be5f7caccefca332fe304cbb`
-- Phase 11 Hardening Commit: Pending push
-- Operational Documentation Checkpoint: reports/DECISIONS.md (D-049, D-050, D-051), reports/PHASE_11_REPORT.md, reports/PROJECT_STATE.md, reports/HANDOFF.md
+- Latest Validated Phase 11 Implementation: `e4026d522a84e376e05f8c77ef9ba2788bc0924b`
+- Repository Memory Checkpoint: Pending commit & push of this task
+- Operational Documentation Checkpoint: reports/DECISIONS.md (D-049, D-050, D-051, D-052), reports/PHASE_11_REPORT.md, reports/PROJECT_STATE.md, reports/HANDOFF.md
 - Phase 10 Status: COMPLETED, AUDITED, HARDENED
-- Phase 11 Status: COMPLETED, AUDITED, HARDENED (Decision D-051)
+- Phase 11 Status: COMPLETED, AUDITED, HARDENED, IDEMPOTENCY, AUTHORIZATION, SCHEDULER CONCURRENCY AND TRANSACTION ROLLBACK VALIDATED (Decisions D-049, D-050, D-051, D-052)
 - Working tree: clean (sau khi commit)
 - Build status: BUILD SUCCESS (Maven 3.9.16, Spring Boot 4.1.1, Java target 21, Checkstyle 0 violations)
 - Test status:
@@ -21,6 +23,65 @@
     - `NotificationIdempotencyAndScannerTest`: 6/6 PASS (includes keyset pagination starvation test with 25 tasks, advisory lock contention skip test, strict boundary tests)
     - `SourceNotificationIntegrationTest`: 10/10 PASS (includes public SR comment coverage, failure-injection rollback tests on Task status change and Asset assignment, duplicate idempotent non-rollback test)
     - `DashboardMockMvcTest`: 5/5 PASS
+
+## Phase 11 Notification and Personal Dashboard Module: COMPLETED, AUDITED & HARDENED
+
+- **V017 Migration**:
+  - `V017__add_notification_idempotency_and_query_indexes.sql`: Controlled deterministic data backfill (`LEGACY_MIGRATION:{notificationId}`).
+  - Thêm cột `event_key VARCHAR(255) NOT NULL`.
+  - Unique constraint idempotency: `CREATE UNIQUE INDEX uk_notifications_recipient_event ON notifications(recipient_id, event_key)`.
+  - Composite query index: `CREATE INDEX idx_notifications_recipient_created_at ON notifications(recipient_id, created_at DESC)`.
+  - 3 index hiện hữu được giữ nguyên: `idx_notifications_recipient_id`, `idx_notifications_recipient_read`, `idx_notifications_created_at`.
+  - Không có dòng notification nào bị xóa; toàn bộ các cột nghiệp vụ (title, message, reference fields, isRead, readAt, createdAt) được bảo toàn 100%.
+  - Ngữ nghĩa transactional DDL/DML rollback của PostgreSQL được chứng minh bằng test độc lập; lỗi di trú phục hồi schema và data về trạng thái pre-V017.
+- **Notification Domain & Delivery Model**:
+  - Thực thể `Notification` và `NotificationPreference`.
+  - 8 loại notification canonical: `PROJECT_MEMBER_ADDED`, `TASK_ASSIGNED`, `TASK_STATUS_CHANGED`, `TASK_DUE_SOON`, `TASK_OVERDUE`, `SERVICE_REQUEST_ASSIGNED`, `SERVICE_REQUEST_UPDATED`, `COMMENT_ADDED`.
+  - Mô hình phân phối: DATABASE IN-APP NOTIFICATION CENTER ONLY.
+  - Không có Push (FCM/APNs), Email delivery, WebSocket/SSE, Kafka/RabbitMQ hay Redis.
+  - Tùy chọn `inAppEnabled` được thực thi nghiêm ngặt; `pushEnabled`/`emailEnabled` chỉ lưu cấu hình; tắt in-app bỏ qua chèn notification an toàn, không tạo pending event, không backfill.
+  - Owner-scoped query: người dùng chỉ xem thông báo của chính mình; truy cập thông báo của người khác trả về HTTP 404 `NOTIFICATION_NOT_FOUND`; ADMIN không bypass quyền sở hữu cá nhân. Không có endpoint xóa, lưu trữ (archive), hay detail riêng lẻ.
+  - Đánh dấu đã đọc lũy đẳng (`PUT /api/v1/notifications/{id}/read`), đánh dấu tất cả đã đọc, đếm số lượng chưa đọc.
+  - Preference API: `GET` / `PUT /api/v1/notification-preferences` với giá trị mặc định cho 8 loại; validate trùng lặp type và type không hợp lệ.
+- **Idempotency & An Toàn Giao Dịch**:
+  - Native insert: `ON CONFLICT (recipient_id, event_key) DO NOTHING`.
+  - Trùng lặp (`affectedRows = 0`) là thành công lũy đẳng; không ném lỗi; không đánh dấu giao dịch nguồn rollback-only; giao dịch nguồn commit thành công.
+  - Lỗi CSDL thực sự khác vẫn rollback giao dịch nguồn.
+  - Cùng eventKey có thể gửi cho nhiều recipient khác nhau; các eventKey khác nhau cho cùng một recipient.
+- **Event Integrations & Stable Keys**:
+  - Project Member Added: `PROJECT_MEMBER_ADDED:{projectId}:{membershipId}`.
+  - Task Assigned: `TASK_ASSIGNED:{taskId}:{assignmentId}`.
+  - Task Status Changed: `TASK_STATUS_CHANGED:{taskId}:{statusHistoryId}` (sử dụng immutable history ID).
+  - Task Public Comment: `COMMENT_ADDED:TASK:{commentId}`.
+  - Service Request Assigned: `SERVICE_REQUEST_UPDATED:{requestId}:ASSIGNED:{assignmentId}`.
+  - Service Request Status Changed: `SERVICE_REQUEST_UPDATED:{requestId}:{statusHistoryId}` (sử dụng immutable history ID).
+  - Service Request Public Comment: `COMMENT_ADDED:SERVICE_REQUEST:{commentId}`.
+  - Asset Assigned: `ASSET_ASSIGNED:{assetId}:{assignmentId}`.
+  - Task Due Soon: `TASK_DUE_SOON:{taskId}:{dueAtEpochMilli}` (sử dụng epoch millisecond).
+  - Task Overdue: `TASK_OVERDUE:{taskId}:{dueAtEpochMilli}` (sử dụng epoch millisecond).
+  - Danh sách người nhận deduplicate qua Set<UUID>, loại trừ actor, tôn trọng preference; PM/TL xác định theo active project membership role; Service Request internal notes không thông báo cho requester.
+- **Source Transaction Atomicity**:
+  - Thay đổi nghiệp vụ + Chèn Notification trong cùng một database transaction.
+  - Kiểm thử failure injection trên Task status change và Asset assignment: giao dịch rollback toàn bộ (status, version, history count, notification count không đổi); response HTTP 500 `INTERNAL_ERROR` an toàn, không rò rỉ SQL/trigger/stack trace/PSQLException.
+- **TaskDeadlineScanner**:
+  - Cấu hình: delay `PT15M`, batch size `100`, enabled mặc định.
+  - Điều phối đa instance: PostgreSQL transaction advisory lock `(1101, 1)`; bỏ qua an toàn khi lock bận.
+  - Toàn bộ chu kỳ (lock, tất cả keyset pages, inserts, commit) nằm trong một `@Transactional` duy nhất.
+  - Keyset pagination `(lastDueDate, lastTaskId)` sắp xếp `dueDate ASC, id ASC`; xử lý tuần tự toàn bộ task vượt quá batch size; triệt tiêu nguy cơ starvation.
+  - Ranh giới thời gian nghiêm ngặt: `now <= dueDate < now + 72 hours` với `dueDate.isBefore(threshold)` cho `TASK_DUE_SOON` và `dueDate < now` cho `TASK_OVERDUE`. Loại trừ task đã hoàn thành hoặc bị xóa.
+  - Kiểm thử starvation 25 task với batch size 10 duyệt qua 3 trang; kiểm thử preseed 10 task không chặn 15 task sau; kiểm thử tranh chấp advisory lock trên 2 session độc lập.
+- **Personal Dashboard API**:
+  - Endpoint: `GET /api/v1/dashboard/me` (duy nhất; không có endpoint hay stub cho Project Dashboard).
+  - Áp dụng phạm vi cá nhân cho mọi vai trò, kể cả ADMIN.
+  - Thống kê Task theo active assignment (`TODO`, `IN_PROGRESS`, `IN_REVIEW`, `COMPLETED`, `overdue`, `dueSoon`).
+  - Thống kê Service Request theo requester HOẶC active assignee với `COUNT(DISTINCT sr.id)` (`OPEN`, `IN_PROGRESS`, `WAITING_FOR_USER`, `RESOLVED`).
+  - Thống kê Project theo active membership (`ACTIVE`, `ON_HOLD`).
+  - Top 5 Upcoming Tasks (`dueSoon`, sắp xếp `dueDate ASC, id ASC`).
+  - Top 5 Recent Notifications (sắp xếp `createdAt DESC, id DESC`).
+  - Mẫu mốc thời gian `Clock.instant()` đồng nhất một lần duy nhất trong toàn request.
+- **Hạ Tầng Kiểm Thử**:
+  - `NotificationTestCleanupListener`: Kiểm tra sự tồn tại của bảng trước khi xóa (`to_regclass` trên PostgreSQL, JDBC metadata trên non-Postgres); chỉ xóa `notifications` và `notification_preferences`; không xóa bảng nghiệp vụ/user/role; không nuốt lỗi SQLException.
+  - `V016MigrationTest`: target `016`, độc lập hoàn toàn với V017, bảo toàn toàn bộ assertions trước đó.
 
 ## Phase 10 Asset Management Module: COMPLETED & HARDENED
 
@@ -60,8 +121,13 @@
 
 ## Deferred Items & Known Gaps
 
+- `NOTIFICATION_RETENTION_CLEANUP_DEFERRED`: Dọn dẹp thông báo cũ theo thời gian hoãn đến vận hành production.
+- `PROJECT_DASHBOARD_PROJECTION_DEFERRED`: Endpoint GET /projects/{projectId}/dashboard hoãn lại.
+- `SERVICE_REQUEST_INTERNAL_NOTE_NOTIFICATION_DEFERRED`: Thông báo nội bộ cho Service Request hoãn lại.
+- `PUSH_NOTIFICATION_DELIVERY_DEFERRED`: Phân phối Push notification (FCM/APNs) hoãn lại ngoài phạm vi Phase 11.
+- `EMAIL_NOTIFICATION_DELIVERY_DEFERRED`: Phân phối Email delivery hoãn lại ngoài phạm vi Phase 11.
+- `REALTIME_NOTIFICATION_DELIVERY_DEFERRED`: Phân phối WebSocket/SSE realtime hoãn lại ngoài phạm vi Phase 11.
 - `ASSET_ASSIGNMENT_LOST_DAMAGED_WORKFLOW_DEFERRED`: Schema enum `AssetAssignmentStatus` contains `ACTIVE`, `RETURNED`, `LOST`, `DAMAGED`. Canonical contract `docs/06_API_CONTRACT.md` mục 14.7 đã chuẩn hóa: vòng đời Phase 10 hỗ trợ là `ACTIVE -> RETURNED`; `LOST` và `DAMAGED` là schema-reserved values không mở qua API Phase 10. Quy trình xử lý phân công thất thoát/hư hỏng hoãn lại rõ ràng, không còn unresolved contract gap.
-- `NOTIFICATION_SIDE_EFFECT_DEFERRED`: Phase 9/10 không triển khai Notification Module; không email, push notification hoặc WebSocket. Hoãn đến phase canonical tiếp theo nếu Roadmap quy định.
 - `ASSET_ATTACHMENT_DEFERRED`: Chưa có liên kết tài liệu/hình ảnh đính kèm cho tài sản; chưa có `ASSET_ATTACHMENT` trong `FilePurpose`.
 - `ASSET_BARCODE_QR_DEFERRED`: Chưa triển khai sinh Barcode hoặc mã QR cho tài sản ở backend.
 - `ASSET_DEPRECIATION_DEFERRED`: Chưa triển khai công cụ khấu hao hoặc kế toán tài sản.
@@ -78,15 +144,12 @@
 - `DATA_INTEGRITY_ERROR_MAPPING_FALLBACK_LOW`: Exception mapping cho task_assignments có thể nâng cấp sang trích xuất constraint PostgreSQL driver tương tự Asset module.
 - `TEMPORARY_PASSWORD_FLOW_GAP`: Luồng kích hoạt và endpoint thiết lập mật khẩu lần đầu tiếp tục hoãn.
 - `TEAM_API_CONTRACT_GAP`: Team REST controllers hoãn vì `06_API_CONTRACT.md` chưa định nghĩa endpoints.
-- `NOTIFICATION_RETENTION_CLEANUP_DEFERRED`: Phase 11 retains read notifications; auto-delete/cleanup scheduler deferred.
-- `PROJECT_DASHBOARD_PROJECTION_DEFERRED`: Project Dashboard GET /projects/{projectId}/dashboard deferred.
-- `SERVICE_REQUEST_INTERNAL_NOTE_NOTIFICATION_DEFERRED`: Internal note notification deferred.
 - `PUT_ME_PASSWORD_TEST_GAP`: Test coverage cho luồng đổi mật khẩu người dùng hiện tại tiếp tục hoãn.
 
 ## Next Permitted Phase
 
-- **Giai đoạn 12: Báo cáo, Thống kê và Xuất dữ liệu** (theo đúng `docs/08_DEVELOPMENT_ROADMAP.md` Section 16, P1).
-- Phase 11 (Notification và Personal Dashboard) đã hoàn thành và làm cứng (Decisions D-049, D-050, D-051), kiểm thử 298/298 PASS, 38 Phase 11 targeted tests PASS, Checkstyle 0 violations.
+- **Giai đoạn 12: Khởi tạo ứng dụng mobile** (theo đúng `docs/08_DEVELOPMENT_ROADMAP.md` Section 16, P0, React Native và TypeScript).
+- Phase 11 (Notification và Personal Dashboard) đã hoàn thành, kiểm toán, làm cứng và đóng memory checkpoint (298/298 tests PASS, Checkstyle 0 violations).
 - Không tự ý triển khai Phase 12 nếu task chưa yêu cầu.
 - Không triển khai React Native / mobile source trong giai đoạn này.
 
@@ -100,7 +163,7 @@
 6. Run git status --short.
 7. Run git log --oneline --decorate -5.
 8. Compare HEAD with origin/main.
-9. Read the relevant canonical document sections for Phase 11 when scoped.
+9. Read the relevant canonical document sections for Phase 12 when scoped.
 10. Do not start another roadmap phase without explicit scope.
 
 ## Model Switch Procedure
