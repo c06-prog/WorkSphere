@@ -61,16 +61,20 @@
 - API: `getRefreshToken()`, `setRefreshToken(token)`, `clearRefreshToken()`.
 - Thao tác xóa có tính chất idempotent; từ chối token rỗng/whitespace; không log giá trị token.
 
-## 8. Local Storage (AsyncStorage)
-- Triển khai tại `mobile/src/shared/storage/localStorage.ts`.
-- Sử dụng `@react-native-async-storage/async-storage` cho dữ liệu không nhạy cảm (theme preference, onboarding flag).
+## 8. Local Storage (AsyncStorage) - Hardened Strict Key Policy
+- Triển khai tại `mobile/src/shared/storage/localStorage.ts` & `storageKeys.ts`.
+- Sử dụng `@react-native-async-storage/async-storage` cho dữ liệu không nhạy cảm (`THEME_PREFERENCE`, `ONBOARDING_COMPLETED`).
 - Namespace chuẩn: `@worksphere/<key>`.
-- Cơ chế bảo vệ: Từ chối lưu trữ nếu khóa chứa các từ khóa nhạy cảm (`token`, `password`, `secret`, `auth`).
-- Parse JSON an toàn: Trả về `unknown`, yêu cầu caller chủ động kiểm tra cấu trúc.
+- Giải quyết triệt để rủi ro `LOCAL_STORAGE_KEY_POLICY_RISK`:
+  - Loại bỏ hoàn toàn cơ chế substring blacklist (`['token', 'password', 'secret', 'auth']`) để triệt tiêu false positives (`authorPreference`) và false negatives (`sessionData`, `jwt`, `credentials`).
+  - Sử dụng định nghĩa kiểu nghiêm ngặt: `LocalStorageKey = (typeof LOCAL_STORAGE_KEYS)[keyof typeof LOCAL_STORAGE_KEYS]`.
+  - Bổ sung runtime guard `assertAllowedKey(key)` kiểm tra tập hợp `Set<string>(Object.values(LOCAL_STORAGE_KEYS))` bảo vệ ứng dụng trước các caller JavaScript untyped; không in chuỗi khóa lạ vào thông báo lỗi để tránh rò rỉ.
+  - Hàm `getJson<T>` bắt buộc truyền hàm `parser: (value: unknown) => T`, loại bỏ hoàn toàn việc ép kiểu mù quáng `as T`. Nếu parser ném lỗi hoặc JSON hỏng, hàm trả về `null` an toàn.
 
 ## 9. Axios Client & Interceptors
 - Triển khai tại `mobile/src/shared/api/apiClient.ts`.
-- Cấu hình baseURL lấy từ Environment config, timeout 15.000 ms, headers mặc định `Accept: application/json` và `Content-Type: application/json`.
+- Cấu hình baseURL lấy động từ Environment config, timeout 15.000 ms, headers mặc định `Accept: application/json` và `Content-Type: application/json`.
+- Ghi nhận: `AXIOS_MULTIPART_CONTENT_TYPE_OVERRIDE_REQUIRED` (khi triển khai upload tệp ở các phase sau, helper upload cần override/xóa Content-Type để Axios sinh boundary).
 - Request Interceptor: Tự động đính kèm `Authorization: Bearer <token>` nếu In-Memory store có access token; bỏ qua header nếu token vắng mặt; không bao giờ log header chứa token.
 - Response Interceptor: Bắt mã 401 để kích hoạt callback `notifyUnauthorized()`, chuẩn hóa mọi lỗi vận chuyển/HTTP thành `NormalizedApiError`.
 - Typed HTTP Helpers: `http.get`, `http.post`, `http.put`, `http.delete` hỗ trợ gọi API sạch sẽ với typed envelope.
@@ -88,18 +92,18 @@
   - `10.0.2.2` (Android emulator kết nối host)
   - `localhost` và `127.0.0.1`
 - Khai báo tại `mobile/android/app/src/debug/AndroidManifest.xml` áp dụng cấu hình này riêng cho variant debug.
-- Bản release (`mobile/android/app/src/main/AndroidManifest.xml`) giữ nguyên chính sách bảo mật HTTPS mặc định của Android.
+- Bản release (`mobile/android/app/src/main/AndroidManifest.xml`) giữ nguyên chính sách bảo mật HTTPS mặc định của Android (`android:usesCleartextTraffic="false"`).
 
 ## 12. Unit Tests & Static Validation
-- Viết 44 unit tests mới:
+- Viết 47 unit tests phủ toàn diện (sau khi patch hardening):
   - `__tests__/config/environment.test.ts`: Kiểm tra dev default, chuẩn hóa trailing slash, từ chối HTTP production, injectable config.
   - `__tests__/storage/accessTokenStore.test.ts`: Kiểm tra in-memory get/set/clear, cách ly state.
   - `__tests__/storage/secureStorage.test.ts`: Kiểm tra get/set/clear refresh token, chặn token rỗng, xử lý lỗi Keychain.
-  - `__tests__/storage/localStorage.test.ts`: Kiểm tra get/set/remove, JSON parse an toàn, namespace, chặn khóa nhạy cảm.
+  - `__tests__/storage/localStorage.test.ts`: Kiểm tra set/get/remove allowlist keys, runtime rejection của arbitrary keys, loại bỏ false-positives của authorPreference, missing key trả null, malformed JSON an toàn, parse JSON với parser callback và xử lý parser rejection.
   - `__tests__/api/apiEnvelope.test.ts`: Kiểm tra unwrap thành công, null data, ném lỗi business/validation, giữ nguyên metadata.
   - `__tests__/api/apiError.test.ts`: Kiểm tra chuẩn hóa 9 loại lỗi (network, timeout, 400, 401, 403, 404, 409, 500, unknown).
   - `__tests__/api/apiClient.test.ts`: Kiểm tra gắn Bearer header, bỏ qua khi thiếu token, gọi 401 handler, an toàn khi không có handler.
-- Kết quả test: **20 test suites PASS, 103/103 tests PASS**.
+- Kết quả test: **20 test suites PASS, 106/106 tests PASS**.
 - `npm run lint`: **0 errors, 0 warnings**.
 - `npm run typecheck`: **0 errors**.
 
@@ -127,7 +131,13 @@
 - Chưa khôi phục phiên làm việc (session restoration) khi mở app.
 - Chưa tạo Auth Store (Zustand) hay màn hình chức năng.
 
-## 17. Files Changed
+## 17. Deferred Evidence Tokens
+- `PRODUCTION_ENVIRONMENT_WIRING_DEFERRED`: Build-variant env wiring (.env / native config) hoãn lại cho production pipeline.
+- `KEYCHAIN_NATIVE_OPERATION_SMOKE_DEFERRED`: Native module linked/compiled; thao tác Keystore runtime hoãn đến khi có token thật trong Phase 13.
+- `ASYNC_STORAGE_NATIVE_OPERATION_SMOKE_DEFERRED`: Native module linked/compiled; thao tác ghi/đọc AsyncStorage runtime hoãn đến khi có màn hình tính năng.
+- `AXIOS_MULTIPART_CONTENT_TYPE_OVERRIDE_REQUIRED`: Content-Type mặc định application/json cần override khi upload tệp multipart ở các phase sau.
+
+## 18. Files Changed
 - `mobile/package.json`
 - `mobile/package-lock.json`
 - `mobile/android/app/src/debug/AndroidManifest.xml`

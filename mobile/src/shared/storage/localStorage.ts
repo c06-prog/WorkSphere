@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LOCAL_STORAGE_KEYS, LocalStorageKey } from './storageKeys';
 
 /**
  * Local Storage Foundation for WorkSphere Mobile
@@ -6,23 +7,22 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
  *
  * Strict policy:
  * - Non-sensitive data ONLY (e.g., UI preferences, theme mode, flags).
- * - NEVER store Access Tokens, Refresh Tokens, passwords, or personal credentials.
+ * - Strict allowlist: Only keys defined in LOCAL_STORAGE_KEYS are permitted.
+ * - Substring blacklists are eliminated to avoid false positives and false negatives.
+ * - JSON parse requires explicit parser callback (no unchecked type casts).
  */
 
-const FORBIDDEN_SENSITIVE_SUBSTRINGS = ['token', 'password', 'secret', 'auth'] as const;
+const ALLOWED_LOCAL_STORAGE_KEYS = new Set<string>(Object.values(LOCAL_STORAGE_KEYS));
 
-function assertNonSensitiveKey(key: string): void {
-  const lower = key.toLowerCase();
-  for (const forbidden of FORBIDDEN_SENSITIVE_SUBSTRINGS) {
-    if (lower.includes(forbidden)) {
-      throw new Error(`LocalStorage security violation: Key "${key}" appears to hold sensitive data.`);
-    }
+function assertAllowedKey(key: string): asserts key is LocalStorageKey {
+  if (!ALLOWED_LOCAL_STORAGE_KEYS.has(key)) {
+    throw new Error('LocalStorage security violation: Key is not allowlisted.');
   }
 }
 
 export const localStorage = {
-  async getString(key: string): Promise<string | null> {
-    assertNonSensitiveKey(key);
+  async getString(key: LocalStorageKey): Promise<string | null> {
+    assertAllowedKey(key);
     try {
       return await AsyncStorage.getItem(key);
     } catch {
@@ -30,8 +30,8 @@ export const localStorage = {
     }
   },
 
-  async setString(key: string, value: string): Promise<void> {
-    assertNonSensitiveKey(key);
+  async setString(key: LocalStorageKey, value: string): Promise<void> {
+    assertAllowedKey(key);
     try {
       await AsyncStorage.setItem(key, value);
     } catch (error) {
@@ -40,8 +40,8 @@ export const localStorage = {
     }
   },
 
-  async remove(key: string): Promise<void> {
-    assertNonSensitiveKey(key);
+  async remove(key: LocalStorageKey): Promise<void> {
+    assertAllowedKey(key);
     try {
       await AsyncStorage.removeItem(key);
     } catch {
@@ -50,10 +50,14 @@ export const localStorage = {
   },
 
   /**
-   * Retrieves and safely parses JSON from AsyncStorage.
-   * If parsing fails or validator returns false, returns null.
+   * Retrieves and safely parses JSON from AsyncStorage using an explicit parser.
+   * If value is missing, JSON parse fails, or parser rejects/throws, returns null.
    */
-  async getJson<T>(key: string, validator?: (val: unknown) => val is T): Promise<T | null> {
+  async getJson<T>(
+    key: LocalStorageKey,
+    parser: (value: unknown) => T
+  ): Promise<T | null> {
+    assertAllowedKey(key);
     const raw = await this.getString(key);
     if (!raw) {
       return null;
@@ -61,16 +65,14 @@ export const localStorage = {
 
     try {
       const parsed: unknown = JSON.parse(raw);
-      if (validator) {
-        return validator(parsed) ? parsed : null;
-      }
-      return parsed as T;
+      return parser(parsed);
     } catch {
       return null;
     }
   },
 
-  async setJson<T>(key: string, value: T): Promise<void> {
+  async setJson<T>(key: LocalStorageKey, value: T): Promise<void> {
+    assertAllowedKey(key);
     const serialized = JSON.stringify(value);
     await this.setString(key, serialized);
   },

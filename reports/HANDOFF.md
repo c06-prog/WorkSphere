@@ -145,7 +145,7 @@
   - Phase 12A (Scaffold Baseline): PASS.
   - Phase 12B (Theme & Navigation Shell): PASS & PATCHED.
   - Phase 12C (10 Shared Components Foundation): PASS & PATCHED.
-  - Phase 12D (Network, Storage & Auth State Foundation): PASS (103/103 tests PASS, axios, react-native-keychain, async-storage, assembleDebug BUILD SUCCESSFUL, emulator smoke verified).
+  - Phase 12D (Network, Storage & Auth State Foundation): PASS & PATCHED (106/106 tests PASS, strict LocalStorage allowlist, axios, react-native-keychain, async-storage, assembleDebug BUILD SUCCESSFUL, emulator smoke verified).
   - Bước kế tiếp: Kiểm toán độc lập và hardening kết thúc Phase 12 (Phase 12 Final Audit / Hardening).
   - Phase 13 (Authentication & Session State): Hoãn lại hoàn toàn, chưa bắt đầu.
   - Checkpoint Phase 12 chưa đóng trước kiểm toán độc lập.

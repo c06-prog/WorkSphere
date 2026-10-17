@@ -21,3 +21,6 @@ export const LOCAL_STORAGE_KEYS = {
   THEME_PREFERENCE: '@worksphere/theme_preference',
   ONBOARDING_COMPLETED: '@worksphere/onboarding_completed',
 } as const;
+
+export type LocalStorageKey =
+  (typeof LOCAL_STORAGE_KEYS)[keyof typeof LOCAL_STORAGE_KEYS];

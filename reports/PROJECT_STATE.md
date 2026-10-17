@@ -304,7 +304,7 @@
   - Thiết lập npm cấp người dùng `allow-scripts=opencode-ai` đã được khôi phục an toàn, kiểm chứng `npm ci` tương thích hoàn toàn.
   - Phase 12B (Theme Foundation & Navigation Shell): PASS & PATCHED (`7b3b0ea446128811ec9f5f55e51bf249bae23e47`).
   - Phase 12C (10 Shared Components Foundation): PASS & PATCHED (`587ee1b4596c5377f1fbf3976f5698993cee830b` / `bcc881bcf322e892905356411e5f3d77f01de09f`).
-  - Phase 12D (Network, Storage & Auth State Foundation): PASS (103/103 tests PASS, axios 1.20.0, react-native-keychain 10.0.0, async-storage 3.1.1, in-memory AccessTokenStore, SecureStorage cho refresh token, LocalStorage an toàn với namespace @worksphere, chuẩn hóa lỗi ApiError & envelope decoder khớp ApiResponse/PagedData backend, Axios client với Bearer interceptor và 401 callback hook, Android debug cleartext config, assembleDebug BUILD SUCCESSFUL, Emulator smoke verified).
+  - Phase 12D (Network, Storage & Auth State Foundation): PASS & PATCHED (106/106 tests PASS, axios 1.20.0, react-native-keychain 10.0.0, async-storage 3.1.1, in-memory AccessTokenStore, SecureStorage cho refresh token, LocalStorage làm cứng với strict allowlisted LocalStorageKey, runtime exact Set guard, parser-enforced JSON parsing, chuẩn hóa lỗi ApiError & envelope decoder khớp ApiResponse/PagedData backend, Axios client với Bearer interceptor và 401 callback hook, Android debug cleartext config, assembleDebug BUILD SUCCESSFUL, Emulator smoke verified).
   - Bước kế tiếp được phép: Kiểm toán độc lập và hardening kết thúc Phase 12 (Phase 12 Final Audit/Hardening).
   - Phase 13 (Authentication & Session State) vẫn hoãn lại hoàn toàn, chưa bắt đầu.
   - Checkpoint Phase 12 chưa đóng toàn diện trước audit độc lập.
