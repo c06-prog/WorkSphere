@@ -178,3 +178,13 @@ Phase 12A đã hoàn thành xuất sắc tất cả các mục tiêu đề ra: k
 ```text
 PHASE_12A_SCAFFOLD_PASS_PUSHED
 ```
+
+---
+
+## 14. Ghi Chú Kiểm Toán Môi Trường và CI (Environment & CI Patch Audit Note)
+
+- **Khôi phục cấu hình npm cấp người dùng:** Trong quá trình khởi tạo Phase 12A, cấu hình cấp người dùng `allow-scripts` tạm thời bị gỡ bỏ để tránh xung đột `npm init`. Sau kiểm toán, thiết lập cấp người dùng đã được khôi phục nguyên trạng về `allow-scripts=opencode-ai` trong `C:\Users\dienm\.npmrc`.
+- **Khả năng tương thích `npm ci`:** Sau khi khôi phục `allow-scripts=opencode-ai`, thực thi `npm ci` trong thư mục `mobile/` đạt kết quả PASS (exit code 0, 857 packages added, không phát sinh `EALLOWSCRIPTS`). Thiết lập `allow-scripts=opencode-ai` được duy trì an toàn.
+- **Minh chứng smoke screenshot:** Ảnh chụp màn hình `design/prototype/review-output/smoke_phase12a_starter.png` là bằng chứng kiểm thử cục bộ được `.gitignore` bảo vệ, không commit vào repository Git.
+- **Debug keystore và bí mật:** Tập tin `debug.keystore` là artifact mẫu chính thức đi kèm template React Native phục vụ môi trường phát triển cục bộ và debug build. Tuyệt đối không theo dõi release keystore hay release signing credentials trong Git.
+- **Khắc phục lệch phiên bản CI Node:** Đồng bộ cấu hình CI trong `.github/workflows/ci.yml` sử dụng `node-version-file: mobile/.node-version` (Node 24.19.0) thay thế cho phiên bản cũ `node-version: 20`, đồng thời thiết lập chu trình kiểm thử chất lượng di động (`npm ci`, `npm run lint`, `npm run typecheck`, `npm test -- --runInBand`).

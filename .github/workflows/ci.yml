@@ -61,8 +61,8 @@ jobs:
           echo "Backend structure ready for Stage 2 initialization."
           test -d backend
 
-  mobile-ci-skeleton:
-    name: Mobile CI Skeleton (React Native)
+  mobile-ci:
+    name: Mobile Quality (React Native)
     runs-on: ubuntu-latest
     needs: validate-repository
     steps:
@@ -72,9 +72,22 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version-file: mobile/.node-version
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
 
-      - name: Check Mobile Directory
-        run: |
-          echo "Mobile structure ready for Stage 12 initialization."
-          test -d mobile
+      - name: Install mobile dependencies
+        working-directory: mobile
+        run: npm ci
+
+      - name: Lint mobile code
+        working-directory: mobile
+        run: npm run lint
+
+      - name: Typecheck mobile code
+        working-directory: mobile
+        run: npm run typecheck
+
+      - name: Run mobile unit tests
+        working-directory: mobile
+        run: npm test -- --runInBand

@@ -4,25 +4,18 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: ĐÓNG MEMORY CHECKPOINT PHASE 11 - NOTIFICATION VÀ PERSONAL DASHBOARD
-- Phase 11 Design Checkpoint: `c4bd8362c040d968a087898322780b0495fd6ff4`
-- Base Phase 11 Implementation Checkpoint: `766d747ef4a429b3be5f7caccefca332fe304cbb`
-- Latest Validated Phase 11 Implementation: `e4026d522a84e376e05f8c77ef9ba2788bc0924b`
-- Repository Memory Checkpoint: Pending commit & push of this task
-- Operational Documentation Checkpoint: reports/DECISIONS.md (D-049, D-050, D-051, D-052), reports/PHASE_11_REPORT.md, reports/PROJECT_STATE.md, reports/HANDOFF.md
-- Phase 10 Status: COMPLETED, AUDITED, HARDENED
-- Phase 11 Status: COMPLETED, AUDITED, HARDENED, IDEMPOTENCY, AUTHORIZATION, SCHEDULER CONCURRENCY AND TRANSACTION ROLLBACK VALIDATED (Decisions D-049, D-050, D-051, D-052)
+- Current Task: KHẮC PHỤC SIDE EFFECT MÔI TRƯỜNG VÀ ĐỒNG BỘ CI SAU PHASE 12A
+- Phase 11 Status: COMPLETED, AUDITED, HARDENED (Checkstyle 0, Tests 298/298 PASS)
+- Phase 12 Tooling Checkpoint: `ab006e409a57bec93bd98b03b38d5188b98304f8`
+- Phase 12A Scaffold Baseline Checkpoint: `d61358e3e2322ae8933c6b241680ddc563594d6e`
+- Phase 12A Status: SCAFFOLD PASS, ANDROID ASSEMBLE DEBUG PASS, EMULATOR SMOKE PASS
+- Environment & CI Patch:
+  - Cấu hình npm cấp người dùng `allow-scripts=opencode-ai` đã được khôi phục và kiểm chứng tương thích (`npm ci` PASS exit code 0).
+  - Workflow CI `.github/workflows/ci.yml` được đồng bộ sang Node 24 qua `node-version-file: mobile/.node-version` kèm các bước kiểm thử chất lượng di động (`npm ci`, `npm run lint`, `npm run typecheck`, `npm test -- --runInBand`).
+- Phase 12 Checkpoint: CHƯA ĐÓNG (Phase 12 chưa hoàn tất).
+- Phase 12B (Application Shell, Navigation, Theme, Shared Foundation): CHƯA BẮT ĐẦU.
+- Phase 13: CHƯA BẮT ĐẦU.
 - Working tree: clean (sau khi commit)
-- Build status: BUILD SUCCESS (Maven 3.9.16, Spring Boot 4.1.1, Java target 21, Checkstyle 0 violations)
-- Test status:
-  - Host Suite (Oracle JDK 27, Testcontainers PostgreSQL): 298/298 PASS (0 failures, 0 errors, 0 skipped)
-  - Targeted Phase 11 Suite: 38/38 PASS across 5 test classes (run twice consecutively, 0 flakiness):
-    - `V017MigrationTest`: 4/4 PASS
-    - `NotificationMockMvcTest`: 8/8 PASS
-    - `NotificationPreferenceMockMvcTest`: 5/5 PASS
-    - `NotificationIdempotencyAndScannerTest`: 6/6 PASS (includes keyset pagination starvation test with 25 tasks, advisory lock contention skip test, strict boundary tests)
-    - `SourceNotificationIntegrationTest`: 10/10 PASS (includes public SR comment coverage, failure-injection rollback tests on Task status change and Asset assignment, duplicate idempotent non-rollback test)
-    - `DashboardMockMvcTest`: 5/5 PASS
 
 ## Phase 11 Notification and Personal Dashboard Module: COMPLETED, AUDITED & HARDENED
 

@@ -299,9 +299,12 @@
 ## Next Permitted Phase
 
 - **Giai đoạn 12: Khởi tạo ứng dụng mobile** (theo đúng `docs/08_DEVELOPMENT_ROADMAP.md` Section 16, P0, React Native và TypeScript).
+  - Phase 12A (Scaffold Baseline): PASS, kiểm toán môi trường và đồng bộ CI Node 24 hoàn tất (`mobile/.node-version`).
+  - Thiết lập npm cấp người dùng `allow-scripts=opencode-ai` đã được khôi phục an toàn, kiểm chứng `npm ci` tương thích hoàn toàn.
+  - Phase 12B (Application Shell, Navigation, Theme, Shared Foundation): Chưa bắt đầu.
+  - Checkpoint Phase 12 chưa đóng, chưa hoàn tất Phase 12 toàn diện.
 - Phase 11 (Notification và Personal Dashboard) đã hoàn thành, kiểm toán, làm cứng và đóng memory checkpoint (298/298 tests PASS, Checkstyle 0 violations).
-- Không tự ý triển khai Phase 12 nếu task chưa yêu cầu.
-- Không triển khai React Native / mobile source trong giai đoạn này.
+- Không tự ý triển khai Phase 12B nếu task chưa yêu cầu.
 
 ## Trust Rules
 
