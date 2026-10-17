@@ -5,8 +5,8 @@ export function MoreScreen() {
   return (
     <PlaceholderScreen
       title="More"
-      screenId="SCR-ACC-01"
-      subtitle="SCR-ACC-01: More Menu & Profile Screen (Phase 12 Shell)"
+      screenId="SCR-MAIN-03"
+      subtitle="SCR-MAIN-03: More Menu Screen (Phase 12 Shell)"
       testID="screen-more"
     />
   );

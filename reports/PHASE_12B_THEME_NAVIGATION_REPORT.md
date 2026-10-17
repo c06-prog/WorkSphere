@@ -41,7 +41,7 @@ Tuân thủ nghiêm ngặt [docs/03_MOBILE_SCREEN_MAP.md](file:///D:/WorkSphere/
 2. **Tab 2: Projects** (`ProjectsScreen` - `SCR-PRJ-01`)
 3. **Tab 3: Tasks** (`TasksScreen` - `SCR-TSK-01`)
 4. **Tab 4: Service Requests** (`ServiceRequestsScreen` - `SCR-SRV-01`)
-5. **Tab 5: More** (`MoreScreen` - `SCR-ACC-01`)
+5. **Tab 5: More** (`MoreScreen` - `SCR-MAIN-03`)
 
 *Cam kết chuẩn:* Tuyệt đối không thay thế bằng `Notifications` hay `Settings`.
 
@@ -58,7 +58,7 @@ RootNavigator (quản lý sessionState: INITIALIZING | UNAUTHENTICATED | AUTHENT
     ├── Projects (SCR-PRJ-01)
     ├── Tasks (SCR-TSK-01)
     ├── ServiceRequests (SCR-SRV-01)
-    └── More (SCR-ACC-01)
+    └── More (SCR-MAIN-03)
 ```
 
 ---

@@ -1,6 +1,16 @@
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AppRoot } from '../src/app/AppRoot';
+import { AppProviders } from '../src/app/providers';
+import { LoginScreen, ResetPasswordScreen } from '../src/features/auth/screens';
+import type { AuthStackParamList } from '../src/app/navigation/types';
+import { TEST_INITIAL_METRICS } from './test-utils';
+
+jest.mock('react-native-safe-area-context', () =>
+  require('react-native-safe-area-context/jest/mock').default,
+);
 
 // Mock react-native-screens if needed in jest environment
 jest.mock('react-native-screens', () => {
@@ -83,7 +93,7 @@ describe('RootNavigator Session Abstraction & Navigation Shell', () => {
     fireEvent.press(getByLabelText('Tab 5: Thêm'));
     await waitFor(() => {
       expect(getByTestId('screen-more')).toBeTruthy();
-      expect(getByText('SCR-ACC-01')).toBeTruthy();
+      expect(getByText('SCR-MAIN-03')).toBeTruthy();
     });
 
     // Navigate back to Dashboard tab
@@ -113,6 +123,45 @@ describe('RootNavigator Session Abstraction & Navigation Shell', () => {
     fireEvent.press(getByTestId('btn-back-to-login'));
     await waitFor(() => {
       expect(getByTestId('screen-login')).toBeTruthy();
+    });
+  });
+
+  test('Auth stack navigation: ResetPassword route shell renders with params and navigates back to Login', async () => {
+    const Stack = createNativeStackNavigator<AuthStackParamList>();
+
+    function ResetPasswordTestHarness() {
+      return (
+        <NavigationContainer>
+          <Stack.Navigator initialRouteName="ResetPassword">
+            <Stack.Screen
+              name="ResetPassword"
+              component={ResetPasswordScreen}
+              initialParams={{ token: 'test-reset-token' }}
+            />
+            <Stack.Screen name="Login" component={LoginScreen} />
+          </Stack.Navigator>
+        </NavigationContainer>
+      );
+    }
+
+    const { getByTestId, getByText } = await render(
+      <AppProviders initialMetrics={TEST_INITIAL_METRICS}>
+        <ResetPasswordTestHarness />
+      </AppProviders>
+    );
+
+    // Verify SCR-AUTH-04 visible
+    expect(getByTestId('screen-reset-password')).toBeTruthy();
+    expect(getByText('Reset Password')).toBeTruthy();
+    expect(getByText('SCR-AUTH-04')).toBeTruthy();
+    expect(getByText('SCR-AUTH-04: Reset Password Screen (Phase 12 Shell)')).toBeTruthy();
+    expect(getByTestId('btn-back-to-login-from-reset')).toBeTruthy();
+
+    // Verify navigation action back to Login
+    fireEvent.press(getByTestId('btn-back-to-login-from-reset'));
+    await waitFor(() => {
+      expect(getByTestId('screen-login')).toBeTruthy();
+      expect(getByText('SCR-AUTH-02')).toBeTruthy();
     });
   });
 });
