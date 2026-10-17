@@ -33,14 +33,15 @@ describe('ErrorState Component', () => {
   });
 
   test('renders traceId caption when provided', async () => {
-    const { getByText } = await renderWithProviders(
+    const { getByText, queryByText } = await renderWithProviders(
       <ErrorState
         message="Hệ thống bận"
         traceId="REQ-9921-X"
       />
     );
 
-    expect(getByText('Mã lỗi: REQ-9921-X')).toBeTruthy();
+    expect(getByText('Mã tham chiếu: REQ-9921-X')).toBeTruthy();
+    expect(queryByText('Mã lỗi: REQ-9921-X')).toBeNull();
   });
 
   test('does not render button when onRetry is omitted', async () => {

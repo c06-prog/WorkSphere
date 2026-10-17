@@ -1,9 +1,15 @@
 import React from 'react';
 import { fireEvent } from '@testing-library/react-native';
-import { ConfirmationDialog } from '../../src/shared/components/ConfirmationDialog';
+import { ConfirmationDialog } from '../../src/shared/components';
+import * as SharedComponents from '../../src/shared/components';
 import { renderWithProviders } from '../test-utils';
 
 describe('ConfirmationDialog Component', () => {
+  test('public API surface exports ConfirmationDialog and excludes ConfirmDialog alias', () => {
+    expect(ConfirmationDialog).toBeDefined();
+    expect(typeof ConfirmationDialog).toBe('function');
+    expect((SharedComponents as Record<string, unknown>).ConfirmDialog).toBeUndefined();
+  });
   test('renders title, message, and buttons when visible', async () => {
     const handleConfirm = jest.fn();
     const handleCancel = jest.fn();

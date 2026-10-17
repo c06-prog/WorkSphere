@@ -27,23 +27,20 @@ describe('PriorityBadge Component', () => {
     expect(getByText('Cao')).toBeTruthy();
   });
 
-  test('maps CRITICAL and URGENT priorities to Vietnamese label "Khẩn cấp"', async () => {
-    const { getByText: getCritical } = await renderWithProviders(
+  test('maps CRITICAL priority to Vietnamese label "Khẩn cấp"', async () => {
+    const { getByText, getByTestId } = await renderWithProviders(
       <PriorityBadge priority="CRITICAL" />
     );
-    expect(getCritical('Khẩn cấp')).toBeTruthy();
 
-    const { getByText: getUrgent } = await renderWithProviders(
-      <PriorityBadge priority="URGENT" />
-    );
-    expect(getUrgent('Khẩn cấp')).toBeTruthy();
+    expect(getByText('Khẩn cấp')).toBeTruthy();
+    expect(getByTestId('priority-badge-critical')).toBeTruthy();
   });
 
-  test('handles unknown priority fallback safely', async () => {
+  test('supports custom label override on canonical priority', async () => {
     const { getByText } = await renderWithProviders(
-      <PriorityBadge priority="CUSTOM_PRIORITY" />
+      <PriorityBadge priority="HIGH" label="Mức độ cao" />
     );
 
-    expect(getByText('CUSTOM_PRIORITY')).toBeTruthy();
+    expect(getByText('Mức độ cao')).toBeTruthy();
   });
 });

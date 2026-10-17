@@ -72,7 +72,7 @@ export function ErrorState({
             },
           ]}
         >
-          {`Mã lỗi: ${traceId}`}
+          {`Mã tham chiếu: ${traceId}`}
         </Text>
       ) : null}
 

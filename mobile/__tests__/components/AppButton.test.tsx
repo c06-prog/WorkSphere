@@ -1,4 +1,5 @@
 import React from 'react';
+import { StyleSheet } from 'react-native';
 import { fireEvent } from '@testing-library/react-native';
 import { AppButton } from '../../src/shared/components/AppButton';
 import { renderWithProviders } from '../test-utils';
@@ -64,5 +65,23 @@ describe('AppButton Component', () => {
       <AppButton title="Xóa tài sản" variant="danger" onPress={jest.fn()} />
     );
     expect(getDanger('Xóa tài sản')).toBeTruthy();
+  });
+
+  test('preserves baseline touch target minHeight of 48dp against caller style override', async () => {
+    const { getByRole } = await renderWithProviders(
+      <AppButton
+        title="Nút bấm nhỏ"
+        onPress={jest.fn()}
+        style={{ minHeight: 20 }}
+      />
+    );
+
+    const button = getByRole('button');
+    const flatStyle = StyleSheet.flatten(
+      typeof button.props.style === 'function'
+        ? button.props.style({ pressed: false })
+        : button.props.style
+    );
+    expect(flatStyle.minHeight).toBe(48);
   });
 });

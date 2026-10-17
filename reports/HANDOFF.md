@@ -10,7 +10,7 @@
 - Phase 12A Scaffold Baseline Checkpoint: `d61358e3e2322ae8933c6b241680ddc563594d6e`
 - Phase 12A Environment/CI Patch: `dd6e9eef69876837bf9383e6137d3105daefaa5d`
 - Phase 12B Status: THEME FOUNDATION & NAVIGATION SHELL PASS & PATCHED (`7b3b0ea446128811ec9f5f55e51bf249bae23e47`)
-- Phase 12C Status: 10 SHARED COMPONENTS FOUNDATION PASS (57/57 tests PASS, lint 0, typecheck 0, Android assembleDebug BUILD SUCCESS, Emulator smoke verified)
+- Phase 12C Status: 10 SHARED COMPONENTS FOUNDATION PASS & PATCHED (59/59 tests PASS, Priority contract aligned to LOW/MEDIUM/HIGH/CRITICAL, ConfirmationDialog public export standardized, AppButton touch target & pressed style hardened, ErrorState trace wording standardized to "Mã tham chiếu", StatusBadge boundary documented, lint 0, typecheck 0, Android assembleDebug BUILD SUCCESS, Emulator smoke verified)
 - Next Permitted Substep: Phase 12D (Network, Storage & Auth State Foundation)
 - Phase 12 Checkpoint: CHƯA ĐÓNG (Phase 12 chưa hoàn tất).
 - Phase 12D: CHƯA BẮT ĐẦU.

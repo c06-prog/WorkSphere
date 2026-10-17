@@ -4,6 +4,13 @@ import { useAppTheme } from '../../app/providers/ThemeProvider';
 
 export type StatusCategory = 'project' | 'task' | 'serviceRequest' | 'generic';
 
+/**
+ * StatusBadge is a cross-domain presentational display component.
+ * Boundary notice:
+ * - Do NOT use StatusBadge status types as API request/response DTO enums.
+ * - API feature types MUST use exact backend enums (e.g. ProjectStatus, TaskStatus, ServiceStatus).
+ * - Unknown status fallback is for presentation safety only and does not canonicalize backend values.
+ */
 export interface StatusBadgeProps {
   status: string;
   label?: string;

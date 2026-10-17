@@ -6,6 +6,9 @@ export * from './EmptyState';
 export * from './ErrorState';
 export * from './StatusBadge';
 export * from './PriorityBadge';
-export * from './ConfirmationDialog';
+export {
+  ConfirmationDialog,
+  type ConfirmationDialogProps,
+} from './ConfirmationDialog';
 export * from './SearchBar';
 export * from './PlaceholderScreen';

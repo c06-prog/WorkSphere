@@ -38,7 +38,7 @@ export function AppButton({
   const theme = useAppTheme();
   const isInteractive = !disabled && !loading;
 
-  const getVariantStyles = (pressed: boolean): { container: ViewStyle; text: TextStyle } => {
+  const getVariantStyles = (): { container: ViewStyle; text: TextStyle } => {
     if (disabled) {
       if (variant === 'outline' || variant === 'text') {
         return {
@@ -68,7 +68,7 @@ export function AppButton({
       case 'secondary':
         return {
           container: {
-            backgroundColor: pressed ? theme.colors.border : theme.colors.surfaceVariant,
+            backgroundColor: theme.colors.surfaceVariant,
             borderColor: theme.colors.border,
             borderWidth: 1,
           },
@@ -79,7 +79,7 @@ export function AppButton({
       case 'outline':
         return {
           container: {
-            backgroundColor: pressed ? theme.colors.primaryContainer : 'transparent',
+            backgroundColor: 'transparent',
             borderColor: theme.colors.primary,
             borderWidth: 1,
           },
@@ -90,7 +90,7 @@ export function AppButton({
       case 'danger':
         return {
           container: {
-            backgroundColor: pressed ? '#B91C1C' : theme.colors.error,
+            backgroundColor: theme.colors.error,
             borderColor: 'transparent',
             borderWidth: 0,
           },
@@ -101,7 +101,7 @@ export function AppButton({
       case 'text':
         return {
           container: {
-            backgroundColor: pressed ? theme.colors.surfaceVariant : 'transparent',
+            backgroundColor: 'transparent',
             borderColor: 'transparent',
             borderWidth: 0,
           },
@@ -113,7 +113,7 @@ export function AppButton({
       default:
         return {
           container: {
-            backgroundColor: pressed ? '#1E40AF' : theme.colors.primary,
+            backgroundColor: theme.colors.primary,
             borderColor: 'transparent',
             borderWidth: 0,
           },
@@ -148,13 +148,16 @@ export function AppButton({
           borderRadius: theme.radii.medium,
           paddingHorizontal: theme.spacing.md,
           paddingVertical: theme.spacing.sm,
+        },
+        getVariantStyles().container,
+        pressed && isInteractive && styles.pressed,
+        style,
+        {
           minHeight: theme.minTouchTarget,
         },
-        getVariantStyles(pressed).container,
-        style,
       ]}
     >
-      {({ pressed }) => (
+      {() => (
         loading ? (
           <ActivityIndicator
             size="small"
@@ -166,7 +169,7 @@ export function AppButton({
             style={[
               theme.typography.label,
               styles.baseText,
-              getVariantStyles(pressed).text,
+              getVariantStyles().text,
               textStyle,
             ]}
           >
@@ -186,5 +189,8 @@ const styles = StyleSheet.create({
   },
   baseText: {
     textAlign: 'center',
+  },
+  pressed: {
+    opacity: 0.8,
   },
 });

@@ -2,21 +2,20 @@ import React from 'react';
 import { StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { useAppTheme } from '../../app/providers/ThemeProvider';
 
-export type PriorityLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' | 'URGENT';
+export type PriorityLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 
 export interface PriorityBadgeProps {
-  priority: PriorityLevel | string;
+  priority: PriorityLevel;
   label?: string;
   testID?: string;
   style?: StyleProp<ViewStyle>;
 }
 
-const CANONICAL_PRIORITY_LABELS: Record<string, string> = {
+const CANONICAL_PRIORITY_LABELS: Record<PriorityLevel, string> = {
   LOW: 'Thấp',
   MEDIUM: 'Trung bình',
   HIGH: 'Cao',
   CRITICAL: 'Khẩn cấp',
-  URGENT: 'Khẩn cấp',
 };
 
 export function PriorityBadge({
@@ -26,10 +25,9 @@ export function PriorityBadge({
   style,
 }: PriorityBadgeProps) {
   const theme = useAppTheme();
-  const normalized = (priority || '').toUpperCase().trim();
 
   const getPriorityColors = (): { bg: string; text: string; border: string } => {
-    switch (normalized) {
+    switch (priority) {
       case 'LOW':
         return {
           bg: theme.colors.surfaceVariant,
@@ -49,23 +47,16 @@ export function PriorityBadge({
           border: theme.colors.warning,
         };
       case 'CRITICAL':
-      case 'URGENT':
         return {
           bg: theme.colors.errorContainer,
           text: theme.colors.error,
           border: theme.colors.error,
         };
-      default:
-        return {
-          bg: theme.colors.surfaceVariant,
-          text: theme.colors.textSecondary,
-          border: theme.colors.border,
-        };
     }
   };
 
   const colors = getPriorityColors();
-  const displayLabel = label ?? CANONICAL_PRIORITY_LABELS[normalized] ?? priority;
+  const displayLabel = label ?? CANONICAL_PRIORITY_LABELS[priority];
 
   return (
     <View
@@ -80,7 +71,7 @@ export function PriorityBadge({
         },
         style,
       ]}
-      testID={testID ?? `priority-badge-${normalized.toLowerCase()}`}
+      testID={testID ?? `priority-badge-${priority.toLowerCase()}`}
       accessibilityLabel={`Độ ưu tiên: ${displayLabel}`}
     >
       <Text

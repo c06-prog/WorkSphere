@@ -303,7 +303,7 @@
   - Phase 12A (Scaffold Baseline): PASS, kiểm toán môi trường và đồng bộ CI Node 24 hoàn tất (`mobile/.node-version`).
   - Thiết lập npm cấp người dùng `allow-scripts=opencode-ai` đã được khôi phục an toàn, kiểm chứng `npm ci` tương thích hoàn toàn.
   - Phase 12B (Theme Foundation & Navigation Shell): PASS & PATCHED (`7b3b0ea446128811ec9f5f55e51bf249bae23e47`).
-  - Phase 12C (10 Shared Components Foundation): PASS (57/57 tests PASS, lint 0, typecheck 0, Android assembleDebug BUILD SUCCESS, Emulator smoke verified).
+  - Phase 12C (10 Shared Components Foundation): PASS & PATCHED (59/59 tests PASS, Priority contract canonicalized to LOW/MEDIUM/HIGH/CRITICAL, ConfirmationDialog public export standardized, AppButton touch target & pressed style hardened, ErrorState trace wording standardized to "Mã tham chiếu", StatusBadge boundary clarified, lint 0, typecheck 0, Android assembleDebug BUILD SUCCESS, Emulator smoke verified).
   - Bước kế tiếp được phép: Phase 12D (Network, Storage & Auth State Foundation).
   - Checkpoint Phase 12 chưa đóng, chưa hoàn tất Phase 12 toàn diện.
 - Phase 11 (Notification và Personal Dashboard) đã hoàn thành, kiểm toán, làm cứng và đóng memory checkpoint (298/298 tests PASS, Checkstyle 0 violations).

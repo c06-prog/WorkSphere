@@ -29,8 +29,8 @@
 ### 3.1. `AppButton`
 - **Vị trí:** `mobile/src/shared/components/AppButton.tsx`
 - **Variants:** `primary` (nền Primary, chữ trắng), `secondary` (nền xám nhạt `surfaceVariant`, viền `border`), `outline` (nền trong suốt, viền `primary`), `danger` (nền `error` đỏ, chữ trắng), `text` (nền trong suốt, chữ `primary`).
-- **States:** Default, Pressed (opacity/tint), Disabled (nền `disabledContainer`, chữ `disabled`, không nhận tương tác), Loading (`ActivityIndicator` thay thế chữ, ngăn chặn bấm đúp).
-- **Quy chuẩn tiếp cận:** `accessibilityRole="button"`, `accessibilityState={{ disabled: !isInteractive, busy: loading }}`, `minHeight: 48` (touch target).
+- **States:** Default, Pressed (opacity 0.8 chuẩn theo `design/06_COMPONENT_INVENTORY.md`, không dùng mã hex cứng ngoài theme), Disabled (nền `disabledContainer`, chữ `disabled`, không nhận tương tác), Loading (`ActivityIndicator` thay thế chữ, ngăn chặn bấm đúp).
+- **Quy chuẩn tiếp cận:** `accessibilityRole="button"`, `accessibilityState={{ disabled: !isInteractive, busy: loading }}`, `minHeight: 48` (touch target được bảo vệ, caller style không thể đè giảm dưới 48dp).
 
 ### 3.2. `AppTextInput`
 - **Vị trí:** `mobile/src/shared/components/AppTextInput.tsx`
@@ -64,12 +64,13 @@
 ### 3.6. `ErrorState`
 - **Vị trí:** `mobile/src/shared/components/ErrorState.tsx`
 - **Bố cục:** Tiêu đề cảnh báo `typography.heading2` màu `error`, thông điệp giải thích màu `textSecondary`.
-- **Trace ID:** Hiển thị mã theo dõi lỗi `traceId` tinh gọn ở định dạng caption nếu được cung cấp; không rò rỉ stack trace hay SQL nội bộ.
+- **Trace ID:** Hiển thị mã theo dõi lỗi `traceId` tinh gọn ở định dạng caption với nhãn chuẩn: `Mã tham chiếu: ${traceId}`; không rò rỉ stack trace hay SQL nội bộ.
 - **Thử lại:** Nút bấm `<AppButton variant="outline" title={retryTitle} onPress={onRetry} />`.
 - **Accessibility:** `accessible={true}`, `accessibilityRole="alert"`.
 
 ### 3.7. `StatusBadge`
 - **Vị trí:** `mobile/src/shared/components/StatusBadge.tsx`
+- **Ranh giới kiến trúc:** StatusBadge là display component đa miền (presentational cross-domain display mapping); không được dùng types của StatusBadge làm API request/response DTO enum.
 - **Ánh xạ chuẩn:**
   - `DRAFT` / `PLANNED` / `OPEN`: Nền `infoContainer`, viền/chữ `info` ("Bản nháp", "Kế hoạch", "Mở").
   - `ACTIVE` / `IN_PROGRESS` / `DONE` / `RESOLVED`: Nền `successContainer`, viền/chữ `success` ("Đang thực hiện", "Đang xử lý", "Hoàn thành", "Đã giải quyết").
@@ -80,23 +81,23 @@
 
 ### 3.8. `PriorityBadge`
 - **Vị trí:** `mobile/src/shared/components/PriorityBadge.tsx`
-- **Mức độ ưu tiên chuẩn:**
+- **Hợp đồng Canonical:** Chuẩn hóa nghiêm ngặt theo backend `TaskPriority` và `ProjectPriority` (`LOW`, `MEDIUM`, `HIGH`, `CRITICAL`), loại bỏ hoàn toàn `URGENT`:
   - `LOW`: Chữ/viền `textSecondary`, nhãn tiếng Việt **"Thấp"**.
   - `MEDIUM`: Chữ `#2563EB`, nền `primaryContainer`, nhãn tiếng Việt **"Trung bình"**.
   - `HIGH`: Chữ/viền `warning`, nền `warningContainer`, nhãn tiếng Việt **"Cao"**.
-  - `CRITICAL` / `URGENT`: Chữ/viền `error`, nền `errorContainer`, nhãn tiếng Việt **"Khẩn cấp"**.
-  - Fallback an toàn: Hiển thị chuỗi nguyên bản với định dạng neutral khi gặp giá trị runtime chưa xác định.
+  - `CRITICAL`: Chữ/viền `error`, nền `errorContainer`, nhãn tiếng Việt **"Khẩn cấp"**.
 
-### 3.9. `ConfirmationDialog` (alias `ConfirmDialog`)
+### 3.9. `ConfirmationDialog`
 - **Vị trí:** `mobile/src/shared/components/ConfirmationDialog.tsx`
+- **Public API:** Xuất khẩu tên chuẩn duy nhất `ConfirmationDialog` (loại bỏ alias `ConfirmDialog` khỏi public export surface).
 - **Cấu trúc:** Sử dụng React Native `Modal` (`transparent={true}`, `animationType="fade"`).
 - **Lớp phủ:** Scrim bán trong suốt `rgba(0, 0, 0, 0.5)`. Thẻ dialog bo góc `radii.large` (16px), elevation `level4`.
-- **Hành động:** Nút Hủy (`AppButton variant="secondary"`) và nút Xác nhận (`AppButton variant="primary"` hoặc `variant="danger"` khi `isDanger=true`).
+- **Hành động:** Nút Hủy (`AppButton variant="secondary"`) và nút Xác nhận (`AppButton variant="primary"` hoặc `variant="danger"` khi `isDanger=true`). Chặn bấm hủy khi đang loading (`disabled={loading}`).
 - **Nút Back Android:** `onRequestClose={onCancel}` gọi trực tiếp callback hủy an toàn khi người dùng bấm phím back phần cứng.
 
 ### 3.10. `SearchBar`
 - **Vị trí:** `mobile/src/shared/components/SearchBar.tsx`
-- **Kiểu dáng:** Nền `surfaceVariant`, bo góc `radii.medium`, chiều cao tối thiểu 48dp, icon tìm kiếm 🔍.
+- **Kiểu dáng:** Nền `surfaceVariant`, bo góc `radii.medium`, chiều cao tối thiểu 48dp, icon tìm kiếm 🔍 (được ẩn khỏi accessibility tree bằng `accessibilityElementsHidden` và `importantForAccessibility="no"`).
 - **Nút xóa nhanh:** Nút ✕ chỉ hiển thị khi `value` có ký tự (`value.length > 0`); khi nhấn sẽ xóa chuỗi về rỗng và gọi `onClear`. Vùng chạm nút xóa đạt chuẩn 48×48dp, `accessibilityLabel="Xóa tìm kiếm"`.
 - **Thiết kế thuần Presentational:** Không chứa logic debounce hay gọi mạng bên trong component.
 
@@ -123,20 +124,20 @@
 
 ### 5.3. Jest Unit & Integration Test Matrix
 - Tổng số Test Suites: **13 passed, 13 total**.
-- Tổng số Tests: **57 passed, 57 total** (17 tests nền tảng cũ + 40 tests mới cho 10 shared components).
+- Tổng số Tests: **59 passed, 59 total** (17 tests nền tảng cũ + 42 tests mới cho 10 shared components).
 - Chi tiết các test suites:
   1. `App.test.tsx`: 1 test PASS
   2. `theme.test.tsx`: 9 tests PASS
   3. `navigation.test.tsx`: 7 tests PASS
-  4. `AppButton.test.tsx`: 5 tests PASS
+  4. `AppButton.test.tsx`: 6 tests PASS (+1 test bảo vệ touch target 48dp)
   5. `AppTextInput.test.tsx`: 5 tests PASS
   6. `PasswordInput.test.tsx`: 3 tests PASS
   7. `LoadingIndicator.test.tsx`: 3 tests PASS
   8. `EmptyState.test.tsx`: 3 tests PASS
-  9. `ErrorState.test.tsx`: 4 tests PASS
+  9. `ErrorState.test.tsx`: 4 tests PASS (kiểm tra nhãn "Mã tham chiếu")
   10. `StatusBadge.test.tsx`: 5 tests PASS
-  11. `PriorityBadge.test.tsx`: 5 tests PASS
-  12. `ConfirmationDialog.test.tsx`: 4 tests PASS
+  11. `PriorityBadge.test.tsx`: 5 tests PASS (kiểm tra 4 mức canonical LOW, MEDIUM, HIGH, CRITICAL)
+  12. `ConfirmationDialog.test.tsx`: 5 tests PASS (+1 test xuất khẩu public API và loại trừ alias)
   13. `SearchBar.test.tsx`: 3 tests PASS
 
 ### 5.4. Android Debug Build

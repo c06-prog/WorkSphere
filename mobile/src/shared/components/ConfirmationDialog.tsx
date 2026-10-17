@@ -107,8 +107,6 @@ export function ConfirmationDialog({
   );
 }
 
-export const ConfirmDialog = ConfirmationDialog;
-
 const styles = StyleSheet.create({
   scrim: {
     flex: 1,
