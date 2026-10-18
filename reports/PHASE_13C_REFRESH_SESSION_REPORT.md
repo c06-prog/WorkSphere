@@ -45,9 +45,10 @@ Phase 13C establishes robust, single-flight token refresh coordination, cold-sta
 ## 2. Test & Verification Matrix
 
 ### 2.1 Mobile Unit & Integration Tests (Jest)
-- Total test suites: **31 passed, 31 total**
-- Total tests: **258 passed, 258 total** (0 failures, 0 skipped)
+- Total test suites: **32 passed, 32 total**
+- Total tests: **261 passed, 261 total** (0 failures, 0 skipped)
 - Hardened test suites:
+  - `mobile/__tests__/auth/sessionCredentialCoordinator.test.ts` (3 tests: deterministic Login-wins, deterministic Logout-wins, queue failure recovery)
   - `mobile/__tests__/auth/refreshCoordinator.test.ts` (9 tests: single-flight deduplication, atomic rotation, failure handling, isolation, stale refresh race A, stale refresh race B, generation coexistence)
   - `mobile/__tests__/auth/AuthProvider.bootstrap.test.tsx` (7 tests: absent token unauthenticated, successful bootstrap, recoverable network preservation, terminal 401 cleanup, concurrent 401 terminal cleanup coalescing, retry recovery)
   - `mobile/__tests__/auth/AuthProvider.logout.test.tsx` (5 tests: remote logout cleanup, network failure resilience, logoutAll, mutex locks)
@@ -55,12 +56,12 @@ Phase 13C establishes robust, single-flight token refresh coordination, cold-sta
   - `mobile/__tests__/auth/authReducer.test.ts` (11 tests: state machine transitions, canRetryBootstrap lifecycle, security invariants)
 
 ### 2.2 Static Analysis & Quality Gates
-- `npm config get allow-scripts`: Verified
+- `npm config get allow-scripts`: Verified (`opencode-ai`)
 - `npm run lint`: **0 errors, 0 warnings**
 - `npm run typecheck`: **0 errors**
 
 ### 2.3 Android Build & Smoke Test
-- Gradle Build: `.\gradlew.bat assembleDebug --no-daemon` -> **BUILD SUCCESSFUL**
+- Gradle Build: `.\gradlew.bat assembleDebug --no-daemon` -> **BUILD SUCCESSFUL in 6m 0s** (203 actionable tasks, exit code 0)
 - Device Verification: `emulator-5554` running Android 15 (API 35).
 - APK Installation: `app-debug.apk` successfully streamed and installed (`Success`).
 - Runtime Smoke Test: Application `com.workspheremobile/.MainActivity` launched successfully (PID `24109`), SoLoader initialized without crash, and process terminated cleanly.
@@ -90,3 +91,20 @@ Phase 13C establishes robust, single-flight token refresh coordination, cold-sta
 
 3. **HANDLER_OWNERSHIP_RACE_NOTE (LOW/MEDIUM)**:
    - Implemented `registerUnauthorizedHandler` and `registerTokenRefreshHandler` in `apiClient.ts` returning unregister closures that check reference identity before clearing, preventing race conditions during provider unmount/remount.
+
+---
+
+## 5. Phase 13C Final Token Commit Serialization Patch
+
+### 5.1 Architecture & Findings Resolved
+1. **TOKEN_COMMIT_SERIALIZATION_GAP & STALE_REFRESH_KEYCHAIN_OVERWRITE_RISK**:
+   - Created `mobile/src/app/auth/sessionCredentialCoordinator.ts`.
+   - Unified all Keychain mutations and memory token updates under a single module-private FIFO promise queue (`credentialQueue`).
+   - Every mutation is gated by `expectedGeneration`: if the session generation was invalidated before Keychain write completes, the mutation aborts without altering storage or overwriting newer session tokens.
+   - All direct `secureStorage.setRefreshToken` and `secureStorage.clearRefreshToken` calls in `AuthProvider` and `refreshCoordinator` were migrated to the coordinator.
+
+2. **LOGOUT_STALE_REFRESH_REPOPULATION_GAP & LOGIN_REFRESH_FINAL_TOKEN_TEST_GAP**:
+   - Added deterministic integration tests in `sessionCredentialCoordinator.test.ts`:
+     - `1. DETERMINISTIC LOGIN-WINS TEST`: Demonstrates that when a delayed refresh A is held during Keychain write while login B invalidates and commits, refresh A rejects and final Keychain / memory tokens belong exclusively to B.
+     - `2. DETERMINISTIC LOGOUT-WINS TEST`: Demonstrates that when refresh A is delayed while logout occurs, refresh A rejects and final Keychain / memory state is strictly `null`.
+     - `3. FAILURE RECOVERY TEST`: Proves that a failed credential transaction (e.g. Keychain write error) does not poison or block subsequent queued transactions.

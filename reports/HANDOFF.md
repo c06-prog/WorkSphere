@@ -4,17 +4,18 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: Phase 13C Concurrency Hardening Patch
-- Status: SUBPHASE 13C HARDENED & TESTED (Ready for Subphase 13D review)
-- Phase 13C Concurrency Hardening Scope:
-  - `mobile/src/app/auth/refreshCoordinator.ts`: Monotonic `refreshGeneration` counter, pre-network, pre-Keychain write, and post-Keychain write generation checks to prevent stale flights from overwriting session data or publishing outdated access tokens (`STALE_REFRESH_TOKEN_COMMIT_RISK`).
-  - `mobile/src/app/auth/AuthProvider.tsx`: Synchronous `invalidateRefreshCoordinator()` on `login`, `logout`, `logoutAll`, `logoutLocal`, and terminal cleanup; `terminalCleanupPromiseRef` coalesces concurrent 401 terminal rejections into a single session cleanup execution (`TERMINAL_CLEANUP_DEDUP_GAP`).
-  - `mobile/src/shared/api/apiClient.ts`: Added `registerUnauthorizedHandler` and `registerTokenRefreshHandler` returning identity-safe unregister closures (`HANDLER_OWNERSHIP_RACE_NOTE`).
+- Current Task: Phase 13C Final Token Commit Serialization Patch
+- Status: SUBPHASE 13C SERIALIZED, HARDENED & TESTED (Ready for final verification before Phase 13D)
+- Phase 13C Token Commit Serialization Scope:
+  - `mobile/src/app/auth/sessionCredentialCoordinator.ts`: Global serialized FIFO credential queue (`credentialQueue`) governing all Keychain writes/clears and memory access token updates. Enforces `expectedGeneration` verification immediately prior to Keychain mutation, ensuring delayed stale refresh flights cannot overwrite newer login sessions (`STALE_REFRESH_KEYCHAIN_OVERWRITE_RISK`) or repopulate storage after logout (`LOGOUT_STALE_REFRESH_REPOPULATION_GAP`).
+  - `mobile/src/app/auth/refreshCoordinator.ts`: Routes credential commit/clears through `sessionCredentialCoordinator`.
+  - `mobile/src/app/auth/AuthProvider.tsx`: Login and logout flows commit/clear credentials strictly through `sessionCredentialCoordinator`.
+  - Deterministic Tests: Added `sessionCredentialCoordinator.test.ts` proving Login-wins, Logout-wins, and queue error-recovery semantics.
   - Dedicated Report: `reports/PHASE_13C_REFRESH_SESSION_REPORT.md`.
-  - Mobile Tests: 31/31 test suites, 258/258 tests PASS (0 failures, 0 skipped).
+  - Mobile Tests: 32/32 test suites, 261/261 tests PASS (0 failures, 0 skipped).
   - TypeScript & Lint: `tsc --noEmit` PASS (0 errors), `eslint .` PASS (0 errors, 0 warnings).
-  - Android Build: `.\gradlew.bat assembleDebug --no-daemon` BUILD SUCCESSFUL (exit code 0).
-  - Next Action: Phase 13D entry review.
+  - Android Build: `.\gradlew.bat assembleDebug --no-daemon` BUILD SUCCESSFUL (203 actionable tasks, exit code 0).
+  - Next Action: Independent final verification before Phase 13D.
 - Working tree: clean (sau khi commit)
 
 ## Phase 11 Notification and Personal Dashboard Module: COMPLETED, AUDITED & HARDENED

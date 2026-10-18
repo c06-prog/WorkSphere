@@ -3,7 +3,6 @@ import { getEnvironmentConfig } from '../../shared/config/environment';
 import { isApiResponse, unwrapApiResponse } from '../../shared/api/apiEnvelope';
 import { isRefreshResponse, RefreshResponse, RefreshTokenRequest } from '../../features/auth/api/authTypes';
 import { secureStorage } from '../../shared/storage/secureStorage';
-import { accessTokenStore } from '../../shared/storage/accessTokenStore';
 
 /**
  * Module-private dedicated refresh HTTP transport client.
@@ -59,28 +58,16 @@ export async function executeRefreshCall(refreshToken: string): Promise<RefreshR
   return data;
 }
 
-/**
- * Monotonically increasing generation counter for refresh operations.
- * Incremented whenever a session replacement occurs (login, logout, terminal cleanup).
- */
-let refreshGeneration = 1;
+import {
+  getSessionCredentialGeneration,
+  commitRefreshedCredentials,
+  clearSessionCredentials,
+  invalidateSessionCredentials,
+} from './sessionCredentialCoordinator';
 
-/**
- * Returns current refresh generation.
- */
-export function getRefreshGeneration(): number {
-  return refreshGeneration;
-}
-
-/**
- * Invalidates any in-flight refresh flight immediately.
- * Any in-flight refresh whose captured generation does not match will abort
- * before writing tokens to Keychain or memory, and will not clear newer tokens.
- */
-export function invalidateRefreshCoordinator(): void {
-  refreshGeneration += 1;
-  refreshPromise = null;
-}
+// Re-export generation and invalidation helpers so existing callers remain valid
+export const getRefreshGeneration = getSessionCredentialGeneration;
+export const invalidateRefreshCoordinator = invalidateSessionCredentials;
 
 /**
  * Module-private shared promise for single-flight concurrency.
@@ -93,17 +80,16 @@ let activeFlightGeneration = 0;
  * Coordinates single-flight access token refresh with generation-based staleness protection.
  *
  * Flow:
- * 1. Captures current refresh generation.
+ * 1. Captures current credential generation.
  * 2. If a valid refreshPromise is already in-flight for this generation, returns it directly.
  * 3. Reads existing refreshToken from Keychain (secureStorage).
  * 4. Calls dedicated refresh transport.
- * 5. Before writing rotated token: verifies generation is still current.
- * 6. After Keychain write: verifies generation again before publishing in-memory access token.
- * 7. If invalidated during flight: aborts without overwriting current session or clearing newer tokens.
- * 8. Resets refreshPromise in finally block ONLY IF it still belongs to this flight.
+ * 5. Before enqueuing credential commit: verifies generation is still current.
+ * 6. Commits rotated tokens through serialized sessionCredentialCoordinator.
+ * 7. Resets refreshPromise in finally block ONLY IF it still belongs to this flight.
  */
 export async function refreshAccessToken(expectedGeneration?: number): Promise<string> {
-  const flightGeneration = expectedGeneration ?? refreshGeneration;
+  const flightGeneration = expectedGeneration ?? getSessionCredentialGeneration();
 
   if (refreshPromise && activeFlightGeneration === flightGeneration) {
     return refreshPromise;
@@ -113,14 +99,14 @@ export async function refreshAccessToken(expectedGeneration?: number): Promise<s
   const currentFlightPromise = (async () => {
     const currentRefreshToken = await secureStorage.getRefreshToken();
     if (!currentRefreshToken) {
-      if (refreshGeneration === flightGeneration) {
-        accessTokenStore.clearAccessToken();
+      if (getSessionCredentialGeneration() === flightGeneration) {
+        await clearSessionCredentials(flightGeneration);
       }
       throw new Error('Không tìm thấy phiên đăng nhập trong bộ lưu trữ an toàn');
     }
 
     // Verify generation before making network call
-    if (refreshGeneration !== flightGeneration) {
+    if (getSessionCredentialGeneration() !== flightGeneration) {
       throw new Error('Phiên làm mới đã bị hủy bởi tác vụ xác thực mới hơn');
     }
 
@@ -129,45 +115,31 @@ export async function refreshAccessToken(expectedGeneration?: number): Promise<s
       response = await executeRefreshCall(currentRefreshToken);
     } catch (apiError) {
       // Backend rejected refresh token or network failed
-      // For terminal rejection (or any refresh failure), clear in-memory access token only if still current
-      if (refreshGeneration === flightGeneration) {
-        accessTokenStore.clearAccessToken();
+      // For terminal rejection, clear credentials only if still in this generation
+      if (getSessionCredentialGeneration() === flightGeneration) {
+        await clearSessionCredentials(flightGeneration);
       }
       throw apiError;
     }
 
-    // Pre-persistence generation check:
-    // If user logged in or logged out while refresh was in flight, ABORT immediately.
-    if (refreshGeneration !== flightGeneration) {
+    // Pre-queue generation check
+    if (getSessionCredentialGeneration() !== flightGeneration) {
       throw new Error('Phiên làm mới đã bị hủy bởi tác vụ xác thực mới hơn');
     }
 
-    // Atomic rotation persistence:
-    // Persist new refresh token to Keychain BEFORE updating memory access token
+    // Serialized credential commit through sessionCredentialCoordinator
     try {
-      await secureStorage.setRefreshToken(response.refreshToken);
-    } catch {
-      // Storage hardware failed: rollback memory and best-effort clear Keychain if still current
-      if (refreshGeneration === flightGeneration) {
-        accessTokenStore.clearAccessToken();
-        try {
-          await secureStorage.clearRefreshToken();
-        } catch {
-          // Best-effort cleanup
-        }
+      await commitRefreshedCredentials(flightGeneration, response.refreshToken, response.accessToken);
+    } catch (commitError) {
+      if (
+        commitError instanceof Error &&
+        commitError.message === 'Phiên làm mới đã bị hủy bởi tác vụ xác thực mới hơn'
+      ) {
+        throw commitError;
       }
       throw new Error('Không thể lưu trữ khóa phiên làm mới vào phần cứng an toàn');
     }
 
-    // Post-persistence generation check:
-    // If session invalidated during the Keychain write await window, do NOT publish access token
-    // and compensate by restoring/cleaning only if no newer session took over.
-    if (refreshGeneration !== flightGeneration) {
-      throw new Error('Phiên làm mới đã bị hủy bởi tác vụ xác thực mới hơn');
-    }
-
-    // Now safe to commit new access token into memory
-    accessTokenStore.setAccessToken(response.accessToken);
     return response.accessToken;
   })();
 
@@ -188,5 +160,4 @@ export async function refreshAccessToken(expectedGeneration?: number): Promise<s
 export function resetRefreshCoordinatorForTests(): void {
   refreshPromise = null;
   activeFlightGeneration = 0;
-  refreshGeneration = 1;
 }

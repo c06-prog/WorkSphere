@@ -7,21 +7,22 @@
 - Pre-Phase 13 Readiness Base: `a9c59259904f2dd6e9bd38e4ca63c1a88c89c474` (`feat(mobile): finalize pre-auth runtime readiness`)
 - Phase 13B Checkpoint: `d81717ecda52fd6883746f1ad4234979a6eceaed` (`feat(mobile): implement auth provider and login flow`)
 - Phase 13B Hardening: `93ae7a33c4ee87870416fe9ccf0ac798c3daeabc` (`fix(mobile): harden auth provider concurrency`)
-- Current Status: Phase 13 Subphase 13C Concurrency Hardening COMPLETED & VALIDATED
+- Current Status: Phase 13 Subphase 13C Final Token Commit Serialization COMPLETED & VALIDATED
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening
 
-- Latest Validated Implementation: `fix(mobile): harden auth refresh concurrency`
-- Subphase 13C Concurrency Hardening:
-  - `mobile/src/app/auth/refreshCoordinator.ts`: Monotonic `refreshGeneration` counter, pre-network, pre-Keychain write, and post-Keychain write generation checks to prevent stale flights from overwriting session data or publishing outdated access tokens (`STALE_REFRESH_TOKEN_COMMIT_RISK`).
-  - `mobile/src/app/auth/AuthProvider.tsx`: Synchronous `invalidateRefreshCoordinator()` on `login`, `logout`, `logoutAll`, `logoutLocal`, and terminal cleanup; `terminalCleanupPromiseRef` coalesces concurrent 401 terminal rejections into a single session cleanup execution (`TERMINAL_CLEANUP_DEDUP_GAP`).
-  - `mobile/src/shared/api/apiClient.ts`: Added `registerUnauthorizedHandler` and `registerTokenRefreshHandler` returning identity-safe unregister closures (`HANDLER_OWNERSHIP_RACE_NOTE`).
-  - Mobile Tests: 31/31 test suites, 258/258 tests PASS (0 failures, 0 skipped).
+- Latest Validated Implementation: `fix(mobile): serialize auth credential commits`
+- Subphase 13C Token Commit Serialization Patch:
+  - `mobile/src/app/auth/sessionCredentialCoordinator.ts`: Global serialized FIFO credential queue (`credentialQueue`) governing all Keychain writes/clears and memory access token updates. Enforces `expectedGeneration` verification immediately prior to Keychain mutation, ensuring delayed stale refresh flights cannot overwrite newer login sessions (`STALE_REFRESH_KEYCHAIN_OVERWRITE_RISK`) or repopulate storage after logout (`LOGOUT_STALE_REFRESH_REPOPULATION_GAP`).
+  - `mobile/src/app/auth/refreshCoordinator.ts`: Re-exports generation helpers and routes credential commits/clears through `sessionCredentialCoordinator`.
+  - `mobile/src/app/auth/AuthProvider.tsx`: Login and logout flows commit/clear credentials strictly through `sessionCredentialCoordinator`.
+  - Deterministic Tests: Added `sessionCredentialCoordinator.test.ts` proving Login-wins, Logout-wins, and queue error-recovery semantics.
+  - Mobile Tests: 32/32 test suites, 261/261 tests PASS (0 failures, 0 skipped).
   - TypeScript & Lint: `tsc --noEmit` PASS (0 errors), `eslint .` PASS (0 errors, 0 warnings).
-  - Android Build: `.\gradlew.bat assembleDebug --no-daemon` BUILD SUCCESSFUL (exit code 0).
+  - Android Build: `.\gradlew.bat assembleDebug --no-daemon` BUILD SUCCESSFUL (203 actionable tasks, exit code 0).
   - Dedicated Report: `reports/PHASE_13C_REFRESH_SESSION_REPORT.md`.
-  - Next Action: Phase 13D entry review.
+  - Next Action: Independent final verification before Phase 13D.
 
 
 

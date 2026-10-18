@@ -5,6 +5,7 @@ import {
   invalidateRefreshCoordinator,
   getRefreshGeneration,
 } from '../../src/app/auth/refreshCoordinator';
+import { resetSessionCredentialCoordinatorForTests } from '../../src/app/auth/sessionCredentialCoordinator';
 import { secureStorage } from '../../src/shared/storage/secureStorage';
 import { accessTokenStore } from '../../src/shared/storage/accessTokenStore';
 import type { RefreshResponse } from '../../src/features/auth/api/authTypes';
@@ -21,8 +22,9 @@ describe('Single-Flight RefreshCoordinator', () => {
     refreshTokenExpiresIn: 604800,
   };
 
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks();
+    await resetSessionCredentialCoordinatorForTests();
     resetRefreshCoordinatorForTests();
   });
 

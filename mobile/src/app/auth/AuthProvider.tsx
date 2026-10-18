@@ -14,7 +14,12 @@ import { mapAuthError } from '../../features/auth/errors/authErrorMapper';
 import { accessTokenStore } from '../../shared/storage/accessTokenStore';
 import { secureStorage } from '../../shared/storage/secureStorage';
 import { registerTokenRefreshHandler, registerUnauthorizedHandler } from '../../shared/api/apiClient';
-import { invalidateRefreshCoordinator, refreshAccessToken } from './refreshCoordinator';
+import { refreshAccessToken } from './refreshCoordinator';
+import {
+  invalidateSessionCredentials,
+  commitLoginCredentials,
+  clearSessionCredentials,
+} from './sessionCredentialCoordinator';
 import { isNormalizedApiError } from '../../shared/api/apiError';
 
 export const AuthContext = createContext<AuthContextValue | null>(null);
@@ -50,13 +55,8 @@ export function AuthProvider({ children, initialState }: AuthProviderProps) {
 
     const cleanupPromise = (async () => {
       sessionEpochRef.current += 1;
-      invalidateRefreshCoordinator();
-      accessTokenStore.clearAccessToken();
-      try {
-        await secureStorage.clearRefreshToken();
-      } catch {
-        // Best-effort
-      }
+      invalidateSessionCredentials();
+      await clearSessionCredentials();
       if (mountedRef.current) {
         dispatch({ type: 'BOOTSTRAP_TERMINAL_FAILED' });
       }
@@ -176,7 +176,7 @@ export function AuthProvider({ children, initialState }: AuthProviderProps) {
 
     loginInFlightRef.current = true;
     sessionEpochRef.current += 1;
-    invalidateRefreshCoordinator();
+    const loginGeneration = invalidateSessionCredentials();
     const loginEpoch = sessionEpochRef.current;
 
     if (mountedRef.current) {
@@ -190,19 +190,14 @@ export function AuthProvider({ children, initialState }: AuthProviderProps) {
       });
 
       if (!mountedRef.current || loginEpoch !== sessionEpochRef.current) {
-        accessTokenStore.clearAccessToken();
-        await secureStorage.clearRefreshToken();
+        await clearSessionCredentials(loginGeneration);
         return false;
       }
 
-      // Secure storage sequence:
-      // 1. Persist refresh token to Keychain
-      // 2. Set in-memory access token ONLY AFTER Keychain write succeeds
+      // Serialized credential commit through sessionCredentialCoordinator
       try {
-        await secureStorage.setRefreshToken(response.refreshToken);
+        await commitLoginCredentials(loginGeneration, response.refreshToken, response.accessToken);
       } catch (storageError) {
-        accessTokenStore.clearAccessToken();
-        await secureStorage.clearRefreshToken();
         if (mountedRef.current && loginEpoch === sessionEpochRef.current) {
           const mappedStorageError = mapAuthError(storageError);
           dispatch({
@@ -214,12 +209,10 @@ export function AuthProvider({ children, initialState }: AuthProviderProps) {
       }
 
       if (!mountedRef.current || loginEpoch !== sessionEpochRef.current) {
-        accessTokenStore.clearAccessToken();
-        await secureStorage.clearRefreshToken();
+        await clearSessionCredentials(loginGeneration);
         return false;
       }
 
-      accessTokenStore.setAccessToken(response.accessToken);
       if (mountedRef.current && loginEpoch === sessionEpochRef.current) {
         dispatch({
           type: 'LOGIN_SUCCEEDED',
@@ -246,7 +239,7 @@ export function AuthProvider({ children, initialState }: AuthProviderProps) {
    * 1. Acquires synchronous lock
    * 2. Reads existing refreshToken
    * 3. Calls POST /auth/logout with skipAuthRefresh
-   * 4. Regardless of network/server response, cleans memory & Keychain
+   * 4. Regardless of network/server response, cleans memory & Keychain through coordinator
    * 5. Dispatches LOGOUT_COMPLETED
    */
   const logout = async (): Promise<void> => {
@@ -256,7 +249,7 @@ export function AuthProvider({ children, initialState }: AuthProviderProps) {
 
     logoutInFlightRef.current = true;
     sessionEpochRef.current += 1;
-    invalidateRefreshCoordinator();
+    invalidateSessionCredentials();
 
     if (mountedRef.current) {
       dispatch({ type: 'LOGOUT_STARTED' });
@@ -272,12 +265,7 @@ export function AuthProvider({ children, initialState }: AuthProviderProps) {
         }
       }
     } finally {
-      accessTokenStore.clearAccessToken();
-      try {
-        await secureStorage.clearRefreshToken();
-      } catch {
-        // Best-effort
-      }
+      await clearSessionCredentials();
       if (mountedRef.current) {
         dispatch({ type: 'LOGOUT_COMPLETED' });
       }
@@ -287,7 +275,7 @@ export function AuthProvider({ children, initialState }: AuthProviderProps) {
 
   /**
    * Remote logout all devices:
-   * Calls POST /auth/logout-all then always tears down local session
+   * Calls POST /auth/logout-all then always tears down local session through coordinator
    */
   const logoutAll = async (): Promise<void> => {
     if (logoutInFlightRef.current || state.operationState === 'signingOut') {
@@ -296,7 +284,7 @@ export function AuthProvider({ children, initialState }: AuthProviderProps) {
 
     logoutInFlightRef.current = true;
     sessionEpochRef.current += 1;
-    invalidateRefreshCoordinator();
+    invalidateSessionCredentials();
 
     if (mountedRef.current) {
       dispatch({ type: 'LOGOUT_STARTED' });
@@ -311,12 +299,7 @@ export function AuthProvider({ children, initialState }: AuthProviderProps) {
         }
       }
     } finally {
-      accessTokenStore.clearAccessToken();
-      try {
-        await secureStorage.clearRefreshToken();
-      } catch {
-        // Best-effort
-      }
+      await clearSessionCredentials();
       if (mountedRef.current) {
         dispatch({ type: 'LOGOUT_COMPLETED' });
       }
@@ -334,19 +317,15 @@ export function AuthProvider({ children, initialState }: AuthProviderProps) {
 
     logoutInFlightRef.current = true;
     sessionEpochRef.current += 1;
-    invalidateRefreshCoordinator();
+    invalidateSessionCredentials();
 
     if (mountedRef.current) {
       dispatch({ type: 'LOGOUT_STARTED' });
     }
 
     try {
-      accessTokenStore.clearAccessToken();
-      await secureStorage.clearRefreshToken();
-    } catch {
-      // Best-effort
+      await clearSessionCredentials();
     } finally {
-      accessTokenStore.clearAccessToken();
       if (mountedRef.current) {
         dispatch({ type: 'LOGOUT_COMPLETED' });
       }
