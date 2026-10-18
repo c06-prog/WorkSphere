@@ -3,6 +3,7 @@
 Tài liệu kiểm kê, theo dõi và quản lý nguồn gốc (provenance), mức độ tin cậy, giấy phép bản quyền, trạng thái kiểm thẩm an ninh và phạm vi tái sử dụng của toàn bộ kho mã (repositories), kỹ năng (skills), bản mẫu (templates), gói thư viện (packages), và tài nguyên tham khảo từ Internet được đưa vào dự án WorkSphere.
 
 Ngày thiết lập: 18/10/2026.
+Ngày kiểm toán & chuẩn hóa: 18/10/2026 (Audit Checkpoint `4207e62`).
 Cơ chế ban hành: Quyết định **D-057** và Quy chuẩn `AGENTS.md`.
 
 ---
@@ -20,7 +21,7 @@ Mọi tài nguyên bên ngoài được tải về máy phát triển phục v�
 - `CANDIDATE`: Mới phát hiện trên Internet, chưa tải về máy.
 - `QUARANTINED`: Đã tải về lưu tại `.external/quarantine/`, chưa hoàn thành kiểm thẩm an ninh; **tuyệt đối không thực thi**.
 - `REVIEWED`: Đã hoàn thành phân tích mã nguồn, giấy phép, script và kiểm tra bảo mật; chờ quyết định phê duyệt.
-- `APPROVED_REFERENCE`: Đã phê duyệt để làm tài liệu tham khảo đọc hiểu kiến trúc (Read-Only Reference); lưu tại `.external/repos/` hoặc `.external/templates/`.
+- `APPROVED_REFERENCE`: Đã phê duyệt để làm tài liệu tham khảo đọc hiểu kiến trúc (Read-Only Reference); lưu tại `.external/repos/` hoặc `.external/templates/` (hoặc tài liệu trực tuyến chính thức không yêu cầu bản sao cục bộ).
 - `APPROVED_EXECUTION`: Đã phê duyệt cho phép chạy script/công cụ trong môi trường cô lập có kiểm soát (Isolated Sandbox / Development Container).
 - `APPROVED_INTEGRATION`: Đã phê duyệt cho phép trích xuất hoặc phỏng tác các đoạn mã chọn lọc vào codebase WorkSphere với ghi nhận bản quyền đầy đủ.
 - `REJECTED`: Bị từ chối do rủi ro an ninh, giấy phép không tương thích, hoặc chất lượng không đạt chuẩn; tệp trong quarantine sẽ bị xóa.
@@ -47,10 +48,11 @@ Mọi tài nguyên bên ngoài được tải về máy phát triển phục v�
 - **Phiên bản / Tag**: <vX.Y.Z hoặc Tag>
 - **Commit SHA / Digest bất biến**: <Full 40-character SHA hoặc image digest sha256:...>
 - **Ngày thu thập (Retrieval Date)**: YYYY-MM-DD
-- **Đường dẫn cục bộ (Local Path)**: `D:\WorkSphere\.external\<subfolder>\<name>`
-- **Đường dẫn logic (Logical Path)**: `.external/<subfolder>/<name>`
+- **Tồn tại bản sao cục bộ (Local Copy Existence)**: `True` | `False`
+- **Đường dẫn cục bộ (Local Path)**: `D:\WorkSphere\.external\<subfolder>\<name>` hoặc `N/A (Online Reference)`
+- **Đường dẫn logic (Logical Path)**: `.external/<subfolder>/<name>` hoặc `None`
 - **Trạng thái (Status)**: `CANDIDATE` | `QUARANTINED` | `REVIEWED` | `APPROVED_REFERENCE` | `APPROVED_EXECUTION` | `APPROVED_INTEGRATION` | `REJECTED` | `SUPERSEDED` | `MISSING_LOCAL_COPY`
-- **Mã băm SHA-256**: <Checksum tệp nén hoặc archive snapshot>
+- **Mã băm SHA-256**: <Checksum tệp nén hoặc archive snapshot, hoặc N/A nếu là online reference>
 - **Xác minh chữ ký (Signature)**: `VALID` | `UNSIGNED` | `N/A`
 - **Scripts / Hooks**: `Có` (mô tả) | `Không`
 - **Native / Binary**: `Có` (ngôn ngữ/nền tảng) | `Không`
@@ -87,15 +89,16 @@ Mọi tài nguyên bên ngoài được tải về máy phát triển phục v�
 - **Phiên bản / Tag**: `v0.76.x`
 - **Commit SHA / Digest bất biến**: `5f891ebc569f143714b1ef868dc3b994d528bdf6` (React Native 0.76.0 release tag)
 - **Ngày thu thập (Retrieval Date)**: 2026-10-18
-- **Đường dẫn cục bộ (Local Path)**: `D:\WorkSphere\.external\repos\facebook__react-native`
-- **Đường dẫn logic (Logical Path)**: `.external/repos/facebook__react-native`
-- **Trạng thái (Status)**: `APPROVED_REFERENCE`
+- **Tồn tại bản sao cục bộ (Local Copy Existence)**: `False` (Tài liệu tham chiếu trực tuyến; không clone mã nguồn đầy đủ vào đĩa cục bộ)
+- **Đường dẫn cục bộ (Local Path)**: `N/A (Online Documentation Reference - no local clone required)`
+- **Đường dẫn logic (Logical Path)**: `None`
+- **Trạng thái (Status)**: `APPROVED_REFERENCE` (Hợp lệ theo quy tắc D-057: Tài liệu chính thức đã xác minh nguồn gốc được duyệt tham khảo mà không bắt buộc có bản sao đĩa)
 - **Mã băm SHA-256**: N/A (Online Git Reference & Documentation)
 - **Xác minh chữ ký (Signature)**: GPG Verified Tag
-- **Scripts / Hooks**: `Có` (Build and lifecycle scripts trong repository nguồn; không thực thi cục bộ)
-- **Native / Binary**: `Có` (C++, Java, Objective-C++)
-- **Hành vi mạng (Network Behavior)**: Tài liệu chỉ đọc (Offline/Online docs)
-- **Quyền hạn yêu cầu (Permissions)**: Không yêu cầu quyền đặc quyền
+- **Scripts / Hooks**: `Không` (Không thực thi script cục bộ)
+- **Native / Binary**: `Không` (Không biên dịch binary ngoài dự án)
+- **Hành vi mạng (Network Behavior)**: Tài liệu chỉ đọc trực tuyến
+- **Quyền hạn yêu cầu (Permissions)**: None
 - **Khả năng tương thích**: Windows host, Android SDK 35, React Native 0.76.7
 - **Kết quả quét bảo mật (Security Scan)**: `CLEAN`
 - **Kết quả quét Secret (Secret Scan)**: `CLEAN`
@@ -124,9 +127,10 @@ Mọi tài nguyên bên ngoài được tải về máy phát triển phục v�
 - **Phiên bản / Tag**: `v6.3.x`
 - **Commit SHA / Digest bất biến**: `c696e5454659f81682f6e9bc644b6c33c3f87b8d`
 - **Ngày thu thập (Retrieval Date)**: 2026-10-18
-- **Đường dẫn cục bộ (Local Path)**: `D:\WorkSphere\.external\repos\spring-projects__spring-security`
-- **Đường dẫn logic (Logical Path)**: `.external/repos/spring-projects__spring-security`
-- **Trạng thái (Status)**: `APPROVED_REFERENCE`
+- **Tồn tại bản sao cục bộ (Local Copy Existence)**: `False` (Tài liệu tham chiếu trực tuyến; không clone kho mã đầy đủ vào đĩa cục bộ)
+- **Đường dẫn cục bộ (Local Path)**: `N/A (Online Documentation Reference - no local clone required)`
+- **Đường dẫn logic (Logical Path)**: `None`
+- **Trạng thái (Status)**: `APPROVED_REFERENCE` (Hợp lệ theo quy tắc D-057: Tài liệu chính thức đã xác minh nguồn gốc được duyệt tham khảo mà không bắt buộc có bản sao đĩa)
 - **Mã băm SHA-256**: N/A (Online Reference)
 - **Xác minh chữ ký (Signature)**: Verified
 - **Scripts / Hooks**: `Không` (Tham chiếu cấu trúc và API)
@@ -152,3 +156,4 @@ Mọi tài nguyên bên ngoài được tải về máy phát triển phục v�
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | 2026-10-18 | `EXT-RES-001` | Khởi tạo | `APPROVED_REFERENCE` | WorkSphere Agent | Thiết lập tài liệu tham chiếu chuẩn React Native Native Bridge (D-055, D-057) |
 | 2026-10-18 | `EXT-RES-002` | Khởi tạo | `APPROVED_REFERENCE` | WorkSphere Agent | Thiết lập tài liệu tham chiếu chuẩn Spring Security & Dev Provisioning (D-056, D-057) |
+| 2026-10-18 | `EXT-RES-001`, `002` | Audit & Chuẩn hóa | `APPROVED_REFERENCE` | WorkSphere Agent | Xác nhận tồn tại bản sao cục bộ là False (Online Reference); làm rõ Local Path N/A |

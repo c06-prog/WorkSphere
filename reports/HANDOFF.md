@@ -4,10 +4,10 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: Establish External Resource Reuse, Quarantine, Security Review, and Standing Authority Policy
-- External Resource Governance Status: ESTABLISHED, AUDITED, HARDENED AND OPERATIONAL
-- Standing Agent Authority: Active project-wide via AGENTS.md (proactive discovery & quarantine download authorized autonomously; execution & source integration require policy checks)
-- Quarantine Workspace: D:\WorkSphere\.external\ (quarantine/, repos/, skills/, templates/, packages/, tools/, extensions/, downloads/, cache/, scans/, manifests/)
+- Current Task: Audit & Factually Normalize Initial External Resource and Tool/Extension Registries
+- External Resource Governance Status: AUDITED, FACTUALLY NORMALIZED AND ENFORCED
+- Audit Evidence: Tracked at reports/EXTERNAL_REGISTRY_BOOTSTRAP_AUDIT.md (all 2 EXT-RES and 10 TOOL-EXT entries factually verified against local disk and CLI outputs)
+- Normalization Actions: Versions corrected to ground truth (Node 24.19.0, npm 11.17.0, ADB 37.0.1, GitLens 19.4.0, Edge Tools 2.1.10); uninstalled extensions downgraded to CANDIDATE/NOT_INSTALLED; documentation references clearly noted with Local Copy False.
 - Registries: Tracked at reports/EXTERNAL_RESOURCE_REGISTRY.md and reports/TOOL_EXTENSION_REGISTRY.md
 - Runbook: Tracked at reports/runbooks/EXTERNAL_RESOURCE_ACQUISITION.md
 - Decisions: D-057 (External Resource Reuse Governance), D-056 (Dev E2E Provisioner)
@@ -144,8 +144,8 @@
 - **Giai đoạn 13: Mobile Authentication** (theo đúng `docs/08_DEVELOPMENT_ROADMAP.md` Mục 17, P0).
   - Scope: Splash, Login, Forgot Password, Profile, Change Password, Settings; Form validation, gọi API login, Secure Storage lưu token, tự thêm access token vào request, refresh token, xử lý logout, xử lý tài khoản bị khóa, xử lý token hết hạn, điều hướng Auth và Main.
   - DoD: Đăng nhập end-to-end hoạt động, token được lưu an toàn, refresh không tạo vòng lặp, logout xóa phiên, mobile không hiện màn hình được bảo vệ khi chưa đăng nhập.
-  - Pre-Phase 13 Readiness, Provisioning & Governance: ĐÃ HOÀN THÀNH VÀ KIỂM CHỨNG (307/307 backend tests PASS, 20/20 mobile suites 112/112 tests PASS, E2eUserProvisioner, D-056, D-057, External Resource Governance, Registries, Runbook).
-  - Kết luận: `EXTERNAL_RESOURCE_GOVERNANCE_PUSHED` (hoàn tất mọi điều kiện tiền trạm và quản trị tài nguyên cho Phase 13).
+  - Pre-Phase 13 Readiness, Provisioning, Governance & Registry Audit: ĐÃ HOÀN THÀNH, ĐỐI SOÁT CHÂN THỰC VÀ KIỂM CHỨNG TOÀN DIỆN (307/307 backend tests PASS, 20/20 mobile suites 112/112 tests PASS, E2eUserProvisioner, D-056, D-057, Registries factually audited).
+  - Kết luận: `EXTERNAL_REGISTRY_AUDIT_PATCHED_PUSHED` (sổ đăng ký hoàn toàn chính xác theo bằng chứng thực tế).
   - Phase 13 chưa bắt đầu trong nhiệm vụ này. Bước tiếp theo: Quyết định kiến trúc & đóng băng hợp đồng Phase 13.
 
 ## New Session Procedure

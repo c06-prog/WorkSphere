@@ -5,18 +5,18 @@
 - Branch: main
 - Phase 12 Completion Checkpoint: `bdd56778c9e64104b47d85a16e61431ccf1ac899` (`docs(agent): checkpoint phase 12 completion`)
 - Pre-Phase 13 Readiness Base: `a9c59259904f2dd6e9bd38e4ca63c1a88c89c474` (`feat(mobile): finalize pre-auth runtime readiness`)
-- Current Status: External Resource Reuse Governance & Standing Authority ESTABLISHED AND ENFORCED
+- Current Status: External Resource & Tool/Extension Registries AUDITED, VERIFIED AND FACTUALLY NORMALIZED
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening
 
-- Latest Validated Implementation: This commit (`docs(agent): govern external resource reuse`)
-- Commit message: `docs(agent): govern external resource reuse`
-- Governance Status: ESTABLISHED, AUDITED, HARDENED AND OPERATIONAL
-- Standing Authority: Permanent project-wide discovery, quarantine, security review, and reuse policy active
+- Latest Validated Implementation: This commit (`docs(agent): verify external resource registries`)
+- Commit message: `docs(agent): verify external resource registries`
+- Registry Audit Status: ALL INITIAL EXT-RES AND TOOL-EXT RECORDS VERIFIED AGAINST LOCAL FILESYSTEM EVIDENCE
+- Factual Normalization: Accurate versions recorded (Node 24.19.0, npm 11.17.0, ADB 37.0.1, GitLens 19.4.0, Edge Tools 2.1.10); uninstalled extensions downgraded to CANDIDATE/NOT_INSTALLED (ESLint/Prettier, SQLTools PG Driver, Spring Boot Tools); documentation references clearly noted with Local Copy False.
 - Backend Tests: 307/307 tests PASS (0 failures, 0 errors, Checkstyle 0 violations, BUILD SUCCESS)
 - Mobile Tests: 20/20 test suites, 112/112 tests PASS (0 failures, 0 skipped)
-- Operational Documentation Checkpoint: AGENTS.md, reports/DECISIONS.md (D-057), reports/EXTERNAL_RESOURCE_REGISTRY.md, reports/TOOL_EXTENSION_REGISTRY.md, reports/runbooks/EXTERNAL_RESOURCE_ACQUISITION.md, reports/PROJECT_STATE.md, reports/HANDOFF.md
+- Operational Documentation Checkpoint: AGENTS.md, reports/DECISIONS.md (D-057), reports/EXTERNAL_RESOURCE_REGISTRY.md, reports/TOOL_EXTENSION_REGISTRY.md, reports/runbooks/EXTERNAL_RESOURCE_ACQUISITION.md, reports/EXTERNAL_REGISTRY_BOOTSTRAP_AUDIT.md, reports/PROJECT_STATE.md, reports/HANDOFF.md
 
 ## Validated Progress
 
