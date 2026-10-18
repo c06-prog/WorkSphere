@@ -20,6 +20,48 @@ export function authReducer(state: AuthState, action: AuthAction): AuthState {
         lastAuthError: null,
       };
 
+    case 'BOOTSTRAP_STARTED':
+      return {
+        ...state,
+        sessionState: 'INITIALIZING',
+        operationState: 'authenticating',
+        lastAuthError: null,
+      };
+
+    case 'BOOTSTRAP_SUCCEEDED':
+      return {
+        ...state,
+        sessionState: 'AUTHENTICATED',
+        operationState: 'idle',
+        currentUser: action.payload.user,
+        initialized: true,
+        canRetryBootstrap: false,
+        lastAuthError: null,
+      };
+
+    case 'BOOTSTRAP_RECOVERABLE_FAILED':
+      return {
+        ...state,
+        sessionState: 'INITIALIZING',
+        operationState: 'error',
+        lastAuthError: action.payload.error,
+        canRetryBootstrap: true,
+        initialized: true,
+      };
+
+    case 'BOOTSTRAP_TERMINAL_FAILED':
+      return {
+        ...state,
+        sessionState: 'UNAUTHENTICATED',
+        operationState: 'idle',
+        currentUser: null,
+        initialized: true,
+        canRetryBootstrap: false,
+        lastAuthError: null,
+      };
+
+
+
     case 'LOGIN_STARTED':
       return {
         ...state,
@@ -53,8 +95,8 @@ export function authReducer(state: AuthState, action: AuthAction): AuthState {
         operationState: 'signingOut',
       };
 
-    case 'LOGOUT_COMPLETED':
-      return {
+    case 'LOGOUT_COMPLETED': {
+      const nextState: AuthState = {
         ...state,
         sessionState: 'UNAUTHENTICATED',
         operationState: 'idle',
@@ -62,6 +104,9 @@ export function authReducer(state: AuthState, action: AuthAction): AuthState {
         initialized: true,
         lastAuthError: null,
       };
+      delete nextState.canRetryBootstrap;
+      return nextState;
+    }
 
     case 'CLEAR_AUTH_ERROR':
       return {

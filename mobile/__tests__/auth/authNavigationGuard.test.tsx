@@ -39,7 +39,9 @@ describe('RootNavigator Authentication Guard', () => {
     initialized: sessionState !== 'INITIALIZING',
     lastAuthError: null,
     login: jest.fn(),
+    logout: jest.fn().mockResolvedValue(undefined),
     logoutLocal: jest.fn(),
+    retryBootstrap: jest.fn().mockResolvedValue(undefined),
     clearAuthError: jest.fn(),
   });
 

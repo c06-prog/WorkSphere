@@ -30,7 +30,9 @@ describe('LoginScreen Component', () => {
     initialized: true,
     lastAuthError: null,
     login: jest.fn().mockResolvedValue(true),
+    logout: jest.fn().mockResolvedValue(undefined),
     logoutLocal: jest.fn().mockResolvedValue(undefined),
+    retryBootstrap: jest.fn().mockResolvedValue(undefined),
     clearAuthError: jest.fn(),
   };
 

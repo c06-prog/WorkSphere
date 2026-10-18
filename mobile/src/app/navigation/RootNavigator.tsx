@@ -19,6 +19,60 @@ export function RootNavigator({ sessionState: explicitSessionState }: RootNaviga
   const sessionState = explicitSessionState ?? auth.sessionState;
 
   if (sessionState === 'INITIALIZING') {
+    if (auth.canRetryBootstrap) {
+      return (
+        <SafeAreaView
+          style={[styles.centerContainer, { backgroundColor: theme.colors.background, padding: theme.spacing.lg }]}
+          testID="root-bootstrap-error-state"
+        >
+          <Text
+            style={[
+              theme.typography.heading2,
+              styles.centerText,
+              { color: theme.colors.error, marginBottom: theme.spacing.sm },
+            ]}
+          >
+            Không thể kết nối đến máy chủ
+          </Text>
+          <Text
+            style={[
+              theme.typography.body,
+              styles.centerText,
+              { color: theme.colors.textSecondary, marginBottom: theme.spacing.xl },
+            ]}
+          >
+            {auth.lastAuthError?.message || 'Vui lòng kiểm tra lại đường truyền mạng và thử lại.'}
+          </Text>
+          <Text
+            onPress={() => auth.retryBootstrap()}
+            style={[
+              theme.typography.bodyMedium,
+              {
+                color: theme.colors.primary,
+                padding: theme.spacing.md,
+                marginBottom: theme.spacing.md,
+              },
+            ]}
+            accessibilityRole="button"
+            testID="root-bootstrap-retry-button"
+          >
+            Thử lại
+          </Text>
+          <Text
+            onPress={() => auth.logoutLocal()}
+            style={[
+              theme.typography.body,
+              { color: theme.colors.textSecondary, padding: theme.spacing.sm },
+            ]}
+            accessibilityRole="button"
+            testID="root-bootstrap-login-button"
+          >
+            Đăng nhập lại
+          </Text>
+        </SafeAreaView>
+      );
+    }
+
     return (
       <SafeAreaView
         style={[styles.centerContainer, { backgroundColor: theme.colors.background }]}
@@ -58,5 +112,8 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  centerText: {
+    textAlign: 'center',
   },
 });

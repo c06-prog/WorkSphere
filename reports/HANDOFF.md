@@ -4,22 +4,19 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: Phase 13B Concurrency Hardening Patch (Synchronous Auth Operation Locks)
-- Status: SUBPHASE 13B HARDENED, VALIDATED & TESTED (Ready for Subphase 13C review)
-- Phase 13B Scope & Hardening:
-  - `mobile/src/app/auth/authTypes.ts`: Domain types for SessionState (`INITIALIZING`, `UNAUTHENTICATED`, `AUTHENTICATED`), AuthOperationState, AuthState, AuthAction, and AuthContextValue.
-  - `mobile/src/app/auth/authReducer.ts`: Pure state machine reducer with 7 actions and zero token/password storage invariants.
-  - `mobile/src/app/auth/AuthProvider.tsx`: React Context Provider with safe mount bootstrap, atomic token persistence (Keychain first, memory token second, full rollback on error), synchronous mutex locks (`loginInFlightRef`, `logoutInFlightRef`), unmount guard (`mountedRef`), resilient local logout, and useAuth hook.
-  - `mobile/src/app/providers/AppProviders.tsx`: Wrapped children with AuthProvider inside ThemeProvider.
-  - `mobile/src/app/navigation/RootNavigator.tsx`: Integrated authentication navigation guard consuming real sessionState from AuthProvider.
-  - `mobile/src/features/auth/screens/LoginScreen.tsx`: Production-ready login screen replacing Phase 12 placeholder, with controlled form inputs, field validation, presentation-safe error banner with traceId, and untrimmed password character preservation.
-  - Barrel exports: `mobile/src/app/auth/index.ts`.
-  - Dedicated Report: `reports/PHASE_13B_AUTH_PROVIDER_LOGIN_REPORT.md`.
-  - Mobile Tests: 28/28 suites, 232/232 tests PASS (38 new tests including 7 concurrency/unmount tests, 0 failures, 0 skipped).
+- Current Task: Phase 13C - Single-Flight Refresh, Session Bootstrap, and Remote Logout
+- Status: SUBPHASE 13C IMPLEMENTED, HARDENED & TESTED (Ready for Subphase 13D review)
+- Phase 13C Scope & Implementation:
+  - `mobile/src/app/auth/refreshCoordinator.ts`: Dedicated isolated refresh transport, single-flight refresh concurrency coordinator (`refreshPromise`), atomic token rotation in Keychain before memory commit, and rollback handling.
+  - `mobile/src/shared/api/apiClient.ts`: 401 interceptor enhancements with 5 eligibility checks, retry-once semantics (`_retry = true`), and excluded auth endpoints (`/auth/login`, `/auth/refresh`, `/auth/logout`, `/auth/logout-all`, `/auth/forgot-password`, `/auth/reset-password`).
+  - `mobile/src/app/auth/AuthProvider.tsx`: Cold-start session bootstrap reading Keychain, network error recoverable preservation (`canRetryBootstrap = true`), terminal 401 cleanup, session epoch guard (`sessionEpochRef`), and remote `logout` / `logoutAll` / `retryBootstrap`.
+  - `mobile/src/app/navigation/RootNavigator.tsx`: Recoverable bootstrap failure UI with retry button and fallback local logout button.
+  - Dedicated Report: `reports/PHASE_13C_REFRESH_SESSION_REPORT.md`.
+  - Mobile Tests: 31/31 test suites, 253/253 tests PASS (21 new tests across 3 new test suites, 0 failures, 0 skipped).
+  - TypeScript & Lint: `tsc --noEmit` PASS (0 errors), `eslint .` PASS (0 errors, 0 warnings).
   - Android Build: `.\gradlew.bat assembleDebug --no-daemon` BUILD SUCCESSFUL (exit code 0).
-  - Emulator Smoke Test: APK installed and verified on `emulator-5554` (package `com.workspheremobile`), UI regression smoke verified, screenshot captured at `reports/screenshots/phase13b_login.png`.
-  - Phase 13C Status: Phase 13C NOT STARTED (Session Restore & Token Refresh Coordinator deferred to next phase per frozen plan).
-  - Next Action: Phase 13C entry review.
+  - Emulator Smoke Test: APK installed and verified on `emulator-5554` (package `com.workspheremobile`), launched successfully (PID 24109).
+  - Next Action: Phase 13D entry review.
 - Working tree: clean (sau khi commit)
 
 ## Phase 11 Notification and Personal Dashboard Module: COMPLETED, AUDITED & HARDENED

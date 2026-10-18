@@ -11,10 +11,15 @@ export interface AuthState {
   currentUser: AuthUser | null;
   initialized: boolean;
   lastAuthError: AuthPresentationError | null;
+  canRetryBootstrap?: boolean;
 }
 
 export type AuthAction =
   | { type: 'INITIALIZATION_COMPLETED_UNAUTHENTICATED' }
+  | { type: 'BOOTSTRAP_STARTED' }
+  | { type: 'BOOTSTRAP_SUCCEEDED'; payload: { user: AuthUser } }
+  | { type: 'BOOTSTRAP_RECOVERABLE_FAILED'; payload: { error: AuthPresentationError } }
+  | { type: 'BOOTSTRAP_TERMINAL_FAILED' }
   | { type: 'LOGIN_STARTED' }
   | { type: 'LOGIN_SUCCEEDED'; payload: { user: AuthUser } }
   | { type: 'LOGIN_FAILED'; payload: { error: AuthPresentationError } }
@@ -28,7 +33,11 @@ export interface AuthContextValue {
   currentUser: AuthUser | null;
   initialized: boolean;
   lastAuthError: AuthPresentationError | null;
+  canRetryBootstrap?: boolean;
   login: (loginInput: string, passwordInput: string) => Promise<boolean>;
+  logout: () => Promise<void>;
   logoutLocal: () => Promise<void>;
+  logoutAll?: () => Promise<void>;
+  retryBootstrap: () => Promise<void>;
   clearAuthError: () => void;
 }

@@ -5,8 +5,10 @@ import { normalizeError } from './apiError';
 import { isApiResponse, unwrapApiResponse } from './apiEnvelope';
 
 export type UnauthorizedHandler = () => void | Promise<void>;
+export type TokenRefreshHandler = () => Promise<string>;
 
 let unauthorizedHandler: UnauthorizedHandler | null = null;
+let tokenRefreshHandler: TokenRefreshHandler | null = null;
 
 /**
  * Injects or clears the global 401 Unauthorized callback.
@@ -14,6 +16,14 @@ let unauthorizedHandler: UnauthorizedHandler | null = null;
  */
 export function setUnauthorizedHandler(handler: UnauthorizedHandler | null): void {
   unauthorizedHandler = handler;
+}
+
+/**
+ * Injects or clears the token refresh coordinator handler.
+ * Wired in Phase 13C to perform single-flight token refresh without circular module dependencies.
+ */
+export function setTokenRefreshHandler(handler: TokenRefreshHandler | null): void {
+  tokenRefreshHandler = handler;
 }
 
 /**
@@ -28,6 +38,55 @@ export async function notifyUnauthorized(): Promise<void> {
       // Handler failure must not crash transport flow
     }
   }
+}
+
+const NON_REFRESHABLE_ENDPOINTS = [
+  '/auth/login',
+  '/auth/refresh',
+  '/auth/forgot-password',
+  '/auth/reset-password',
+  '/auth/logout',
+  '/auth/logout-all',
+];
+
+
+/**
+ * Checks if a failed 401 response is eligible for automatic token refresh and retry.
+ */
+function isEligibleForRefresh(error: any): boolean {
+  if (!axios.isAxiosError(error) || error.response?.status !== 401) {
+    return false;
+  }
+
+  const config = error.config;
+  if (!config) {
+    return false;
+  }
+
+  // If already retried or explicitly instructed to skip auth refresh
+  if (config._retry || config.skipAuthRefresh) {
+    return false;
+  }
+
+  // Must have carried an Authorization Bearer header
+  const authHeader = config.headers?.Authorization || config.headers?.get?.('Authorization');
+  if (!authHeader || typeof authHeader !== 'string' || !authHeader.startsWith('Bearer ')) {
+    return false;
+  }
+
+  // Must not be an excluded authentication endpoint
+  const url = config.url || '';
+  if (NON_REFRESHABLE_ENDPOINTS.some(excluded => url.includes(excluded))) {
+    return false;
+  }
+
+  // If envelope provided a code, it must not be a non-refreshable code (like INVALID_CREDENTIALS)
+  const responseData = error.response.data;
+  if (isApiResponse(responseData) && responseData.code && responseData.code !== 'UNAUTHORIZED') {
+    return false;
+  }
+
+  return true;
 }
 
 /**
@@ -63,13 +122,42 @@ function createApiClient(): AxiosInstance {
     error => Promise.reject(normalizeError(error))
   );
 
-  // Response Interceptor: Intercepts 401 and normalizes all transport errors
+  // Response Interceptor: Intercepts 401, attempts single-flight refresh and retries once
   instance.interceptors.response.use(
     response => response,
     async error => {
-      if (axios.isAxiosError(error) && error.response?.status === 401) {
-        await notifyUnauthorized();
+      if (isEligibleForRefresh(error) && tokenRefreshHandler) {
+        const originalConfig = error.config;
+        originalConfig._retry = true;
+
+        try {
+          const newAccessToken = await tokenRefreshHandler();
+          if (originalConfig.headers) {
+            if (typeof originalConfig.headers.set === 'function') {
+              originalConfig.headers.set('Authorization', `Bearer ${newAccessToken}`);
+            } else {
+              originalConfig.headers.Authorization = `Bearer ${newAccessToken}`;
+            }
+          }
+          return await instance.request(originalConfig);
+        } catch (refreshOrRetryError) {
+          // Refresh failed or retry failed with 401: trigger session invalidation once
+          await notifyUnauthorized();
+          return Promise.reject(normalizeError(refreshOrRetryError));
+        }
       }
+
+      // If 401 was received and either not eligible for refresh or retry 401 failed
+      if (axios.isAxiosError(error) && error.response?.status === 401) {
+        // If it was already a retried request or a protected request with no refresh handler
+        const config = error.config;
+        const url = config?.url;
+        const isAuthEndpoint = url ? NON_REFRESHABLE_ENDPOINTS.some(ep => url.includes(ep)) : false;
+        if (!isAuthEndpoint && (config?._retry || !tokenRefreshHandler)) {
+          await notifyUnauthorized();
+        }
+      }
+
       return Promise.reject(normalizeError(error));
     }
   );

@@ -131,4 +131,155 @@ describe('ApiClient and Transport Interceptors', () => {
     expect(postSpy).toHaveBeenCalledWith('/auth/login', payload, { skipAuthRefresh: true });
     expect(payload).not.toHaveProperty('skipAuthRefresh');
   });
+
+  describe('Phase 13C Token Refresh & Retry-Once Interceptor', () => {
+    test('protected request 401 triggers single-flight refresh and retries once with new Bearer token', async () => {
+      const mockRefresh = jest.fn().mockResolvedValue('new-rotated-access-token');
+      const { setTokenRefreshHandler } = require('../../src/shared/api/apiClient');
+      setTokenRefreshHandler(mockRefresh);
+
+      const responseInterceptorErr = (apiClient.interceptors.response as any).handlers[0].rejected;
+
+      const requestConfig = {
+        url: '/projects',
+        method: 'get',
+        headers: new axios.AxiosHeaders({
+          Authorization: 'Bearer expired-token',
+        }),
+      } as any;
+
+      const error401 = new AxiosError('Unauthorized', '401', requestConfig, {}, {
+        status: 401,
+        data: { success: false, code: 'UNAUTHORIZED', timestamp: '2026-10-18T12:00:00Z' },
+        statusText: 'Unauthorized',
+        headers: {},
+        config: requestConfig,
+      } as AxiosResponse);
+
+      const requestSpy = jest.spyOn(apiClient, 'request').mockResolvedValueOnce({
+        data: { success: true, data: [{ id: '1' }] },
+      } as AxiosResponse);
+
+      const result = await responseInterceptorErr(error401);
+
+      expect(mockRefresh).toHaveBeenCalledTimes(1);
+      expect(requestConfig._retry).toBe(true);
+      expect(requestConfig.headers.get('Authorization')).toBe('Bearer new-rotated-access-token');
+      expect(requestSpy).toHaveBeenCalledWith(requestConfig);
+      expect(result).toEqual({ data: { success: true, data: [{ id: '1' }] } });
+
+      setTokenRefreshHandler(null);
+    });
+
+    test('excluded auth endpoints (/auth/login, /auth/refresh, etc.) do NOT trigger refresh on 401', async () => {
+      const mockRefresh = jest.fn();
+      const { setTokenRefreshHandler } = require('../../src/shared/api/apiClient');
+      setTokenRefreshHandler(mockRefresh);
+
+      const responseInterceptorErr = (apiClient.interceptors.response as any).handlers[0].rejected;
+
+      const loginError = new AxiosError('Unauthorized', '401', {
+        url: '/auth/login',
+        headers: new axios.AxiosHeaders({ Authorization: 'Bearer token' }),
+      } as any, {}, {
+        status: 401,
+        data: { success: false, code: 'INVALID_CREDENTIALS', timestamp: '2026-10-18T12:00:00Z' },
+        statusText: 'Unauthorized',
+        headers: {},
+        config: { url: '/auth/login' } as any,
+      } as AxiosResponse);
+
+      await expect(responseInterceptorErr(loginError)).rejects.toMatchObject({
+        kind: 'UNAUTHORIZED',
+      });
+
+      expect(mockRefresh).not.toHaveBeenCalled();
+      setTokenRefreshHandler(null);
+    });
+
+    test('request with skipAuthRefresh=true does NOT trigger refresh on 401', async () => {
+      const mockRefresh = jest.fn();
+      const { setTokenRefreshHandler } = require('../../src/shared/api/apiClient');
+      setTokenRefreshHandler(mockRefresh);
+
+      const responseInterceptorErr = (apiClient.interceptors.response as any).handlers[0].rejected;
+
+      const skipError = new AxiosError('Unauthorized', '401', {
+        url: '/auth/logout',
+        skipAuthRefresh: true,
+        headers: new axios.AxiosHeaders({ Authorization: 'Bearer token' }),
+      } as any, {}, {
+        status: 401,
+        data: { success: false, code: 'UNAUTHORIZED', timestamp: '2026-10-18T12:00:00Z' },
+        statusText: 'Unauthorized',
+        headers: {},
+        config: { url: '/auth/logout', skipAuthRefresh: true } as any,
+      } as AxiosResponse);
+
+      await expect(responseInterceptorErr(skipError)).rejects.toMatchObject({
+        kind: 'UNAUTHORIZED',
+      });
+
+      expect(mockRefresh).not.toHaveBeenCalled();
+      setTokenRefreshHandler(null);
+    });
+
+    test('retried request (_retry=true) that fails with 401 does not refresh again and calls notifyUnauthorized', async () => {
+      const mockRefresh = jest.fn();
+      const unauthorizedMock = jest.fn();
+      const { setTokenRefreshHandler } = require('../../src/shared/api/apiClient');
+      setTokenRefreshHandler(mockRefresh);
+      setUnauthorizedHandler(unauthorizedMock);
+
+      const responseInterceptorErr = (apiClient.interceptors.response as any).handlers[0].rejected;
+
+      const retryError = new AxiosError('Unauthorized', '401', {
+        url: '/projects',
+        _retry: true,
+        headers: new axios.AxiosHeaders({ Authorization: 'Bearer token' }),
+      } as any, {}, {
+        status: 401,
+        data: { success: false, code: 'UNAUTHORIZED', timestamp: '2026-10-18T12:00:00Z' },
+        statusText: 'Unauthorized',
+        headers: {},
+        config: { url: '/projects', _retry: true } as any,
+      } as AxiosResponse);
+
+      await expect(responseInterceptorErr(retryError)).rejects.toMatchObject({
+        kind: 'UNAUTHORIZED',
+      });
+
+      expect(mockRefresh).not.toHaveBeenCalled();
+      expect(unauthorizedMock).toHaveBeenCalledTimes(1);
+
+      setTokenRefreshHandler(null);
+      setUnauthorizedHandler(null);
+    });
+
+    test('missing Authorization Bearer header does NOT trigger refresh', async () => {
+      const mockRefresh = jest.fn();
+      const { setTokenRefreshHandler } = require('../../src/shared/api/apiClient');
+      setTokenRefreshHandler(mockRefresh);
+
+      const responseInterceptorErr = (apiClient.interceptors.response as any).handlers[0].rejected;
+
+      const noAuthError = new AxiosError('Unauthorized', '401', {
+        url: '/public/status',
+        headers: new axios.AxiosHeaders(),
+      } as any, {}, {
+        status: 401,
+        data: { success: false, code: 'UNAUTHORIZED', timestamp: '2026-10-18T12:00:00Z' },
+        statusText: 'Unauthorized',
+        headers: {},
+        config: { url: '/public/status' } as any,
+      } as AxiosResponse);
+
+      await expect(responseInterceptorErr(noAuthError)).rejects.toMatchObject({
+        kind: 'UNAUTHORIZED',
+      });
+
+      expect(mockRefresh).not.toHaveBeenCalled();
+      setTokenRefreshHandler(null);
+    });
+  });
 });

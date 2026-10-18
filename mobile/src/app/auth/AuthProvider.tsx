@@ -1,10 +1,21 @@
-import React, { createContext, useContext, useEffect, useReducer, useRef, ReactNode } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useReducer,
+  useRef,
+  ReactNode,
+} from 'react';
 import { authReducer, initialAuthState } from './authReducer';
 import type { AuthContextValue, AuthState } from './authTypes';
 import { authApi } from '../../features/auth/api/authApi';
 import { mapAuthError } from '../../features/auth/errors/authErrorMapper';
 import { accessTokenStore } from '../../shared/storage/accessTokenStore';
 import { secureStorage } from '../../shared/storage/secureStorage';
+import { setTokenRefreshHandler, setUnauthorizedHandler } from '../../shared/api/apiClient';
+import { refreshAccessToken } from './refreshCoordinator';
+import { isNormalizedApiError } from '../../shared/api/apiError';
 
 export const AuthContext = createContext<AuthContextValue | null>(null);
 
@@ -22,28 +33,132 @@ export function AuthProvider({ children, initialState }: AuthProviderProps) {
   const mountedRef = useRef(true);
   const loginInFlightRef = useRef(false);
   const logoutInFlightRef = useRef(false);
+  const bootstrapInFlightRef = useRef(false);
+  // Monotonically increasing session generation ID to discard stale async callbacks
+  const sessionEpochRef = useRef(1);
 
+  /**
+   * Internal terminal cleanup helper: cleans memory & keychain and notifies reducer
+   */
+  const handleTerminalCleanup = useCallback(async () => {
+    sessionEpochRef.current += 1;
+    accessTokenStore.clearAccessToken();
+    try {
+      await secureStorage.clearRefreshToken();
+    } catch {
+      // Best-effort
+    }
+    if (mountedRef.current) {
+      dispatch({ type: 'BOOTSTRAP_TERMINAL_FAILED' });
+    }
+  }, []);
+
+  /**
+   * Cold-start session bootstrap:
+   * 1. Checks Keychain for existing refresh token
+   * 2. If absent -> UNAUTHENTICATED
+   * 3. If present -> calls single-flight refreshCoordinator to rotate token & get accessToken
+   * 4. Calls authApi.getCurrentUser() (/me) to populate profile
+   * 5. If network/timeout fails -> BOOTSTRAP_RECOVERABLE_FAILED (retains refresh token)
+   * 6. If terminal 401/invalid token -> clears session and sets UNAUTHENTICATED
+   */
+  const runBootstrap = useCallback(async (): Promise<void> => {
+    if (bootstrapInFlightRef.current) {
+      return;
+    }
+
+    bootstrapInFlightRef.current = true;
+    const currentEpoch = sessionEpochRef.current;
+
+    if (mountedRef.current) {
+      dispatch({ type: 'BOOTSTRAP_STARTED' });
+    }
+
+    try {
+      // 1. Clear any stale in-memory token from previous lifecycle
+      accessTokenStore.clearAccessToken();
+
+      // 2. Read refreshToken from Keychain
+      const existingRefreshToken = await secureStorage.getRefreshToken();
+      if (!existingRefreshToken) {
+        if (mountedRef.current && currentEpoch === sessionEpochRef.current) {
+          dispatch({ type: 'INITIALIZATION_COMPLETED_UNAUTHENTICATED' });
+        }
+        return;
+      }
+
+      // 3. Call refresh coordinator to rotate token and set access token
+      await refreshAccessToken();
+
+      // Check mount and epoch
+      if (!mountedRef.current || currentEpoch !== sessionEpochRef.current) {
+        return;
+      }
+
+      // 4. Fetch user profile from /me
+      const userProfile = await authApi.getCurrentUser();
+
+      if (mountedRef.current && currentEpoch === sessionEpochRef.current) {
+        dispatch({
+          type: 'BOOTSTRAP_SUCCEEDED',
+          payload: { user: userProfile },
+        });
+      }
+    } catch (error) {
+      if (!mountedRef.current || currentEpoch !== sessionEpochRef.current) {
+        return;
+      }
+
+      // Classify error: recoverable (network/timeout) vs terminal (401, expired, revoked)
+      const mapped = mapAuthError(error);
+      const isRecoverable =
+        mapped.retryable ||
+        (isNormalizedApiError(error) &&
+          (error.kind === 'NETWORK_ERROR' || error.kind === 'TIMEOUT'));
+
+      if (isRecoverable) {
+        // Keep refresh token in Keychain so user can retry later
+        dispatch({
+          type: 'BOOTSTRAP_RECOVERABLE_FAILED',
+          payload: { error: mapped },
+        });
+      } else {
+        // Terminal failure: clear storage and transition to UNAUTHENTICATED
+        await handleTerminalCleanup();
+      }
+    } finally {
+      bootstrapInFlightRef.current = false;
+    }
+  }, [handleTerminalCleanup]);
+
+  // Wire transport handlers and run cold-start bootstrap on mount
   useEffect(() => {
     mountedRef.current = true;
-    // Phase 13B Bootstrap:
-    // Memory access token is cleared, session starts UN-AUTHENTICATED.
-    // Keychain reading and refresh session restore are strictly deferred to Phase 13C.
-    accessTokenStore.clearAccessToken();
-    dispatch({ type: 'INITIALIZATION_COMPLETED_UNAUTHENTICATED' });
+
+    // Register refresh coordinator with apiClient transport
+    setTokenRefreshHandler(refreshAccessToken);
+
+    // Register 401 unauthorized cleanup handler
+    setUnauthorizedHandler(handleTerminalCleanup);
+
+    // Execute cold-start bootstrap if uninitialized
+    runBootstrap();
 
     return () => {
       mountedRef.current = false;
+      setTokenRefreshHandler(null);
+      setUnauthorizedHandler(null);
     };
-  }, []);
+  }, [handleTerminalCleanup, runBootstrap]);
 
   const login = async (loginInput: string, passwordInput: string): Promise<boolean> => {
-    // Synchronous non-render mutex lock: prevents race condition when login() is invoked
-    // multiple times in the same JavaScript tick before React rerenders
     if (loginInFlightRef.current || state.operationState === 'authenticating') {
       return false;
     }
 
     loginInFlightRef.current = true;
+    sessionEpochRef.current += 1;
+    const loginEpoch = sessionEpochRef.current;
 
     if (mountedRef.current) {
       dispatch({ type: 'LOGIN_STARTED' });
@@ -55,8 +170,7 @@ export function AuthProvider({ children, initialState }: AuthProviderProps) {
         password: passwordInput,
       });
 
-      // Verify component is still mounted before persisting session
-      if (!mountedRef.current) {
+      if (!mountedRef.current || loginEpoch !== sessionEpochRef.current) {
         accessTokenStore.clearAccessToken();
         await secureStorage.clearRefreshToken();
         return false;
@@ -68,10 +182,9 @@ export function AuthProvider({ children, initialState }: AuthProviderProps) {
       try {
         await secureStorage.setRefreshToken(response.refreshToken);
       } catch (storageError) {
-        // Rollback memory and keychain on storage failure
         accessTokenStore.clearAccessToken();
         await secureStorage.clearRefreshToken();
-        if (mountedRef.current) {
+        if (mountedRef.current && loginEpoch === sessionEpochRef.current) {
           const mappedStorageError = mapAuthError(storageError);
           dispatch({
             type: 'LOGIN_FAILED',
@@ -81,15 +194,14 @@ export function AuthProvider({ children, initialState }: AuthProviderProps) {
         return false;
       }
 
-      // Check mountedRef again in case unmount happened during secureStorage.setRefreshToken
-      if (!mountedRef.current) {
+      if (!mountedRef.current || loginEpoch !== sessionEpochRef.current) {
         accessTokenStore.clearAccessToken();
         await secureStorage.clearRefreshToken();
         return false;
       }
 
       accessTokenStore.setAccessToken(response.accessToken);
-      if (mountedRef.current) {
+      if (mountedRef.current && loginEpoch === sessionEpochRef.current) {
         dispatch({
           type: 'LOGIN_SUCCEEDED',
           payload: { user: response.user },
@@ -97,8 +209,7 @@ export function AuthProvider({ children, initialState }: AuthProviderProps) {
       }
       return true;
     } catch (apiError) {
-      // API call failed: storage is untouched
-      if (mountedRef.current) {
+      if (mountedRef.current && loginEpoch === sessionEpochRef.current) {
         const mappedError = mapAuthError(apiError);
         dispatch({
           type: 'LOGIN_FAILED',
@@ -111,13 +222,97 @@ export function AuthProvider({ children, initialState }: AuthProviderProps) {
     }
   };
 
-  const logoutLocal = async (): Promise<void> => {
-    // Synchronous non-render mutex lock: prevents concurrent duplicate logouts in the same tick
+  /**
+   * Remote logout:
+   * 1. Acquires synchronous lock
+   * 2. Reads existing refreshToken
+   * 3. Calls POST /auth/logout with skipAuthRefresh
+   * 4. Regardless of network/server response, cleans memory & Keychain
+   * 5. Dispatches LOGOUT_COMPLETED
+   */
+  const logout = async (): Promise<void> => {
     if (logoutInFlightRef.current || state.operationState === 'signingOut') {
       return;
     }
 
     logoutInFlightRef.current = true;
+    sessionEpochRef.current += 1;
+
+    if (mountedRef.current) {
+      dispatch({ type: 'LOGOUT_STARTED' });
+    }
+
+    try {
+      const token = await secureStorage.getRefreshToken();
+      if (token && accessTokenStore.getAccessToken()) {
+        try {
+          await authApi.logout({ refreshToken: token });
+        } catch {
+          // Remote failure does not prevent local session teardown
+        }
+      }
+    } finally {
+      accessTokenStore.clearAccessToken();
+      try {
+        await secureStorage.clearRefreshToken();
+      } catch {
+        // Best-effort
+      }
+      if (mountedRef.current) {
+        dispatch({ type: 'LOGOUT_COMPLETED' });
+      }
+      logoutInFlightRef.current = false;
+    }
+  };
+
+  /**
+   * Remote logout all devices:
+   * Calls POST /auth/logout-all then always tears down local session
+   */
+  const logoutAll = async (): Promise<void> => {
+    if (logoutInFlightRef.current || state.operationState === 'signingOut') {
+      return;
+    }
+
+    logoutInFlightRef.current = true;
+    sessionEpochRef.current += 1;
+
+    if (mountedRef.current) {
+      dispatch({ type: 'LOGOUT_STARTED' });
+    }
+
+    try {
+      if (accessTokenStore.getAccessToken()) {
+        try {
+          await authApi.logoutAll();
+        } catch {
+          // Remote failure does not prevent local session teardown
+        }
+      }
+    } finally {
+      accessTokenStore.clearAccessToken();
+      try {
+        await secureStorage.clearRefreshToken();
+      } catch {
+        // Best-effort
+      }
+      if (mountedRef.current) {
+        dispatch({ type: 'LOGOUT_COMPLETED' });
+      }
+      logoutInFlightRef.current = false;
+    }
+  };
+
+  /**
+   * Local logout only (legacy / offline fallback)
+   */
+  const logoutLocal = async (): Promise<void> => {
+    if (logoutInFlightRef.current || state.operationState === 'signingOut') {
+      return;
+    }
+
+    logoutInFlightRef.current = true;
+    sessionEpochRef.current += 1;
 
     if (mountedRef.current) {
       dispatch({ type: 'LOGOUT_STARTED' });
@@ -127,7 +322,7 @@ export function AuthProvider({ children, initialState }: AuthProviderProps) {
       accessTokenStore.clearAccessToken();
       await secureStorage.clearRefreshToken();
     } catch {
-      // Local logout is resilient: always proceed with local UI teardown even if Keychain reset throws
+      // Best-effort
     } finally {
       accessTokenStore.clearAccessToken();
       if (mountedRef.current) {
@@ -135,6 +330,10 @@ export function AuthProvider({ children, initialState }: AuthProviderProps) {
       }
       logoutInFlightRef.current = false;
     }
+  };
+
+  const retryBootstrap = async (): Promise<void> => {
+    await runBootstrap();
   };
 
   const clearAuthError = (): void => {
@@ -149,8 +348,12 @@ export function AuthProvider({ children, initialState }: AuthProviderProps) {
     currentUser: state.currentUser,
     initialized: state.initialized,
     lastAuthError: state.lastAuthError,
+    canRetryBootstrap: state.canRetryBootstrap,
     login,
+    logout,
     logoutLocal,
+    logoutAll,
+    retryBootstrap,
     clearAuthError,
   };
 
