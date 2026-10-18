@@ -134,7 +134,8 @@
 - `TASK_DELETE_RULE_AMBIGUITY_DEFERRED`: Định nghĩa “Business history quan trọng” chưa đầy đủ trong canonical docs; giữ logic xét status history.
 - `TASK_FLYWAY_CONFIGURATION_MODULE_LOCATION_LOW`: TaskFlywayConfiguration hiện ở task.infrastructure. Có thể chuyển sang shared.infrastructure trong đợt refactor riêng.
 - `DATA_INTEGRITY_ERROR_MAPPING_FALLBACK_LOW`: Exception mapping cho task_assignments có thể nâng cấp sang trích xuất constraint PostgreSQL driver tương tự Asset module.
-- `TEMPORARY_PASSWORD_FLOW_GAP`: Luồng kích hoạt và endpoint thiết lập mật khẩu lần đầu tiếp tục hoãn.
+- `AUTH_TEST_ACCOUNT_PROVISIONING_REQUIRED`: Kiểm thử E2E đăng nhập thật trên backend live đòi hỏi cơ chế khởi tạo tài khoản dev an toàn, lũy đẳng, chỉ kích hoạt trên profile dev/local.
+- `TEMPORARY_PASSWORD_FLOW_GAP`: Luồng kích hoạt và endpoint thiết lập mật khẩu lần đầu tiếp tục hoãn; mobile mapping ACCOUNT_PENDING sang thông báo liên hệ admin.
 - `TEAM_API_CONTRACT_GAP`: Team REST controllers hoãn vì `06_API_CONTRACT.md` chưa định nghĩa endpoints.
 - `PUT_ME_PASSWORD_TEST_GAP`: Test coverage cho luồng đổi mật khẩu người dùng hiện tại tiếp tục hoãn.
 
@@ -143,8 +144,9 @@
 - **Giai đoạn 13: Mobile Authentication** (theo đúng `docs/08_DEVELOPMENT_ROADMAP.md` Mục 17, P0).
   - Scope: Splash, Login, Forgot Password, Profile, Change Password, Settings; Form validation, gọi API login, Secure Storage lưu token, tự thêm access token vào request, refresh token, xử lý logout, xử lý tài khoản bị khóa, xử lý token hết hạn, điều hướng Auth và Main.
   - DoD: Đăng nhập end-to-end hoạt động, token được lưu an toàn, refresh không tạo vòng lặp, logout xóa phiên, mobile không hiện màn hình được bảo vệ khi chưa đăng nhập.
-  - Pre-Phase 13 Runtime Readiness: ĐÃ HOÀN THÀNH, KIỂM CHỨNG VÀ XÁC THỰC TOÀN DIỆN (20/20 suites, 112/112 tests PASS, Android assembleDebug BUILD SUCCESS, Keychain & AsyncStorage native CRUD PASS trên emulator-5554).
-  - Phase 13 chưa bắt đầu trong nhiệm vụ này. Bước kế tiếp: Kiểm toán hợp đồng và chuẩn bị triển khai Phase 13.
+  - Pre-Phase 13 Readiness & Patch: ĐÃ HOÀN THÀNH VÀ KIỂM CHỨNG (20/20 suites, 112/112 tests PASS, iOS bridge target registered, safe test-account policy defined).
+  - Kết luận Audit Phase 13: `PHASE_13_AUDIT_READY_FOR_DECISION` (yêu cầu quyết định cơ chế provisioning tài khoản dev trước khi kiểm thử E2E live login).
+  - Phase 13 chưa bắt đầu trong nhiệm vụ này.
 
 ## New Session Procedure
 

@@ -932,3 +932,34 @@ Current operating mode:
   5. **Chuyển giao cho Phase 13**:
      - Hoàn tất mọi điều kiện tiên quyết về runtime và lưu trữ native cho Phase 13 Mobile Authentication.
      - Bước tiếp theo: Thực hiện kiểm toán hợp đồng và chuẩn bị triển khai Phase 13 Authentication. Không bắt đầu code Phase 13 trong nhiệm vụ này.
+
+## D-055: iOS Environment Bridge Target Membership và Chính Sách Tài Khoản Kiểm Thử An Toàn
+
+- **Ngày quyết định**: 2026-10-18.
+- **Phạm vi**: Ứng dụng di động WorkSphere (`mobile/ios/`, `mobile/`), Xcode project cấu hình native bridge, Quy chuẩn bảo mật thông tin xác thực tài khoản kiểm thử cho Phase 13 Mobile Authentication.
+- **Tình trạng**: APPROVED / RESOLVED.
+- **Nội dung quyết định**:
+  1. **Đăng ký Target Membership cho iOS Environment Bridge (`EnvironmentConfigModule`)**:
+     - Bổ sung đầy đủ định danh Xcode 24 ký tự hex duy nhất trong `mobile/ios/WorkSphereMobile.xcodeproj/project.pbxproj`:
+       - `PBXBuildFile`: `761780F22CA45674006654F2` (`EnvironmentConfigModule.m in Sources`).
+       - `PBXFileReference`: `761780F02CA45674006654F0` (`EnvironmentConfigModule.h`, type `sourcecode.c.h`) và `761780F12CA45674006654F1` (`EnvironmentConfigModule.m`, type `sourcecode.c.objc`).
+       - `PBXGroup`: Thêm cả 2 tệp vào nhóm `WorkSphereMobile`.
+       - `PBXSourcesBuildPhase`: Thêm `EnvironmentConfigModule.m in Sources` đúng 1 lần duy nhất; loại trừ tệp header `.h` khỏi Compile Sources.
+     - Khắc phục triệt để `IOS_ENVIRONMENT_BRIDGE_TARGET_GAP`.
+  2. **Duy trì Hoãn Biên Dịch iOS trên macOS**:
+     - Tiếp tục duy trì `IOS_BUILD_ON_MACOS_DEFERRED`. Không xác nhận PASS biên dịch native iOS trên hệ điều hành Windows host.
+  3. **Chính Sách Tài Khoản Kiểm Thử An Toàn (Safe Test-Account Policy)**:
+     - Chuẩn hóa giao ước định danh biến môi trường bên ngoài Git:
+       - `WORKSPHERE_E2E_LOGIN`: Tên người dùng hoặc email tài khoản kiểm thử local.
+       - `WORKSPHERE_E2E_PASSWORD`: Mật khẩu tài khoản kiểm thử local.
+       - `WORKSPHERE_E2E_BASE_URL` (tùy chọn): Địa chỉ backend override cho thiết bị thật hoặc host khác.
+     - Giá trị của các biến môi trường bắt buộc nằm ngoài Git; nghiêm cấm ghi vào repository, file `.env` commit, logcat, terminal echo, báo cáo hay ảnh chụp màn hình.
+     - Tuyệt đối không hardcode mật khẩu mặc định hoặc mật khẩu ví dụ vào mã nguồn mobile hoặc backend.
+     - Sử dụng tài khoản kiểm thử cục bộ chuyên dụng với quyền hạn tối thiểu (least privilege).
+     - Kiểm thử E2E trên emulator bắt buộc xử lý an toàn (safe skip hoặc prompt), không gây crash khi thiếu biến môi trường.
+     - Môi trường CI (nếu tích hợp sau này) bắt buộc nạp bí mật qua GitHub Actions Secrets.
+  4. **Quyết Định Khởi Tạo Dữ Liệu Kiểm Thử (`AUTH_TEST_ACCOUNT_PROVISIONING_REQUIRED`)**:
+     - Xác nhận hiện trạng: Không có tài khoản người dùng nào được seed sẵn trong CSDL dev `worksphere-dev-pg` hay các Flyway migrations V001..V017.
+     - Ghi nhận yêu cầu vận hành: Kiểm thử E2E đăng nhập thật trên backend live bị chặn cho đến khi cơ chế khởi tạo tài khoản dev an toàn được kích hoạt (chỉ áp dụng profile dev/local, tắt trên production, mật khẩu inject từ biến môi trường, không in log mật khẩu).
+  5. **Ranh Giới Thực Thi Phase 13**:
+     - Khẳng định Phase 13 Mobile Authentication chưa bắt đầu triển khai code (chưa triển khai Login, Refresh, Session Restore, Logout hay Profile).

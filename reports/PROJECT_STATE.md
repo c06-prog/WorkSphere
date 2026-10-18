@@ -4,16 +4,17 @@
 
 - Branch: main
 - Phase 12 Completion Checkpoint: `bdd56778c9e64104b47d85a16e61431ccf1ac899` (`docs(agent): checkpoint phase 12 completion`)
-- Current Status: Pre-Phase 13 Runtime Readiness COMPLETED, AUDITED AND VALIDATED
+- Pre-Phase 13 Readiness Base: `a9c59259904f2dd6e9bd38e4ca63c1a88c89c474` (`feat(mobile): finalize pre-auth runtime readiness`)
+- Current Status: Pre-Phase 13 iOS Bridge Target & Test-Account Policy Patch COMPLETED AND AUDITED
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening
 
-- Latest Validated Pre-Phase 13 Readiness Commit: This commit (`feat(mobile): finalize pre-auth runtime readiness`)
-- Commit message: `feat(mobile): finalize pre-auth runtime readiness`
-- Pre-Phase 13 Readiness Status: COMPLETED, AUDITED, HARDENED AND VALIDATED
+- Latest Validated Patch: This commit (`fix(mobile): register ios environment bridge`)
+- Commit message: `fix(mobile): register ios environment bridge`
+- Pre-Phase 13 Patch Status: COMPLETED, AUDITED, HARDENED AND VALIDATED
 - Mobile Tests: 20/20 test suites, 112/112 tests PASS (0 failures, 0 skipped)
-- Operational Documentation Checkpoint: reports/DECISIONS.md (D-054), reports/PRE_PHASE_13_READINESS_REPORT.md, reports/PROJECT_STATE.md, reports/HANDOFF.md
+- Operational Documentation Checkpoint: reports/DECISIONS.md (D-055), reports/PHASE_13_AUTH_AUDIT.md, reports/PROJECT_STATE.md, reports/HANDOFF.md
 
 ## Validated Progress
 
