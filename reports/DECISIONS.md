@@ -852,3 +852,54 @@ Current operating mode:
   6. **Personal Dashboard API**: Endpoint duy nhất `GET /api/v1/dashboard/me` phục vụ cho mọi vai trò (kể cả ADMIN vẫn tuân thủ phạm vi cá nhân). Tổng hợp Task, Service Request (`COUNT(DISTINCT sr.id)`), Project membership, top 5 upcoming tasks (`dueSoon`) và top 5 recent notifications. Dùng chung một mốc thời gian `Clock.instant()` duy nhất trong mỗi request. Không triển khai endpoint hay stub cho Project Dashboard.
   7. **Hạ Tầng Kiểm Thử & Kiểm Định**: Toàn bộ 298/298 test hệ thống PASS (BUILD SUCCESS). Targeted Phase 11 suite đạt 38/38 PASS qua 2 lần chạy liên tiếp không flakiness. Checkstyle đạt 0 violations. Listener `NotificationTestCleanupListener` kiểm tra sự tồn tại của bảng trước khi xóa và chỉ xóa `notifications`, `notification_preferences`.
   8. **Giai đoạn Tiếp theo trong Roadmap**: Chuyển giao sang `Giai đoạn 12: Khởi tạo ứng dụng mobile` (docs/08_DEVELOPMENT_ROADMAP.md Mục 16, P0, React Native và TypeScript). Không tự ý triển khai Phase 12 nếu task chưa yêu cầu.
+
+## D-053: Đóng Memory Checkpoint Hoàn Thành Phase 12 - Mobile Foundation
+
+- **Ngày quyết định**: 2026-10-18.
+- **Phạm vi**: Ứng dụng di động WorkSphere (`mobile/`), Toolchain React Native, Theme, Điều hướng, 10 Shared Components, Nền tảng Mạng & Lưu trữ dữ liệu (Phase 12).
+- **Tình trạng**: APPROVED / CLOSED.
+- **Nội dung quyết định**:
+  1. **Trạng thái Phase 12**: Khẳng định Phase 12 đạt trạng thái chính thức `COMPLETED, AUDITED, HARDENED, RECONCILED AND VALIDATED`.
+  2. **Đường cơ sở Toolchain & Scaffold**: React Native 0.88.0, React 19.3.0, TypeScript 6.0.3, Node.js 24.19.0 (ghim tại `mobile/.node-version`), npm 11.17.0 (chính sách `allow-scripts=opencode-ai`), Gradle 9.4.1, JBR 25 (Java 25.0.3-b152), compileSdk 37, targetSdk 36, minSdk 24, buildTools 37.0.0, NDK 27.1.12297006. New Architecture bật (`newArchEnabled=true`), Hermes JS engine bật (`hermesEnabled=true`), Edge-to-Edge bật. Quản lý phụ thuộc độc quyền bằng npm với `package-lock.json` v3 (không dùng Yarn/pnpm/Expo).
+  3. **Kiến trúc Mã nguồn Di động**: Cấu trúc feature-based phân lớp rõ ràng (`src/app/`, `src/features/`, `src/shared/`, `src/assets/`). Quy tắc ranh giới nghiêm ngặt: `src/shared` độc lập 100% với `features` (0 import ngược); `App.tsx` mỏng (9 dòng, ủy quyền vào `AppRoot`); barrel files không rò rỉ mã kiểm thử; các tiện ích test đặt tại `__tests__/test-utils/` ngoài `src/`; không tạo thư mục utils dùng chung bừa bãi; không trùng lặp các lớp trừu tượng theme, navigation, api hay storage.
+  4. **Hệ thống Theme & Điều hướng (Navigation)**:
+     - Theme tokens chuẩn hóa toàn diện (colors, spacing scale, typography scale, radii, elevation shadows), ThemeProvider và hook `useAppTheme`. Ngưỡng chạm tối thiểu 48dp (`minTouchTarget`) được bảo vệ nghiêm ngặt. Phông chữ Inter asset chính thức được hoãn (`FONT_INTER_ASSET_BUNDLING_DEFERRED`), thuộc tính `fontFamily` được omit để React Native tự động sử dụng system font mặc định của hệ điều hành.
+     - Điều hướng typed phân tầng: RootNavigator điều phối theo trạng thái phiên (`INITIALIZING`, `UNAUTHENTICATED`, `AUTHENTICATED`); AuthNavigator gồm 3 màn hình khung (Login `SCR-AUTH-02`, Forgot Password `SCR-AUTH-03`, Reset Password `SCR-AUTH-04`); MainTabNavigator gồm 5 tab chuẩn xác (Dashboard `SCR-MAIN-01`, Projects `SCR-PRJ-01`, Tasks `SCR-TSK-01`, Service Requests `SCR-SRV-01`, More `SCR-MAIN-03`). Ranh giới Auth được giữ nguyên: chưa có logic xác thực thật, không gọi API, không giả lập user/session token.
+  5. **10 Shared Components Chuẩn Hóa**:
+     - `AppButton`: Variants `'primary' | 'secondary' | 'outline' | 'danger' | 'text'`; touch target minHeight 48dp bắt buộc, không bị override giảm xuống; accessibility đầy đủ.
+     - `AppTextInput`: Form control chuẩn với label, helper text, error text và trạng thái disabled.
+     - `PasswordInput`: Dựa trên AppTextInput kèm nút bật/tắt hiển thị mật khẩu và touch target riêng.
+     - `LoadingIndicator`: Hiển thị tiến trình dạng inline và fullscreen với vai trò progressbar.
+     - `EmptyState`: Trạng thái rỗng với tiêu đề, mô tả và nút hành động tùy chọn.
+     - `ErrorState`: Trạng thái lỗi chuẩn hóa với tiêu đề, mô tả, nút thử lại và nhãn trace ID chuẩn xác `Mã tham chiếu: ${traceId}`.
+     - `StatusBadge`: Ánh xạ trực quan trạng thái liên miền, không phải DTO enum backend.
+     - `PriorityBadge`: Đúng 4 mức độ ưu tiên chuẩn hóa: `LOW`, `MEDIUM`, `HIGH`, `CRITICAL` (không có URGENT).
+     - `ConfirmationDialog`: Tên xuất bản duy nhất `ConfirmationDialog` (không export alias `ConfirmDialog`), vai trò alert, modal scrim mờ.
+     - `SearchBar`: Ô tìm kiếm với biểu tượng 🔍 được ẩn khỏi cây accessibility (`accessibilityElementsHidden`, `importantForAccessibility="no"`). Nền tảng accessibility tuân thủ các thuộc tính gốc React Native.
+  6. **Hợp đồng Dữ liệu API (Envelope & Pagination)**:
+     - Hợp đồng `ApiResponse<T>` phẳng, khớp 100% `ApiResponse.java` backend: `success` (boolean), `data` (T | null), `code` (string | null), `message` (string | null), `fieldErrors` (Record<string, string> | null), `timestamp` (string), `traceId` (string | null). Không có cấu trúc lồng `error`.
+     - Hợp đồng `PagedData<T>` khớp 100% `PagedData.java` backend: `items` (T[]), `page` (number), `size` (number), `totalItems` (number), `totalPages` (number), `hasNext` (boolean), `hasPrevious` (boolean). Trường đếm tổng số phần tử là `totalItems` (không dùng `totalElements`).
+  7. **An Ninh Mạng & Phân Tầng Lưu Trữ (Network & Storage)**:
+     - Axios client với giải quyết URL động theo request (mặc định môi trường dev `http://10.0.2.2:8080/api/v1`), timeout 15.000 ms, Bearer request interceptor lấy token từ bộ nhớ, không gửi header khi thiếu token. 401 callback hook cho Phase 13, không tự retry/refresh/navigate từ tầng shared API. Lỗi được chuẩn hóa an toàn qua `normalizeApiError`, che giấu toàn bộ chi tiết nhạy cảm (SQL, stack trace, kết nối mạng thô).
+     - Lưu lượng Cleartext HTTP: Chỉ kích hoạt trong bản build Debug cho đúng 3 host `10.0.2.2`, `localhost`, `127.0.0.1` qua `network_security_config.xml`. Bản build Release cấm hoàn toàn cleartext (`usesCleartextTraffic=false`).
+     - Access Token: Lưu trữ độc quyền trong bộ nhớ RAM (`AccessTokenStore`), không ghi đĩa, không ghi Keychain, không giải mã JWT, không ghi log.
+     - Refresh Token: Lưu trữ độc quyền bằng `react-native-keychain` với service `worksphere.auth.refresh_token` và account `refresh_token_account`.
+     - LocalStorage: Sử dụng `@react-native-async-storage/async-storage` với danh sách khóa cho phép nghiêm ngặt (`@worksphere/theme_preference`, `@worksphere/onboarding_completed`). Loại trừ triệt để blacklist chuỗi con; khóa ngoài allowlist lập tức ném lỗi tại runtime; thao tác đọc JSON bắt buộc có parser callback xác thực. Nghiêm cấm lưu token, mật khẩu hay thông tin phiên trong AsyncStorage.
+  8. **Bằng Chứng Kiểm Thử, Biên Dịch và Vận Hành**:
+     - Unit tests: 20/20 test suites, 106/106 tests PASS (0 failures, 0 skipped, 0 snapshots). Lint đạt 0 errors, 0 warnings. Typecheck đạt 0 errors.
+     - Tái lập sạch: `npm ci` PASS với lockfile nguyên vẹn và cờ `allow-scripts=opencode-ai`.
+     - Biên dịch Android sạch: `.\gradlew.bat clean; .\gradlew.bat assembleDebug --no-daemon` hoàn tất với `BUILD SUCCESSFUL in 5m 6s` (203 actionable tasks: 174 executed, 29 up-to-date). Các native modules (:react-native-keychain, :react-native-async-storage, :react-native-screens, :react-native-safe-area-context, :app) biên dịch và liên kết thành công. APK phát sinh `app-debug.apk` (157,662,829 bytes, SHA256 `B496062B...`) và được Git bỏ qua an toàn.
+     - Khảo sát thực tế giả lập (Emulator Smoke): Cài đặt APK và chạy thành công trên `emulator-5554` (Android 15, API 35). Metro bundler kết nối và biên dịch gói JS thành công; ứng dụng hiển thị màn hình Login shell (`SCR-AUTH-02`); điều hướng tương tác sang Forgot Password (`SCR-AUTH-03`) và quay về Login thành công; không xảy ra fatal crash hay redbox; daemon Metro dừng sạch và giải phóng cổng 8081.
+     - CI: Cấu hình `mobile-ci` trong `.github/workflows/ci.yml` được thẩm định chính xác; phiên chạy từ xa (Remote CI) ghi nhận trạng thái `NOT VERIFIED` do môi trường hiện tại không có GitHub CLI.
+  9. **Danh Mục Hạng Mục Hoãn (Deferred Items)**:
+     - `PRODUCTION_ENVIRONMENT_WIRING_DEFERRED` (Cấu hình môi trường đa bản phát hành hoãn đến Phase 15).
+     - `KEYCHAIN_NATIVE_OPERATION_SMOKE_DEFERRED` (Kiểm thử CRUD phần cứng Keychain thực tế trên thiết bị hoãn đến luồng Auth Phase 13).
+     - `ASYNC_STORAGE_NATIVE_OPERATION_SMOKE_DEFERRED` (Kiểm thử CRUD ghi đĩa AsyncStorage thực tế trên thiết bị hoãn đến luồng Auth Phase 13).
+     - `AXIOS_MULTIPART_CONTENT_TYPE_OVERRIDE_REQUIRED` (Ghi đè thủ công header Content-Type khi upload tệp nhị phân hoãn đến Phase 14+).
+     - `FONT_INTER_ASSET_BUNDLING_DEFERRED` (Tích hợp tệp font chữ Inter hoãn đến đợt trau chuốt UI).
+     - `MOBILE_ICON_PACKAGE_DEFERRED` (Tích hợp thư viện vector icon hoãn đến Phase 13/14).
+     - `FORM_AND_VALIDATION_LIBRARIES_DEFERRED` (Thư viện form và validation React Hook Form/Zod hoãn đến biểu mẫu thật Phase 13).
+     - `IOS_BUILD_ON_MACOS_DEFERRED` (Biên dịch iOS hoãn đến khi có máy chủ macOS).
+     - `ANDROID_NATIVE_CI_BUILD_DEFERRED` (Biên dịch Android native trên GitHub Actions runner hoãn lại).
+     - `PHASE_13_AUTH_FLOWS_DEFERRED` (Toàn bộ luồng đăng nhập, refresh token, phục hồi phiên và đăng xuất thuộc quyền sở hữu của Phase 13).
+  10. **Chuyển Giao Roadmap Tiếp Theo**: Đóng hoàn tất Phase 12. Giai đoạn tiếp theo được phép triển khai là `Giai đoạn 13: Mobile Authentication` (`docs/08_DEVELOPMENT_ROADMAP.md` Mục 17, P0). Nghiêm cấm bắt đầu Phase 13 trong nhiệm vụ đóng checkpoint này.

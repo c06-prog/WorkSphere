@@ -3,17 +3,17 @@
 ## Git Checkpoint
 
 - Branch: main
-- Current Implementation Checkpoint: `53f91ffe86fa282d063a65a1aeb1ca9549b6ea4d`
-- Latest Validated Phase 12 Implementation: `53f91ffe86fa282d063a65a1aeb1ca9549b6ea4d`
+- Latest Validated Implementation: `53f91ffe86fa282d063a65a1aeb1ca9549b6ea4d`
+- Final Audit Reconciliation: `28d238d22d80625243c6ecd634321077874f3697`
+- Memory Checkpoint: This checkpoint commit (`docs(agent): checkpoint phase 12 completion`)
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening
 
 - Latest Validated Implementation Commit: `53f91ffe86fa282d063a65a1aeb1ca9549b6ea4d`
 - Commit message: `fix(mobile): harden local storage key policy`
-- Phase 12 Status: COMPLETED, INDEPENDENTLY AUDITED, RECONCILED WITH SOURCE TRUTH, READY FOR CHECKPOINT CLOSING
-- Phase 12 Final Audit Evidence: reports/PHASE_12_FINAL_AUDIT.md (20/20 suites, 106/106 tests PASS, Android assembleDebug clean build PASS, Emulator smoke verified on emulator-5554)
-- Operational Documentation Checkpoint: reports/PHASE_12_FINAL_AUDIT.md, reports/PROJECT_STATE.md, reports/HANDOFF.md
+- Phase 12 Status: COMPLETED, AUDITED, HARDENED, RECONCILED AND VALIDATED
+- Operational Documentation Checkpoint: reports/DECISIONS.md (D-053), reports/PHASE_12_FINAL_AUDIT.md, reports/PROJECT_STATE.md, reports/HANDOFF.md
 
 ## Validated Progress
 
@@ -293,19 +293,24 @@
 - TEMPORARY_PASSWORD_FLOW_GAP: Luồng kích hoạt và endpoint thiết lập mật khẩu lần đầu tiếp tục hoãn.
 - TEAM_API_CONTRACT_GAP: Team REST controllers hoãn vì `06_API_CONTRACT.md` chưa định nghĩa endpoints.
 - PUT_ME_PASSWORD_TEST_GAP: Test coverage cho luồng đổi mật khẩu người dùng hiện tại tiếp tục hoãn.
-- FONT_INTER_ASSET_BUNDLING_DEFERRED: Font chữ Inter hoãn tích hợp asset; mobile sử dụng fallback font hệ thống (Roboto / System) theo design token standard.
+- PRODUCTION_ENVIRONMENT_WIRING_DEFERRED: Cấu hình môi trường đa bản phát hành (multi-flavor buildConfig) hoãn đến Phase 15.
+- KEYCHAIN_NATIVE_OPERATION_SMOKE_DEFERRED: Kiểm thử CRUD phần cứng Keychain thực tế trên thiết bị hoãn đến luồng Auth Phase 13.
+- ASYNC_STORAGE_NATIVE_OPERATION_SMOKE_DEFERRED: Kiểm thử CRUD ghi đĩa AsyncStorage thực tế trên thiết bị hoãn đến luồng Auth Phase 13.
+- AXIOS_MULTIPART_CONTENT_TYPE_OVERRIDE_REQUIRED: Ghi đè thủ công header Content-Type khi upload tệp nhị phân hoãn đến Phase 14+.
+- FONT_INTER_ASSET_BUNDLING_DEFERRED: Phông chữ Inter asset chưa bundle; mobile sử dụng system font mặc định (thuộc tính fontFamily được omit trong typography tokens).
+- MOBILE_ICON_PACKAGE_DEFERRED: Thư viện vector icon bên thứ ba hoãn đến Phase 13/14 UI refinement.
+- FORM_AND_VALIDATION_LIBRARIES_DEFERRED: React Hook Form và Zod hoãn đến biểu mẫu thật Phase 13.
+- IOS_BUILD_ON_MACOS_DEFERRED: Biên dịch iOS hoãn đến khi có máy chủ macOS.
+- ANDROID_NATIVE_CI_BUILD_DEFERRED: Biên dịch Android native trên GitHub Actions runner hoãn lại.
+- PHASE_13_AUTH_FLOWS_DEFERRED: Toàn bộ luồng đăng nhập, refresh token, phục hồi phiên và đăng xuất thuộc quyền sở hữu của Phase 13.
 
 ## Next Permitted Phase
 
-- **Giai đoạn 12: Khởi tạo ứng dụng mobile** (theo đúng `docs/08_DEVELOPMENT_ROADMAP.md` Section 16, P0, React Native và TypeScript).
-  - Phase 12A (Scaffold Baseline): PASS.
-  - Phase 12B (Theme Foundation & Navigation Shell): PASS & PATCHED (`7b3b0ea446128811ec9f5f55e51bf249bae23e47`).
-  - Phase 12C (10 Shared Components Foundation): PASS & PATCHED (`bcc881bcf322e892905356411e5f3d77f01de09f`).
-  - Phase 12D (Network, Storage & Auth State Foundation): PASS & PATCHED (`53f91ffe86fa282d063a65a1aeb1ca9549b6ea4d`).
-  - Phase 12 Final Audit: PASS & RECONCILED (20/20 test suites, 106/106 tests PASS, clean Android `assembleDebug` BUILD SUCCESSFUL, emulator smoke verified).
-  - Bước kế tiếp: Đóng memory checkpoint Phase 12 (Phase 12 Memory Checkpoint Closing).
-  - Phase 13 (Authentication & Session State): Hoãn lại hoàn toàn, chưa bắt đầu.
-- Phase 11 (Notification và Personal Dashboard) đã hoàn thành, kiểm toán, làm cứng và đóng memory checkpoint (298/298 tests PASS, Checkstyle 0 violations).
+- **Giai đoạn 13: Mobile Authentication** (theo đúng `docs/08_DEVELOPMENT_ROADMAP.md` Mục 17, P0).
+  - Scope: Splash, Login, Forgot Password, Profile, Change Password, Settings; Form validation, gọi API login, Secure Storage lưu token, tự thêm access token vào request, refresh token, xử lý logout, xử lý tài khoản bị khóa, xử lý token hết hạn, điều hướng Auth và Main.
+  - DoD: Đăng nhập end-to-end hoạt động, token được lưu an toàn, refresh không tạo vòng lặp, logout xóa phiên, mobile không hiện màn hình được bảo vệ khi chưa đăng nhập.
+  - Phase 12 (Khởi tạo ứng dụng mobile): ĐÃ HOÀN THÀNH, KIỂM TOÁN, LÀM CỨNG, ĐỐI SOÁT VÀ ĐÓNG MEMORY CHECKPOINT TOÀN DIỆN (20/20 suites, 106/106 tests PASS, Android assembleDebug BUILD SUCCESS, emulator smoke verified).
+  - Phase 13 chưa bắt đầu trong nhiệm vụ này.
 
 ## Trust Rules
 
@@ -316,8 +321,8 @@
 
 ## Recent Git Log
 
+- 28d238d docs(audit): reconcile phase 12 final evidence
 - 53f91ff fix(mobile): harden local storage key policy
 - 681153d feat(mobile): add network and storage foundation
 - bcc881b fix(mobile): align shared component contracts
 - 587ee1b feat(mobile): add shared component foundation
-- 7b3b0ea fix(mobile): resolve phase 12b audit findings on screen id test gap and safe area provider

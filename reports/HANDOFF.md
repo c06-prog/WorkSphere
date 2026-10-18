@@ -4,18 +4,19 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Implementation Checkpoint: `53f91ffe86fa282d063a65a1aeb1ca9549b6ea4d`
+- Current Task: Phase 12 completed; memory checkpoint closed
+- Phase 12 Status: COMPLETED, AUDITED, HARDENED, RECONCILED AND VALIDATED
 - Latest Validated Phase 12 Implementation: `53f91ffe86fa282d063a65a1aeb1ca9549b6ea4d`
-- Current Task: PHASE 12 FINAL AUDIT & TRUTH RECONCILIATION
-- Phase 11 Status: COMPLETED, AUDITED, HARDENED (Checkstyle 0, Tests 298/298 PASS)
+- Final Audit Reconciliation: `28d238d22d80625243c6ecd634321077874f3697`
+- Phase 12 Memory Checkpoint: This checkpoint commit (`docs(agent): checkpoint phase 12 completion`)
 - Phase 12 Tooling Checkpoint: `ab006e409a57bec93bd98b03b38d5188b98304f8`
 - Phase 12A Scaffold Baseline Checkpoint: `d61358e3e2322ae8933c6b241680ddc563594d6e`
 - Phase 12A Environment/CI Patch: `dd6e9eef69876837bf9383e6137d3105daefaa5d`
 - Phase 12B Status: THEME FOUNDATION & NAVIGATION SHELL PASS & PATCHED (`7b3b0ea446128811ec9f5f55e51bf249bae23e47`)
 - Phase 12C Status: 10 SHARED COMPONENTS FOUNDATION PASS & PATCHED (`bcc881bcf322e892905356411e5f3d77f01de09f`)
 - Phase 12D Status: NETWORK, STORAGE & AUTH STATE FOUNDATION PASS & PATCHED (`53f91ffe86fa282d063a65a1aeb1ca9549b6ea4d`)
-- Phase 12 Final Audit Status: COMPLETED, RECONCILED WITH SOURCE TRUTH, PASS (20/20 suites, 106/106 tests PASS, Android assembleDebug BUILD SUCCESS, emulator smoke verified)
-- Phase 12 Checkpoint: CHƯA ĐÓNG (Sẵn sàng đóng checkpoint Phase 12).
+- Phase 12 Final Audit: COMPLETED, RECONCILED WITH SOURCE TRUTH, PASS (20/20 suites, 106/106 tests PASS, Android assembleDebug clean build PASS, emulator smoke verified)
+- Phase 12 Checkpoint: ĐÃ ĐÓNG HOÀN TẤT.
 - Phase 13: CHƯA BẮT ĐẦU.
 - Working tree: clean (sau khi commit)
 
@@ -143,15 +144,11 @@
 
 ## Next Permitted Phase
 
-- **Giai đoạn 12: Khởi tạo ứng dụng mobile** (theo đúng `docs/08_DEVELOPMENT_ROADMAP.md` Section 16, P0, React Native và TypeScript).
-  - Phase 12A (Scaffold Baseline): PASS.
-  - Phase 12B (Theme & Navigation Shell): PASS & PATCHED.
-  - Phase 12C (10 Shared Components Foundation): PASS & PATCHED.
-  - Phase 12D (Network, Storage & Auth State Foundation): PASS & PATCHED.
-  - Phase 12 Final Audit: PASS & RECONCILED (106/106 tests PASS, Android clean build PASS, emulator smoke verified).
-  - Bước kế tiếp: Đóng memory checkpoint Phase 12 (Phase 12 Memory Checkpoint Closing).
-  - Phase 13 (Authentication & Session State): Hoãn lại hoàn toàn, chưa bắt đầu.
-  - Checkpoint Phase 12 chưa đóng trước kiểm toán độc lập.
+- **Giai đoạn 13: Mobile Authentication** (theo đúng `docs/08_DEVELOPMENT_ROADMAP.md` Mục 17, P0).
+  - Scope: Splash, Login, Forgot Password, Profile, Change Password, Settings; Form validation, gọi API login, Secure Storage lưu token, tự thêm access token vào request, refresh token, xử lý logout, xử lý tài khoản bị khóa, xử lý token hết hạn, điều hướng Auth và Main.
+  - DoD: Đăng nhập end-to-end hoạt động, token được lưu an toàn, refresh không tạo vòng lặp, logout xóa phiên, mobile không hiện màn hình được bảo vệ khi chưa đăng nhập.
+  - Phase 12 (Khởi tạo ứng dụng mobile): ĐÃ HOÀN THÀNH, KIỂM TOÁN, LÀM CỨNG, ĐỐI SOÁT VÀ ĐÓNG CHECKPOINT TOÀN DIỆN.
+  - Phase 13 chưa bắt đầu trong nhiệm vụ này.
 
 ## New Session Procedure
 
@@ -163,7 +160,7 @@
 6. Run git status --short.
 7. Run git log --oneline --decorate -5.
 8. Compare HEAD with origin/main.
-9. Read the relevant canonical document sections for Phase 12 when scoped.
+9. Read the relevant canonical document sections for Phase 13 when scoped.
 10. Do not start another roadmap phase without explicit scope.
 
 ## Model Switch Procedure
