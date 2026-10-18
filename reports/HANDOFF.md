@@ -4,16 +4,13 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: Audit & Factually Normalize Initial External Resource and Tool/Extension Registries
-- External Resource Governance Status: AUDITED, FACTUALLY NORMALIZED AND ENFORCED
-- Audit Evidence: Tracked at reports/EXTERNAL_REGISTRY_BOOTSTRAP_AUDIT.md (all 2 EXT-RES and 10 TOOL-EXT entries factually verified against local disk and CLI outputs)
-- Normalization Actions: Versions corrected to ground truth (Node 24.19.0, npm 11.17.0, ADB 37.0.1, GitLens 19.4.0, Edge Tools 2.1.10); uninstalled extensions downgraded to CANDIDATE/NOT_INSTALLED; documentation references clearly noted with Local Copy False.
-- Registries: Tracked at reports/EXTERNAL_RESOURCE_REGISTRY.md and reports/TOOL_EXTENSION_REGISTRY.md
-- Runbook: Tracked at reports/runbooks/EXTERNAL_RESOURCE_ACQUISITION.md
-- Decisions: D-057 (External Resource Reuse Governance), D-056 (Dev E2E Provisioner)
+- Current Task: Phase 13 Decision Freeze - Mobile Authentication Architecture and Contracts
+- Architecture & Contract Freeze Status: FROZEN, APPROVED AND READY FOR IMPLEMENTATION
+- Decisions: D-058 (Freeze Phase 13 Mobile Authentication Architecture and Contract), D-057 (External Resource Governance), D-056 (Dev E2E Provisioner)
+- Implementation Plan: Tracked at reports/PHASE_13_IMPLEMENTATION_PLAN.md (Subphases 13A through 13F with single commit boundaries)
 - Backend Tests: 307/307 tests PASS (0 failures, 0 errors, Checkstyle 0 violations, BUILD SUCCESS)
 - Mobile Tests: 20/20 suites, 112/112 tests PASS (0 failures, 0 skipped)
-- Phase 13: CHƯA BẮT ĐẦU.
+- Phase 13 source implementation: CHƯA BẮT ĐẦU.
 - Working tree: clean (sau khi commit)
 
 ## Phase 11 Notification and Personal Dashboard Module: COMPLETED, AUDITED & HARDENED
@@ -144,9 +141,10 @@
 - **Giai đoạn 13: Mobile Authentication** (theo đúng `docs/08_DEVELOPMENT_ROADMAP.md` Mục 17, P0).
   - Scope: Splash, Login, Forgot Password, Profile, Change Password, Settings; Form validation, gọi API login, Secure Storage lưu token, tự thêm access token vào request, refresh token, xử lý logout, xử lý tài khoản bị khóa, xử lý token hết hạn, điều hướng Auth và Main.
   - DoD: Đăng nhập end-to-end hoạt động, token được lưu an toàn, refresh không tạo vòng lặp, logout xóa phiên, mobile không hiện màn hình được bảo vệ khi chưa đăng nhập.
-  - Pre-Phase 13 Readiness, Provisioning, Governance & Registry Audit: ĐÃ HOÀN THÀNH, ĐỐI SOÁT CHÂN THỰC VÀ KIỂM CHỨNG TOÀN DIỆN (307/307 backend tests PASS, 20/20 mobile suites 112/112 tests PASS, E2eUserProvisioner, D-056, D-057, Registries factually audited).
-  - Kết luận: `EXTERNAL_REGISTRY_AUDIT_PATCHED_PUSHED` (sổ đăng ký hoàn toàn chính xác theo bằng chứng thực tế).
-  - Phase 13 chưa bắt đầu trong nhiệm vụ này. Bước tiếp theo: Quyết định kiến trúc & đóng băng hợp đồng Phase 13.
+  - Pre-Phase 13 Readiness, Provisioning, Governance, Registry Audit & Decision Freeze: ĐÃ HOÀN THÀNH, ĐÓNG BĂNG VÀ PHÊ DUYỆT TOÀN DIỆN (307/307 backend tests PASS, 20/20 mobile suites 112/112 tests PASS, D-058, `reports/PHASE_13_IMPLEMENTATION_PLAN.md`).
+  - Kết luận: `PHASE_13_DECISION_FREEZE_PUSHED` (toàn bộ kiến trúc và hợp đồng Phase 13 đã sẵn sàng cho triển khai).
+  - Phase 13 source implementation: Chưa bắt đầu trong nhiệm vụ này.
+  - Bước tiếp theo: **Subphase 13A: Auth DTOs, API Adapters, Pure Validators và Error Mapper**.
 
 ## New Session Procedure
 

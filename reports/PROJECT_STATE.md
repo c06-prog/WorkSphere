@@ -5,18 +5,22 @@
 - Branch: main
 - Phase 12 Completion Checkpoint: `bdd56778c9e64104b47d85a16e61431ccf1ac899` (`docs(agent): checkpoint phase 12 completion`)
 - Pre-Phase 13 Readiness Base: `a9c59259904f2dd6e9bd38e4ca63c1a88c89c474` (`feat(mobile): finalize pre-auth runtime readiness`)
-- Current Status: External Resource & Tool/Extension Registries AUDITED, VERIFIED AND FACTUALLY NORMALIZED
+- Current Status: Phase 13 Architecture & Contracts FROZEN (Ready for Subphase 13A)
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening
 
-- Latest Validated Implementation: This commit (`docs(agent): verify external resource registries`)
-- Commit message: `docs(agent): verify external resource registries`
-- Registry Audit Status: ALL INITIAL EXT-RES AND TOOL-EXT RECORDS VERIFIED AGAINST LOCAL FILESYSTEM EVIDENCE
-- Factual Normalization: Accurate versions recorded (Node 24.19.0, npm 11.17.0, ADB 37.0.1, GitLens 19.4.0, Edge Tools 2.1.10); uninstalled extensions downgraded to CANDIDATE/NOT_INSTALLED (ESLint/Prettier, SQLTools PG Driver, Spring Boot Tools); documentation references clearly noted with Local Copy False.
+- Latest Validated Implementation: This commit (`docs(design): freeze phase 13 authentication plan`)
+- Commit message: `docs(design): freeze phase 13 authentication plan`
+- Architecture & Decision Freeze: D-058 (Phase 13 Mobile Authentication Architecture, Contracts and 6 Subphases)
+- Implementation Plan: `reports/PHASE_13_IMPLEMENTATION_PLAN.md` (Subphases 13A - 13F with single-commit boundaries)
+- Form Strategy: Controlled React state + pure validators (no react-hook-form, no zod)
+- State Machine & Context: AuthProvider + useReducer/Context (SessionState: INITIALIZING/UNAUTHENTICATED/AUTHENTICATED)
+- Token Storage: Access token in-memory only via accessTokenStore; refresh token in Keychain only via secureStorage
+- Single-Flight Refresh: Dedicated refreshClient Axios instance, single module-private Promise, retry-once flag, zero infinite loops
 - Backend Tests: 307/307 tests PASS (0 failures, 0 errors, Checkstyle 0 violations, BUILD SUCCESS)
 - Mobile Tests: 20/20 test suites, 112/112 tests PASS (0 failures, 0 skipped)
-- Operational Documentation Checkpoint: AGENTS.md, reports/DECISIONS.md (D-057), reports/EXTERNAL_RESOURCE_REGISTRY.md, reports/TOOL_EXTENSION_REGISTRY.md, reports/runbooks/EXTERNAL_RESOURCE_ACQUISITION.md, reports/EXTERNAL_REGISTRY_BOOTSTRAP_AUDIT.md, reports/PROJECT_STATE.md, reports/HANDOFF.md
+- Operational Documentation Checkpoint: AGENTS.md, reports/DECISIONS.md (D-058), reports/PHASE_13_IMPLEMENTATION_PLAN.md, reports/PROJECT_STATE.md, reports/HANDOFF.md
 
 ## Validated Progress
 
@@ -315,10 +319,11 @@
 ## Next Permitted Phase
 
 - **Giai đoạn 13: Mobile Authentication** (theo đúng `docs/08_DEVELOPMENT_ROADMAP.md` Mục 17, P0).
-  - Scope: Splash, Login, Forgot Password, Profile, Change Password, Settings; Form validation, gọi API login, Secure Storage lưu token, tự thêm access token vào request, refresh token, xử lý logout, xử lý tài khoản bị khóa, xử lý token hết hạn, điều hướng Auth và Main.
+  - Scope: Splash, Login, Forgot Password, Reset Password, Profile, Change Password, Settings; Form validation, gọi API login, Secure Storage lưu token, tự thêm access token vào request, refresh token, xử lý logout, xử lý tài khoản bị khóa, xử lý token hết hạn, điều hướng Auth và Main.
   - DoD: Đăng nhập end-to-end hoạt động, token được lưu an toàn, refresh không tạo vòng lặp, logout xóa phiên, mobile không hiện màn hình được bảo vệ khi chưa đăng nhập.
-  - Pre-Phase 13 Runtime Readiness, Provisioning & Governance: ĐÃ HOÀN THÀNH, KIỂM CHỨNG VÀ XÁC THỰC TOÀN DIỆN (307/307 backend tests PASS, 20/20 mobile suites 112/112 tests PASS, E2eUserProvisioner, D-056, D-057, External Resource Governance).
-  - Phase 13 chưa bắt đầu trong nhiệm vụ này. Bước kế tiếp: Quyết định kiến trúc & đóng băng hợp đồng Phase 13.
+  - Architecture & Decision Freeze: ĐÃ HOÀN THÀNH VÀ ĐÓNG BĂNG TOÀN DIỆN (D-058, `reports/PHASE_13_IMPLEMENTATION_PLAN.md`).
+  - Phase 13 source implementation: Chưa bắt đầu trong nhiệm vụ này.
+  - Bước kế tiếp: **Subphase 13A: Auth DTOs, API Adapters, Pure Validators và Error Mapper**.
 
 ## Trust Rules
 
