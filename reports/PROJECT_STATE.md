@@ -3,19 +3,17 @@
 ## Git Checkpoint
 
 - Branch: main
-- Current Checkpoint: `e4026d522a84e376e05f8c77ef9ba2788bc0924b` (với phase 11 memory checkpoint commit sắp tới)
-- Phase 11 Design Checkpoint: `c4bd8362c040d968a087898322780b0495fd6ff4`
-- Base Phase 11 Implementation: `766d747ef4a429b3be5f7caccefca332fe304cbb`
-- Latest Validated Phase 11 Implementation: `e4026d522a84e376e05f8c77ef9ba2788bc0924b`
+- Current Implementation Checkpoint: `53f91ffe86fa282d063a65a1aeb1ca9549b6ea4d`
+- Latest Validated Phase 12 Implementation: `53f91ffe86fa282d063a65a1aeb1ca9549b6ea4d`
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening
 
-- Latest Validated Implementation Commit: `e4026d522a84e376e05f8c77ef9ba2788bc0924b`
-- Commit message: `fix(notification): prevent scanner starvation and prove transaction rollback`
-- Phase 11 Status: COMPLETED, AUDITED, HARDENED, IDEMPOTENCY, AUTHORIZATION, SCHEDULER CONCURRENCY AND TRANSACTION ROLLBACK VALIDATED
-- Phase 11 Design Status: FINALIZED AND HARDENED (Decisions D-049, D-050, D-051, D-052)
-- Operational Documentation Checkpoint: reports/DECISIONS.md (D-049, D-050, D-051, D-052), reports/PHASE_11_REPORT.md, reports/PROJECT_STATE.md, reports/HANDOFF.md
+- Latest Validated Implementation Commit: `53f91ffe86fa282d063a65a1aeb1ca9549b6ea4d`
+- Commit message: `fix(mobile): harden local storage key policy`
+- Phase 12 Status: COMPLETED, INDEPENDENTLY AUDITED, RECONCILED WITH SOURCE TRUTH, READY FOR CHECKPOINT CLOSING
+- Phase 12 Final Audit Evidence: reports/PHASE_12_FINAL_AUDIT.md (20/20 suites, 106/106 tests PASS, Android assembleDebug clean build PASS, Emulator smoke verified on emulator-5554)
+- Operational Documentation Checkpoint: reports/PHASE_12_FINAL_AUDIT.md, reports/PROJECT_STATE.md, reports/HANDOFF.md
 
 ## Validated Progress
 
@@ -300,14 +298,13 @@
 ## Next Permitted Phase
 
 - **Giai đoạn 12: Khởi tạo ứng dụng mobile** (theo đúng `docs/08_DEVELOPMENT_ROADMAP.md` Section 16, P0, React Native và TypeScript).
-  - Phase 12A (Scaffold Baseline): PASS, kiểm toán môi trường và đồng bộ CI Node 24 hoàn tất (`mobile/.node-version`).
-  - Thiết lập npm cấp người dùng `allow-scripts=opencode-ai` đã được khôi phục an toàn, kiểm chứng `npm ci` tương thích hoàn toàn.
+  - Phase 12A (Scaffold Baseline): PASS.
   - Phase 12B (Theme Foundation & Navigation Shell): PASS & PATCHED (`7b3b0ea446128811ec9f5f55e51bf249bae23e47`).
-  - Phase 12C (10 Shared Components Foundation): PASS & PATCHED (`587ee1b4596c5377f1fbf3976f5698993cee830b` / `bcc881bcf322e892905356411e5f3d77f01de09f`).
-  - Phase 12D (Network, Storage & Auth State Foundation): PASS & PATCHED (106/106 tests PASS, axios 1.20.0, react-native-keychain 10.0.0, async-storage 3.1.1, in-memory AccessTokenStore, SecureStorage cho refresh token, LocalStorage làm cứng với strict allowlisted LocalStorageKey, runtime exact Set guard, parser-enforced JSON parsing, chuẩn hóa lỗi ApiError & envelope decoder khớp ApiResponse/PagedData backend, Axios client với Bearer interceptor và 401 callback hook, Android debug cleartext config, assembleDebug BUILD SUCCESSFUL, Emulator smoke verified).
-  - Bước kế tiếp được phép: Kiểm toán độc lập và hardening kết thúc Phase 12 (Phase 12 Final Audit/Hardening).
-  - Phase 13 (Authentication & Session State) vẫn hoãn lại hoàn toàn, chưa bắt đầu.
-  - Checkpoint Phase 12 chưa đóng toàn diện trước audit độc lập.
+  - Phase 12C (10 Shared Components Foundation): PASS & PATCHED (`bcc881bcf322e892905356411e5f3d77f01de09f`).
+  - Phase 12D (Network, Storage & Auth State Foundation): PASS & PATCHED (`53f91ffe86fa282d063a65a1aeb1ca9549b6ea4d`).
+  - Phase 12 Final Audit: PASS & RECONCILED (20/20 test suites, 106/106 tests PASS, clean Android `assembleDebug` BUILD SUCCESSFUL, emulator smoke verified).
+  - Bước kế tiếp: Đóng memory checkpoint Phase 12 (Phase 12 Memory Checkpoint Closing).
+  - Phase 13 (Authentication & Session State): Hoãn lại hoàn toàn, chưa bắt đầu.
 - Phase 11 (Notification và Personal Dashboard) đã hoàn thành, kiểm toán, làm cứng và đóng memory checkpoint (298/298 tests PASS, Checkstyle 0 violations).
 
 ## Trust Rules
@@ -319,8 +316,8 @@
 
 ## Recent Git Log
 
-- e4026d5 fix(notification): prevent scanner starvation and prove transaction rollback
-- 766d747 feat(notification): implement notification and personal dashboard
-- c4bd836 docs(design): harden phase 11 event and query policies
-- 12100a9 docs(design): finalize phase 11 notification and dashboard policies
-- 5558df8 docs(agent): checkpoint phase 10 completion
+- 53f91ff fix(mobile): harden local storage key policy
+- 681153d feat(mobile): add network and storage foundation
+- bcc881b fix(mobile): align shared component contracts
+- 587ee1b feat(mobile): add shared component foundation
+- 7b3b0ea fix(mobile): resolve phase 12b audit findings on screen id test gap and safe area provider
