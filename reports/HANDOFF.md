@@ -4,15 +4,19 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: Phase 13 Contract Freeze Reconciliation
-- Status: FACTUALLY RECONCILED WITH BACKEND SOURCE TRUTH AND READY FOR 13A
-- Reconciliation Evidence: Tracked at reports/PHASE_13_CONTRACT_RECONCILIATION.md
-- Decisions: D-058 (reconciled), D-057 (External Resource Governance), D-056 (Dev E2E Provisioner)
-- Implementation Plan: Tracked at reports/PHASE_13_IMPLEMENTATION_PLAN.md (reconciled)
-- Reconciled Facts: Refresh TTL 2,592,000s (30 days), Domain errors HTTP 422, 5-part refresh eligibility, EMPLOYEE permissions verified 100%, RESET_PASSWORD_DEEP_LINK_DEFERRED, SETTINGS_POLICY_URL_DEFERRED
+- Current Task: Phase 13 Subphase 13A Implementation (Auth DTOs, API Adapter, Pure Validators & Error Mapper)
+- Status: SUBPHASE 13A COMPLETED AND VERIFIED (Ready for Subphase 13B)
+- Subphase 13A Scope:
+  - `mobile/src/features/auth/api/authTypes.ts`: DTOs, runtime guards (`isAuthDepartment`, `isAuthUser`, `isAuthResponse`, `isRefreshResponse`), and AxiosRequestConfig module augmentation (`skipAuthRefresh`, `_retry`).
+  - `mobile/src/features/auth/api/authApi.ts`: Pure transport API adapter with `skipAuthRefresh: true` on public endpoints, clean 204 handler, no storage/navigation side-effects.
+  - `mobile/src/features/auth/validation/authValidation.ts`: Pure validators (`validateLogin`, `validateForgotPassword`, `validateResetPassword`, `validateChangePassword`, `validateUpdateProfile`) and normalizers.
+  - `mobile/src/features/auth/errors/authErrorMapper.ts`: Presentation error mapper mapping 15 backend error codes + transport errors with placement, retryable, clearSession, and traceId preservation.
+  - Test suites: 4 new suites (`authTypes.test.ts`, `authValidation.test.ts`, `authErrorMapper.test.ts`, `authApi.test.ts`), 81 new tests.
+- Decisions: D-059 (Subphase 13A Implementation), D-058 (Phase 13 Architecture & Contract Freeze), D-057, D-056
 - Backend Tests: 307/307 tests PASS (0 failures, 0 errors, Checkstyle 0 violations, BUILD SUCCESS)
-- Mobile Tests: 20/20 suites, 112/112 tests PASS (0 failures, 0 skipped)
-- Phase 13 source implementation: CHƯA BẮT ĐẦU.
+- Mobile Tests: 24/24 suites, 193/193 tests PASS (0 failures, 0 skipped)
+- TypeScript & Lint: `tsc --noEmit` PASS (0 errors), `eslint .` PASS (0 errors)
+- Next Task: Subphase 13B (AuthProvider, State Machine, Login Flow, Local Logout & Navigation Guard)
 - Working tree: clean (sau khi commit)
 
 ## Phase 11 Notification and Personal Dashboard Module: COMPLETED, AUDITED & HARDENED

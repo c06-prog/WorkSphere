@@ -1108,3 +1108,29 @@ Current operating mode:
   15. **Giới Hạn Nền Tảng iOS (iOS Build Limitation)**:
       - Module `EnvironmentConfigModule` đã được tích hợp đúng vào Xcode project target (D-054, D-055).
       - Do môi trường host phát triển là Windows, việc biên dịch binary native cho iOS chưa thể thực thi và chưa thể claim PASS native iOS cho đến khi có máy chủ macOS xác minh. Mã nguồn Phase 13 đảm bảo không chứa các giả định Android-only.
+
+## D-059: Triển Khai Subphase 13A - Data Transfer Objects (DTOs), API Adapter, Pure Form Validators Và Error Mappers Cho Mobile Authentication
+
+- **Ngày quyết định**: 2026-10-18.
+- **Phạm vi**: `mobile/src/features/auth/api`, `mobile/src/features/auth/validation`, `mobile/src/features/auth/errors`, và các test suites liên quan trong `mobile/__tests__/auth/`.
+- **Tình trạng**: APPROVED / COMPLETED.
+- **Nội dung quyết định**:
+  1. **Khắc Phục Module Augmentation Cho Axios Config**:
+     - Bổ sung định nghĩa `skipAuthRefresh?: boolean` và `_retry?: boolean` cho `AxiosRequestConfig` trong `mobile/src/features/auth/api/authTypes.ts` mà không sửa core API module.
+     - Cho phép transport adapter đánh dấu các request công khai bỏ qua bộ điều phối làm mới token tự động.
+  2. **Structural Runtime Type Guards**:
+     - Triển khai các guard thuần `isAuthDepartment`, `isAuthUser`, `isAuthResponse`, `isRefreshResponse`.
+     - Kiểm tra kiểu dữ liệu và cấu trúc trả về từ backend mà không ném ngoại lệ chứa giá trị token/mật khẩu, từ chối an toàn các payload không hợp lệ trước khi chuyển tiếp cho state layer.
+  3. **Transport API Adapter Thuần Túy (`authApi`)**:
+     - Hoạt động như lớp adapter truyền thông thuần túy kết nối HTTP endpoints Spring Boot (`/auth/login`, `/auth/refresh`, `/auth/logout`, `/auth/logout-all`, `/auth/forgot-password`, `/auth/reset-password`, `/me`, `/me/password`).
+     - Gán cờ `skipAuthRefresh: true` cho toàn bộ endpoint công khai.
+     - Xử lý phản hồi 204 No Content sạch sẽ cho `/auth/logout` và `/auth/logout-all`.
+     - Tuyệt đối không lưu trữ token vào Keychain/AsyncStorage, không thay đổi AuthProvider hay Navigation, không tự ý retry đệ quy.
+  4. **Bộ Kiểm Tra Biểu Mẫu Thuần Túy (Pure Form Validators) & Chính Sách Chuẩn Hóa**:
+     - Triển khai `validateLogin`, `validateForgotPassword`, `validateResetPassword`, `validateChangePassword`, `validateUpdateProfile` dưới dạng hàm thuần túy không phụ thuộc React state hay UI components.
+     - Mật khẩu tuyệt đối không được trim (bảo toàn khoảng trắng có chủ đích của người dùng); email được chuẩn hóa chữ thường; token đặt lại mật khẩu không bao giờ xuất hiện trong thông điệp lỗi hoặc log.
+  5. **Bộ Ánh Xạ Lỗi Thân Thiện & An Toàn (`mapAuthError`)**:
+     - Ánh xạ 15 mã lỗi nghiệp vụ backend Spring Boot và 8 lỗi transport kind sang `AuthPresentationError` với thông điệp tiếng Việt rõ ràng, vị trí hiển thị (placement: form, dialog, session, field), cờ `retryable`, cờ `clearSession`, cờ `navigateToLogin`, và bảo toàn `traceId`.
+     - Đảm bảo thông điệp đồng nhất chống user-enumeration và không để lọt credential/token/stacktrace ra UI.
+  6. **Độ Bao Phủ Kiểm Thử Đơn Vị**:
+     - Bổ sung 4 suites kiểm thử (`authTypes.test.ts`, `authValidation.test.ts`, `authErrorMapper.test.ts`, `authApi.test.ts`) với 81 tests mới (tổng số test mobile đạt 24 suites, 193 tests, 100% PASS, 0 failures).

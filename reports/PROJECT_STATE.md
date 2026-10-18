@@ -5,24 +5,24 @@
 - Branch: main
 - Phase 12 Completion Checkpoint: `bdd56778c9e64104b47d85a16e61431ccf1ac899` (`docs(agent): checkpoint phase 12 completion`)
 - Pre-Phase 13 Readiness Base: `a9c59259904f2dd6e9bd38e4ca63c1a88c89c474` (`feat(mobile): finalize pre-auth runtime readiness`)
-- Current Status: Phase 13 Contracts FACTUALLY RECONCILED with Backend Source Truth (Ready for Subphase 13A)
+- Current Status: Phase 13 Subphase 13A (Auth DTOs, API Adapter, Pure Validators & Error Mapper) COMPLETED
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening
 
-- Latest Validated Implementation: This commit (`docs(auth): reconcile phase 13 contracts`)
-- Commit message: `docs(auth): reconcile phase 13 contracts`
-- Contract Reconciliation Report: `reports/PHASE_13_CONTRACT_RECONCILIATION.md`
-- Architecture & Decision Freeze: D-058 (Phase 13 Mobile Authentication Architecture, Contracts and 6 Subphases, reconciled)
-- Implementation Plan: `reports/PHASE_13_IMPLEMENTATION_PLAN.md` (Reconciled with exact backend facts)
-- Token TTL Source Truth: Access token 900s (15m), Refresh token 2,592,000s (30 days, `REFRESH_TOKEN_EXPIRY_DAYS = 30L`), Reset token 15m
-- HTTP Status Truth: Domain business exceptions mapped to HTTP 422 Unprocessable Entity by `GlobalExceptionHandler`, HTTP 401 for unauthenticated protected endpoints
-- Refresh Eligibility Rule: 5-part strict filter (401 + Authorization header + !config._retry + not auth URL + config.skipAuthRefresh !== true)
-- Permissions: EMPLOYEE verified 100% authorized for /me, /me/password, /auth/logout, /auth/logout-all
-- Technical Gaps Recorded: RESET_PASSWORD_DEEP_LINK_DEFERRED, SETTINGS_POLICY_URL_DEFERRED, TEMPORARY_PASSWORD_FLOW_GAP
+- Latest Validated Implementation: `feat(mobile): implement phase 13a auth dtos api adapter validators and error mapper`
+- Commit message: `feat(mobile): implement phase 13a auth dtos api adapter validators and error mapper`
+- Subphase 13A Implementation:
+  - `mobile/src/features/auth/api/authTypes.ts`: Module augmentation (`skipAuthRefresh?: boolean`, `_retry?: boolean`) and runtime type guards (`isAuthDepartment`, `isAuthUser`, `isAuthResponse`, `isRefreshResponse`).
+  - `mobile/src/features/auth/api/authApi.ts`: Transport API adapter for 8 endpoints with `skipAuthRefresh: true` for public routes, clean 204 handler, no storage/navigation side-effects.
+  - `mobile/src/features/auth/validation/authValidation.ts`: Pure form validators (`validateLogin`, `validateForgotPassword`, `validateResetPassword`, `validateChangePassword`, `validateUpdateProfile`) and normalizers.
+  - `mobile/src/features/auth/errors/authErrorMapper.ts`: Presentation error mapper for 15 backend error codes and 8 transport error kinds with placement, retryable, clearSession, and traceId preservation.
+  - Barrel exports: `mobile/src/features/auth/index.ts`, `api/index.ts`, `validation/index.ts`, `errors/index.ts`.
+- Architecture & Decisions: D-058 (Architecture & Contract Freeze), D-059 (Subphase 13A Implementation)
 - Backend Tests: 307/307 tests PASS (0 failures, 0 errors, Checkstyle 0 violations, BUILD SUCCESS)
-- Mobile Tests: 20/20 test suites, 112/112 tests PASS (0 failures, 0 skipped)
-- Operational Documentation Checkpoint: AGENTS.md, reports/DECISIONS.md (D-058), reports/PHASE_13_CONTRACT_RECONCILIATION.md, reports/PHASE_13_IMPLEMENTATION_PLAN.md, reports/PROJECT_STATE.md, reports/HANDOFF.md
+- Mobile Tests: 24/24 test suites, 193/193 tests PASS (4 new suites, 81 new tests, 0 failures, 0 skipped)
+- TypeScript & Lint: `tsc --noEmit` PASS (0 errors), `eslint .` PASS (0 errors)
+- Operational Documentation Checkpoint: reports/DECISIONS.md (D-059), reports/PROJECT_STATE.md, reports/HANDOFF.md
 
 ## Validated Progress
 
@@ -323,9 +323,8 @@
 - **Giai đoạn 13: Mobile Authentication** (theo đúng `docs/08_DEVELOPMENT_ROADMAP.md` Mục 17, P0).
   - Scope: Splash, Login, Forgot Password, Reset Password, Profile, Change Password, Settings; Form validation, gọi API login, Secure Storage lưu token, tự thêm access token vào request, refresh token, xử lý logout, xử lý tài khoản bị khóa, xử lý token hết hạn, điều hướng Auth và Main.
   - DoD: Đăng nhập end-to-end hoạt động, token được lưu an toàn, refresh không tạo vòng lặp, logout xóa phiên, mobile không hiện màn hình được bảo vệ khi chưa đăng nhập.
-  - Architecture & Contract Reconciliation: ĐÃ ĐỐI SOÁT VÀ ĐÓNG BĂNG 100% KHỚP MÃ NGUỒN BACKEND (D-058, `reports/PHASE_13_CONTRACT_RECONCILIATION.md`, `reports/PHASE_13_IMPLEMENTATION_PLAN.md`).
-  - Phase 13 source implementation: Chưa bắt đầu trong nhiệm vụ này.
-  - Bước kế tiếp: **Subphase 13A: Auth DTOs, API Adapters, Pure Validators và Error Mapper**.
+  - Subphase 13A (DTOs, API Adapter, Pure Validators, Error Mapper): HOÀN TẤT VÀ KIỂM THỬ ĐỘC LẬP (24 suites, 193 tests PASS).
+  - Bước kế tiếp: **Subphase 13B: AuthProvider, State Machine, Login Flow, Local Logout & Navigation Guard**.
 
 ## Trust Rules
 
