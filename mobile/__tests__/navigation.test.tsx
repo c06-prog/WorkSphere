@@ -29,13 +29,13 @@ describe('RootNavigator Session Abstraction & Navigation Shell', () => {
     expect(getByText('Đang khởi tạo ứng dụng...')).toBeTruthy();
   });
 
-  test('B. Root unauthenticated: renders Auth navigator with Login placeholder', async () => {
-    const { getByTestId, getByText } = await render(<AppRoot sessionState="UNAUTHENTICATED" />);
+  test('B. Root unauthenticated: renders Auth navigator with Login screen', async () => {
+    const { getByTestId, getAllByText, getByText } = await render(<AppRoot sessionState="UNAUTHENTICATED" />);
 
     expect(getByTestId('screen-login')).toBeTruthy();
-    expect(getByText('Login')).toBeTruthy();
-    expect(getByText('SCR-AUTH-02')).toBeTruthy();
-    expect(getByText('Forgot Password?')).toBeTruthy();
+    expect(getAllByText('Đăng nhập').length).toBeGreaterThanOrEqual(1);
+    expect(getByText('SCR-AUTH-02: Hệ thống quản lý công việc và dự án WorkSphere')).toBeTruthy();
+    expect(getByText('Quên mật khẩu?')).toBeTruthy();
   });
 
   test('C. Root authenticated: renders Main Tab navigator with Dashboard as default tab', async () => {
@@ -161,7 +161,7 @@ describe('RootNavigator Session Abstraction & Navigation Shell', () => {
     fireEvent.press(getByTestId('btn-back-to-login-from-reset'));
     await waitFor(() => {
       expect(getByTestId('screen-login')).toBeTruthy();
-      expect(getByText('SCR-AUTH-02')).toBeTruthy();
+      expect(getByText('SCR-AUTH-02: Hệ thống quản lý công việc và dự án WorkSphere')).toBeTruthy();
     });
   });
 });

@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AuthNavigator } from './AuthNavigator';
 import { MainTabNavigator } from './MainTabNavigator';
 import { useAppTheme } from '../providers/ThemeProvider';
+import { useAuth } from '../auth';
 import type { RootStackParamList, SessionState } from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -12,8 +13,10 @@ export interface RootNavigatorProps {
   sessionState?: SessionState;
 }
 
-export function RootNavigator({ sessionState = 'UNAUTHENTICATED' }: RootNavigatorProps) {
+export function RootNavigator({ sessionState: explicitSessionState }: RootNavigatorProps) {
   const theme = useAppTheme();
+  const auth = useAuth();
+  const sessionState = explicitSessionState ?? auth.sessionState;
 
   if (sessionState === 'INITIALIZING') {
     return (

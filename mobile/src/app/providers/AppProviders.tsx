@@ -1,6 +1,7 @@
 import React, { ReactNode } from 'react';
 import { SafeAreaProvider, Metrics } from 'react-native-safe-area-context';
 import { ThemeProvider } from './ThemeProvider';
+import { AuthProvider } from '../auth';
 import { Theme } from '../../shared/theme';
 
 export interface AppProvidersProps {
@@ -13,7 +14,9 @@ export function AppProviders({ children, theme, initialMetrics }: AppProvidersPr
   return (
     <SafeAreaProvider {...(initialMetrics !== undefined ? { initialMetrics } : {})}>
       <ThemeProvider theme={theme}>
-        {children}
+        <AuthProvider>
+          {children}
+        </AuthProvider>
       </ThemeProvider>
     </SafeAreaProvider>
   );

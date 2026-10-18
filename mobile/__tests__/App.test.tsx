@@ -8,10 +8,10 @@ jest.mock('react-native-safe-area-context', () =>
 
 describe('App Entrypoint', () => {
   test('renders default unauthenticated shell with Login screen', async () => {
-    const { getByTestId, getByText } = await render(<App />);
+    const { getByTestId, getAllByText, getByText } = await render(<App />);
 
     expect(getByTestId('screen-login')).toBeTruthy();
-    expect(getByText('Login')).toBeTruthy();
-    expect(getByText('SCR-AUTH-02')).toBeTruthy();
+    expect(getAllByText('Đăng nhập').length).toBeGreaterThanOrEqual(1);
+    expect(getByText('SCR-AUTH-02: Hệ thống quản lý công việc và dự án WorkSphere')).toBeTruthy();
   });
 });

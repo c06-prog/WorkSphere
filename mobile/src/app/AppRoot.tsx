@@ -13,7 +13,7 @@ export interface AppRootProps {
 }
 
 export function AppRoot({
-  sessionState = 'UNAUTHENTICATED',
+  sessionState,
   theme,
   initialMetrics,
 }: AppRootProps) {

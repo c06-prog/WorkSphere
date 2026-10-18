@@ -4,18 +4,22 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: Final Patch Phase 13A - Axios Request Metadata Typing
-- Status: SUBPHASE 13A PATCHED, AUDITED & VERIFIED (Ready for Subphase 13B review)
-- Patch Scope:
-  - `mobile/src/shared/api/axios.d.ts`: `AxiosRequestConfig` module augmentation (`skipAuthRefresh`, `_retry`) relocated to shared transport layer, resolving `AXIOS_REQUEST_METADATA_TYPING_RISK`.
-  - `mobile/src/features/auth/api/authTypes.ts`: Clean Auth DTOs and runtime guards without transport module augmentation.
-  - `mobile/__tests__/api/apiClient.test.ts`: Added unit test confirming typed metadata forwarding without leaking into request body.
-  - `reports/PHASE_13A_AUTH_CONTRACTS_REPORT.md`: Dedicated comprehensive Phase 13A technical report created.
-  - Decisions: D-059 (updated factual wording per audit), D-060, D-058.
-  - Mobile Tests: 24/24 suites, 194/194 tests PASS (0 failures, 0 skipped).
+- Current Task: Phase 13B - Auth Provider, Login Flow, Local Logout & Navigation Guard
+- Status: SUBPHASE 13B COMPLETED, VALIDATED & AUDITED (Ready for Subphase 13C review)
+- Phase 13B Scope:
+  - `mobile/src/app/auth/authTypes.ts`: Domain types for SessionState (`INITIALIZING`, `UNAUTHENTICATED`, `AUTHENTICATED`), AuthOperationState, AuthState, AuthAction, and AuthContextValue.
+  - `mobile/src/app/auth/authReducer.ts`: Pure state machine reducer with 7 actions and zero token/password storage invariants.
+  - `mobile/src/app/auth/AuthProvider.tsx`: React Context Provider with safe mount bootstrap, atomic token persistence (Keychain first, memory token second, full rollback on error), duplicate login submit guard, resilient local logout, and useAuth hook.
+  - `mobile/src/app/providers/AppProviders.tsx`: Wrapped children with AuthProvider inside ThemeProvider.
+  - `mobile/src/app/navigation/RootNavigator.tsx`: Integrated authentication navigation guard consuming real sessionState from AuthProvider.
+  - `mobile/src/features/auth/screens/LoginScreen.tsx`: Production-ready login screen replacing Phase 12 placeholder, with controlled form inputs, field validation, presentation-safe error banner with traceId, and untrimmed password character preservation.
+  - Barrel exports: `mobile/src/app/auth/index.ts`.
+  - Dedicated Report: `reports/PHASE_13B_AUTH_PROVIDER_LOGIN_REPORT.md`.
+  - Mobile Tests: 28/28 suites, 225/225 tests PASS (31 new tests, 0 failures, 0 skipped).
   - Android Build: `.\gradlew.bat assembleDebug --no-daemon` BUILD SUCCESSFUL (203 actionable tasks, exit code 0).
-  - Phase 13B Status: Phase 13B NOT STARTED.
-  - Next Action: Independent narrow verification or Phase 13B entry review.
+  - Emulator Smoke Test: APK installed and verified on `emulator-5554` (package `com.workspheremobile`), screenshot captured at `reports/screenshots/phase13b_login.png`.
+  - Phase 13C Status: Phase 13C NOT STARTED (Session Restore & Token Refresh Coordinator deferred to next phase).
+  - Next Action: Phase 13C entry review.
 - Working tree: clean (sau khi commit)
 
 ## Phase 11 Notification and Personal Dashboard Module: COMPLETED, AUDITED & HARDENED
