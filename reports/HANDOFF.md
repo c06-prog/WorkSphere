@@ -4,12 +4,15 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: Pre-Phase 13 Dev Auth Test Account Provisioning
-- Pre-Phase 13 Provisioning Status: COMPLETED, AUDITED, HARDENED AND VALIDATED
-- Provisioning Mechanism: E2eUserProvisioner (@Profile("dev"), @ConditionalOnProperty worksphere.dev.e2e-user.enabled=true), least-privilege EMPLOYEE role, ACTIVE status, collision-resistant, idempotent.
-- Backend Tests: 307/307 tests PASS (298 previous + 9 new unit & bean tests, Checkstyle 0 violations, BUILD SUCCESS)
+- Current Task: Establish External Resource Reuse, Quarantine, Security Review, and Standing Authority Policy
+- External Resource Governance Status: ESTABLISHED, AUDITED, HARDENED AND OPERATIONAL
+- Standing Agent Authority: Active project-wide via AGENTS.md (proactive discovery & quarantine download authorized autonomously; execution & source integration require policy checks)
+- Quarantine Workspace: D:\WorkSphere\.external\ (quarantine/, repos/, skills/, templates/, packages/, tools/, extensions/, downloads/, cache/, scans/, manifests/)
+- Registries: Tracked at reports/EXTERNAL_RESOURCE_REGISTRY.md and reports/TOOL_EXTENSION_REGISTRY.md
+- Runbook: Tracked at reports/runbooks/EXTERNAL_RESOURCE_ACQUISITION.md
+- Decisions: D-057 (External Resource Reuse Governance), D-056 (Dev E2E Provisioner)
+- Backend Tests: 307/307 tests PASS (0 failures, 0 errors, Checkstyle 0 violations, BUILD SUCCESS)
 - Mobile Tests: 20/20 suites, 112/112 tests PASS (0 failures, 0 skipped)
-- Runbook: tracked at reports/runbooks/PHASE_13_LOCAL_AUTH_E2E.md
 - Phase 13: CHƯA BẮT ĐẦU.
 - Working tree: clean (sau khi commit)
 
@@ -141,8 +144,8 @@
 - **Giai đoạn 13: Mobile Authentication** (theo đúng `docs/08_DEVELOPMENT_ROADMAP.md` Mục 17, P0).
   - Scope: Splash, Login, Forgot Password, Profile, Change Password, Settings; Form validation, gọi API login, Secure Storage lưu token, tự thêm access token vào request, refresh token, xử lý logout, xử lý tài khoản bị khóa, xử lý token hết hạn, điều hướng Auth và Main.
   - DoD: Đăng nhập end-to-end hoạt động, token được lưu an toàn, refresh không tạo vòng lặp, logout xóa phiên, mobile không hiện màn hình được bảo vệ khi chưa đăng nhập.
-  - Pre-Phase 13 Readiness & Provisioning: ĐÃ HOÀN THÀNH VÀ KIỂM CHỨNG (307/307 backend tests PASS, 20/20 mobile suites 112/112 tests PASS, E2eUserProvisioner, D-056, Runbook sẵn sàng).
-  - Kết luận Audit & Provisioning: `PRE_PHASE_13_AUTH_PROVISIONING_PASS_PUSHED` (sẵn sàng cho quyết định kiến trúc Phase 13).
+  - Pre-Phase 13 Readiness, Provisioning & Governance: ĐÃ HOÀN THÀNH VÀ KIỂM CHỨNG (307/307 backend tests PASS, 20/20 mobile suites 112/112 tests PASS, E2eUserProvisioner, D-056, D-057, External Resource Governance, Registries, Runbook).
+  - Kết luận: `EXTERNAL_RESOURCE_GOVERNANCE_PUSHED` (hoàn tất mọi điều kiện tiền trạm và quản trị tài nguyên cho Phase 13).
   - Phase 13 chưa bắt đầu trong nhiệm vụ này. Bước tiếp theo: Quyết định kiến trúc & đóng băng hợp đồng Phase 13.
 
 ## New Session Procedure

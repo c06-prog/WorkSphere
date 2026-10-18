@@ -63,3 +63,7 @@ Thumbs.db
 *.swp
 *.swo
 ~$*
+
+# External resources, quarantined artifacts, and local caches (never commit third-party artifacts)
+.external/*
+!.external/README.md

@@ -996,3 +996,34 @@ Current operating mode:
      - Tuyệt đối không in giá trị login, email, password, password_hash, token hay đối tượng cấu hình ra console/log.
   6. **Giải Quyết Finding**:
      - Khắc phục và đóng `AUTH_TEST_ACCOUNT_PROVISIONING_REQUIRED`.
+
+## D-057: Quy Định Toàn Dự Án Về Tái Sử Dụng Tài Nguyên Bên Ngoài, Khu Vực Cách Ly (.external/), Kiểm Thẩm An Ninh Và Quyền Hạn Thường Trực Của Agent
+
+- **Ngày quyết định**: 2026-10-18.
+- **Phạm vi**: Toàn bộ dự án WorkSphere, mọi Agent trong mọi phiên hội thoại, quy trình quản trị mã nguồn bên ngoài, kỹ năng (skills), bản mẫu (templates), thư viện (packages), công cụ (tools), ứng dụng và tiện ích mở rộng IDE (extensions).
+- **Tình trạng**: APPROVED / ENFORCED.
+- **Nội dung quyết định**:
+  1. **Quyền Hạn Thường Trực Của Agent (Standing Agent Authority)**:
+     - Mọi Agent trong mọi phiên làm việc được chủ động và kỳ vọng tìm kiếm giải pháp đã tồn tại trước khi tự viết mới từ đầu.
+     - Agent có quyền tự chủ duyệt web, tra cứu tài liệu chính thức, clone/tải tài nguyên ứng viên vào khu cách ly cục bộ `D:\WorkSphere\.external\quarantine\`, kiểm tra mã nguồn, giấy phép, quét an ninh và ghi nhận hồ sơ mà không cần hỏi xin phép riêng cho từng lần tìm kiếm/tải về.
+     - Quyền hạn thường trực CHỈ áp dụng cho việc tìm kiếm, tải cách ly, và thẩm định tĩnh; TUYỆT ĐỐI KHÔNG cấp quyền chạy vô điều kiện cho mã chưa qua kiểm duyệt.
+  2. **Khu Vực Cách Ly Cục Bộ (`D:\WorkSphere\.external\`)**:
+     - Thiết lập cấu trúc phân vùng cô lập chuẩn: `quarantine/`, `repos/`, `skills/`, `templates/`, `packages/`, `tools/`, `extensions/`, `downloads/`, `cache/`, `scans/`, `manifests/`.
+     - Cấu hình `.gitignore` loại trừ `.external/*` (ngoại trừ `.external/README.md`) để đảm bảo không bao giờ commit mã nguồn, artifact, hay binary bên thứ ba vào Git repository WorkSphere.
+  3. **Yêu Cầu Sổ Đăng Ký Theo Dõi (Tracked Registries)**:
+     - Mọi tài nguyên bên ngoài được tham khảo, chạy thử, hoặc tái sử dụng bắt buộc phải được đăng ký đầy đủ tại `reports/EXTERNAL_RESOURCE_REGISTRY.md` hoặc `reports/TOOL_EXTENSION_REGISTRY.md`.
+     - Bắt buộc ghim định danh bất biến: commit SHA 40 ký tự hoặc version digest bất biến; cấm dùng floating branch làm căn cứ provenance duy nhất.
+     - Nghiêm cấm ghi nhận access token, mật khẩu hoặc URL chứa bí mật vào sổ theo dõi.
+  4. **Phân Cấp Tin Cậy Nguồn (Trust Tiers) & Cổng Bản Quyền (License Gates)**:
+     - Phân tầng nghiêm ngặt: Tier 1 (Official Vendor), Tier 2 (Reputable Foundation/Enterprise), Tier 3 (Community with Review), Tier 4 (Blocked/Unlicensed). Lượt stars trên GitHub không phải là bằng chứng an ninh.
+     - Áp dụng chuẩn SPDX: Cho phép nhóm Permissible (`MIT`, `Apache-2.0`, `BSD-2/3`, `ISC`); thẩm định nhóm Review Required (`MPL-2.0`, `LGPL`, `EPL`, `CDDL`); chặn nhóm Blocked (No-license, Proprietary, Strong Copyleft `GPL-3.0`/`AGPL-3.0` tích hợp vào sản phẩm phân phối).
+  5. **Cổng Kiểm Soát An Ninh (Security Gates) & Thẩm Định Chuyên Biệt**:
+     - Áp dụng các pipeline kiểm duyệt chuyên biệt cho Kho mã (Repository), Kỹ năng (Skill - phòng chống Prompt Injection), Gói thư viện (Package - phòng chống Typosquatting), Công cụ (Tool - xác minh Authenticode và SHA-256), và Tiện ích IDE (Extension).
+     - Lập tức từ chối và cách ly tài nguyên nếu phát hiện: truy cập credential ngoài dự kiến, đọc SSH/browser profile, upload mã nguồn dự án, tắt kiểm tra TLS, sửa đổi Git remotes, obfuscated PowerShell/Bash, hoặc payload thứ cấp.
+  6. **Nguyên Tắc Tái Sử Dụng Mã Nguồn (Code Reuse Principles)**:
+     - Ưu tiên khai báo dependency chính thức hơn là sao chép mã nguồn thô (Dependency over Copying).
+     - Ưu tiên phỏng tác có chọn lọc hơn là sao chép hàng loạt (Selective Adaptation over Bulk Copying).
+     - Giữ nguyên thông báo bản quyền bắt buộc; lưu toàn bộ bằng chứng provenance tại registry và runbook.
+  7. **Ranh Giới Roadmap & Phê Duyệt Hệ Thống**:
+     - Ranh giới roadmap tối cao: Chính sách tái sử dụng tài nguyên KHÔNG cho phép tự ý chuyển phase hoặc bắt đầu Phase 13/Phase 14 khi chưa có chỉ định nhiệm vụ rõ ràng.
+     - Phê duyệt hệ điều hành / IDE: Khi xuất hiện prompt cấp quyền của nền tảng, chính sách dự án không thể và không được phép tự ý vượt qua; Agent có trách nhiệm báo cáo và yêu cầu người dùng xác nhận với phạm vi hẹp nhất.
