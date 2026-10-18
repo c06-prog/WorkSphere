@@ -4,10 +4,12 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: Phase 13 Decision Freeze - Mobile Authentication Architecture and Contracts
-- Architecture & Contract Freeze Status: FROZEN, APPROVED AND READY FOR IMPLEMENTATION
-- Decisions: D-058 (Freeze Phase 13 Mobile Authentication Architecture and Contract), D-057 (External Resource Governance), D-056 (Dev E2E Provisioner)
-- Implementation Plan: Tracked at reports/PHASE_13_IMPLEMENTATION_PLAN.md (Subphases 13A through 13F with single commit boundaries)
+- Current Task: Phase 13 Contract Freeze Reconciliation
+- Status: FACTUALLY RECONCILED WITH BACKEND SOURCE TRUTH AND READY FOR 13A
+- Reconciliation Evidence: Tracked at reports/PHASE_13_CONTRACT_RECONCILIATION.md
+- Decisions: D-058 (reconciled), D-057 (External Resource Governance), D-056 (Dev E2E Provisioner)
+- Implementation Plan: Tracked at reports/PHASE_13_IMPLEMENTATION_PLAN.md (reconciled)
+- Reconciled Facts: Refresh TTL 2,592,000s (30 days), Domain errors HTTP 422, 5-part refresh eligibility, EMPLOYEE permissions verified 100%, RESET_PASSWORD_DEEP_LINK_DEFERRED, SETTINGS_POLICY_URL_DEFERRED
 - Backend Tests: 307/307 tests PASS (0 failures, 0 errors, Checkstyle 0 violations, BUILD SUCCESS)
 - Mobile Tests: 20/20 suites, 112/112 tests PASS (0 failures, 0 skipped)
 - Phase 13 source implementation: CHƯA BẮT ĐẦU.
@@ -141,8 +143,8 @@
 - **Giai đoạn 13: Mobile Authentication** (theo đúng `docs/08_DEVELOPMENT_ROADMAP.md` Mục 17, P0).
   - Scope: Splash, Login, Forgot Password, Profile, Change Password, Settings; Form validation, gọi API login, Secure Storage lưu token, tự thêm access token vào request, refresh token, xử lý logout, xử lý tài khoản bị khóa, xử lý token hết hạn, điều hướng Auth và Main.
   - DoD: Đăng nhập end-to-end hoạt động, token được lưu an toàn, refresh không tạo vòng lặp, logout xóa phiên, mobile không hiện màn hình được bảo vệ khi chưa đăng nhập.
-  - Pre-Phase 13 Readiness, Provisioning, Governance, Registry Audit & Decision Freeze: ĐÃ HOÀN THÀNH, ĐÓNG BĂNG VÀ PHÊ DUYỆT TOÀN DIỆN (307/307 backend tests PASS, 20/20 mobile suites 112/112 tests PASS, D-058, `reports/PHASE_13_IMPLEMENTATION_PLAN.md`).
-  - Kết luận: `PHASE_13_DECISION_FREEZE_PUSHED` (toàn bộ kiến trúc và hợp đồng Phase 13 đã sẵn sàng cho triển khai).
+  - Pre-Phase 13 Readiness, Provisioning, Governance, Registry Audit & Contract Reconciliation: ĐÃ HOÀN THÀNH, ĐỐI SOÁT VÀ KHÓA CỨNG 100% VỚI MÃ NGUỒN BACKEND (307/307 backend tests PASS, 20/20 mobile suites 112/112 tests PASS, D-058, `reports/PHASE_13_CONTRACT_RECONCILIATION.md`, `reports/PHASE_13_IMPLEMENTATION_PLAN.md`).
+  - Kết luận: `PHASE_13_CONTRACT_RECONCILED_READY_FOR_13A` (hợp đồng và kiến trúc đã sẵn sàng tuyệt đối cho triển khai).
   - Phase 13 source implementation: Chưa bắt đầu trong nhiệm vụ này.
   - Bước tiếp theo: **Subphase 13A: Auth DTOs, API Adapters, Pure Validators và Error Mapper**.
 

@@ -65,7 +65,7 @@ Toàn bộ hợp đồng API được đóng băng dựa trên mã nguồn thự
       "refreshToken": "secure_random_string",
       "tokenType": "Bearer",
       "accessTokenExpiresIn": 900,
-      "refreshTokenExpiresIn": 604800,
+      "refreshTokenExpiresIn": 2592000,
       "user": {
         "id": "uuid",
         "username": "string",
@@ -254,12 +254,18 @@ mobile/src/
    - `accessToken`: Lưu trữ **duy nhất trong bộ nhớ tạm (in-memory)** thông qua `accessTokenStore`. Tuyệt đối không lưu vào `AsyncStorage`, React state, hay navigation params.
    - `refreshToken`: Lưu trữ **duy nhất trong phần cứng bảo mật (Keychain / Keystore)** thông qua `secureStorage`.
    - Mật khẩu (Password): Tuyệt đối không lưu vào state toàn cục, không ghi log, không in ra terminal, không xuất hiện trong URL hoặc query parameters.
-2. **Quy tắc Single-Flight Token Refresh**:
-   - Chỉ có **duy nhất một Promise làm mới token** được thực thi tại một thời điểm (`module-private refreshPromise`).
-   - Yêu cầu đầu tiên gặp lỗi 401 sẽ kích hoạt refresh; các yêu cầu đồng thời gặp 401 sẽ chia sẻ chung kết quả của Promise này.
+2. **Quy tắc Single-Flight Token Refresh & Điều Kiện Kích Hoạt (Eligibility)**:
+   - Request chỉ đủ điều kiện kích hoạt refresh khi thỏa mãn cả 5 điều kiện:
+     1. Nhận HTTP `401 Unauthorized` với mã `UNAUTHORIZED` từ backend.
+     2. Request gốc có header `Authorization: Bearer <token>` (đã xác thực).
+     3. Request không thuộc nhóm endpoint xác thực (`/api/v1/auth/login`, `/api/v1/auth/refresh`, `/api/v1/auth/forgot-password`, `/api/v1/auth/reset-password`).
+     4. Request chưa từng retry (`!config._retry`).
+     5. Cấu hình request không bật cờ bỏ qua (`config.skipAuthRefresh !== true`).
+   - Duy trì duy nhất **một Promise làm mới token** tại một thời điểm (`module-private refreshPromise`).
+   - Yêu cầu 401 hợp lệ đầu tiên kích hoạt refresh; các yêu cầu 401 đồng thời chia sẻ chung Promise này.
    - Sử dụng **instance Axios riêng biệt (`refreshClient`)** không chứa interceptor 401 đệ quy để gọi endpoint `/auth/refresh`.
-   - Token refresh xoay vòng (rotated refresh token) phải được lưu an toàn vào Keychain trước khi thực hiện thử lại (retry) các request trong hàng đợi.
-   - Mỗi request bị 401 chỉ được retry **tối đa 1 lần** (được đánh dấu qua header/flag `_retry`). Nếu request thử lại tiếp tục nhận 401, nó phải reject ngay lập tức và kích hoạt xóa phiên một lần duy nhất; tuyệt đối không tạo vòng lặp vô hạn.
+   - Token refresh xoay vòng (rotated refresh token - TTL 2,592,000s / 30 ngày) phải được lưu an toàn vào Keychain trước khi retry các request trong hàng đợi.
+   - Mỗi request bị 401 chỉ được retry **tối đa 1 lần** (`config._retry = true`). Nếu request thử lại tiếp tục nhận 401, reject ngay lập tức và kích hoạt xóa phiên an toàn một lần duy nhất; tuyệt đối không tạo vòng lặp vô hạn.
 3. **Bảo vệ chống User Enumeration**:
    - Endpoint `forgot-password` luôn hiển thị kết quả thành công đồng nhất bất kể email có tồn tại trên hệ thống hay không.
 4. **Quản lý tài khoản tạm thời (`TEMPORARY_PASSWORD_FLOW_GAP`)**:
@@ -413,10 +419,12 @@ Mỗi subphase tương ứng với đúng **một commit duy nhất** trên nhá
 ## 16. Deferred items
 
 Các hạng mục sau được ghi nhận rõ ràng là **hoãn lại sau Phase 13**:
-1. **Avatar Upload**: Cần File Service và multipart upload (thuộc Phase 6+). Trong Phase 13, `avatarUrl` hiển thị placeholder hoặc avatar mặc định từ theme.
-2. **First-Login Activation Flow cho PENDING Users**: Cần hợp đồng tự kích hoạt tài khoản backend và chính sách gửi email xác thực thực tế.
-3. **Biometric Authentication (Fingerprint / Face ID)**: Chưa có trong scope Phase 13 MVP; lưu trữ Keychain hiện tại làm nền tảng cho Phase nâng cao sau này.
-4. **Push Notification Token Registration**: Sẽ được triển khai trong Phase Notification tương ứng.
+1. **RESET_PASSWORD_DEEP_LINK_DEFERRED**: Chưa có cấu hình deep link cho mobile trong canonical specs; token đặt lại mật khẩu trong Phase 13 được nhập thủ công hoặc truyền qua route navigation param kiểm thử.
+2. **SETTINGS_POLICY_URL_DEFERRED**: Chưa có URL chính sách công khai trong canonical docs; SettingsScreen trong Subphase 13F hiển thị thông tin tĩnh nội bộ.
+3. **Avatar Upload**: Cần File Service và multipart upload (thuộc Phase 6+). Trong Phase 13, `avatarUrl` hiển thị placeholder hoặc avatar mặc định từ theme.
+4. **First-Login Activation Flow cho PENDING Users (`TEMPORARY_PASSWORD_FLOW_GAP`)**: Cần hợp đồng tự kích hoạt tài khoản backend; Phase 13 mobile ánh xạ lỗi ACCOUNT_PENDING thân thiện yêu cầu liên hệ admin.
+5. **Biometric Authentication (Fingerprint / Face ID)**: Chưa có trong scope Phase 13 MVP; lưu trữ Keychain hiện tại làm nền tảng cho Phase nâng cao sau này.
+6. **Push Notification Token Registration**: Sẽ được triển khai trong Phase Notification tương ứng.
 
 ---
 

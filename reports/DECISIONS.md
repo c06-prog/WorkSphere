@@ -1059,10 +1059,11 @@ Current operating mode:
      - `accessToken`: Lưu trữ **duy nhất trong bộ nhớ tạm (in-memory)** qua `accessTokenStore`. Cấm lưu vào `AsyncStorage`, React state, hay navigation params.
      - `refreshToken`: Lưu trữ **duy nhất trong Keychain/Keystore phần cứng an toàn** qua `secureStorage`.
      - Mật khẩu: Tuyệt đối không lưu vào state toàn cục, không ghi log, không in ra terminal.
-  5. **Điều Phối Làm Mới Token Đơn Luồng (Single-Flight Token Refresh)**:
+  5. **Điều Phối Làm Mới Token Đơn Luồng (Single-Flight Token Refresh) & Điều Kiện Kích Hoạt**:
+     - Quy tắc kích hoạt: Chỉ request thỏa mãn đủ 5 tiêu chí mới kích hoạt refresh: (1) HTTP 401 với mã UNAUTHORIZED, (2) Request gốc có chứa header Authorization, (3) Không thuộc endpoint auth (login, refresh, forgot, reset), (4) Chưa từng retry (!_retry), (5) config.skipAuthRefresh !== true.
      - Sử dụng **instance Axios riêng biệt (`refreshClient`)** không chứa response interceptor 401 đệ quy để gọi endpoint `/auth/refresh`.
      - Duy trì duy nhất một Promise `refreshPromise` ở phạm vi module. Request đầu tiên gặp 401 kích hoạt refresh, các request đồng thời khác gặp 401 cùng chia sẻ Promise này.
-     - Lưu rotated refresh token vào Keychain trước khi retry các request trong hàng đợi.
+     - Lưu rotated refresh token (TTL 2,592,000s / 30 ngày) vào Keychain trước khi retry các request trong hàng đợi.
      - Mỗi request chỉ được retry tối đa 1 lần (đánh dấu qua cờ `_retry = true`). Nếu retry tiếp tục nhận 401, reject ngay lập tức và kích hoạt xóa phiên an toàn một lần duy nhất.
      - Không có vòng lặp vô hạn, không log token.
   6. **Khởi Tạo Phiên Khởi Động Lạnh (Cold-Start Bootstrap)**:
@@ -1078,9 +1079,10 @@ Current operating mode:
      - Đăng nhập: Validate form -> disable submit kép -> gửi request -> ghi refresh token vào Keychain -> nạp access token vào memory -> gán user -> chuyển RootNavigator sang `AUTHENTICATED`. Nếu ghi Keychain lỗi -> rollback xóa token và báo lỗi an toàn.
      - Đăng xuất: Lấy snapshot refresh token -> gọi API backend logout (khi có mạng) -> finally luôn xóa access token và Keychain cục bộ -> xóa session user -> chuyển RootNavigator sang `UNAUTHENTICATED`.
      - Giới hạn khi offline logout: Xóa sạch phiên cục bộ ngay lập tức. Session trên server sẽ tự hết hạn nếu request thu hồi không gửi được.
-  9. **Ánh Xạ Lỗi Thân Thiện (Error-to-UI Mapping)**:
-     - Ánh xạ chính xác toàn bộ 14 mã lỗi backend sang thông điệp tiếng Việt rõ ràng, dễ hiểu.
-     - Các lỗi validation đặt tại trường nhập liệu tương ứng; các lỗi nghiệp vụ chung (sai mật khẩu, tài khoản khóa) đặt tại thông báo form/dialog.
+  9. **Ánh Xạ Lỗi Thân Thiện & Ma Trận Mã Lỗi HTTP (Error-to-UI Mapping)**:
+     - Đối soát chính xác HTTP status từ backend Spring Boot: Các lỗi nghiệp vụ (INVALID_CREDENTIALS, ACCOUNT_PENDING, ACCOUNT_LOCKED, ACCOUNT_DISABLED, REFRESH_TOKEN_*, RESET_TOKEN_*, CURRENT_PASSWORD_INCORRECT, NEW_PASSWORD_SAME_AS_CURRENT, PASSWORD_CONFIRMATION_MISMATCH, PASSWORD_POLICY_VIOLATION) được GlobalExceptionHandler trả về dưới mã **HTTP 422 Unprocessable Entity**; lỗi validation đầu vào trả về **HTTP 400**; lỗi thiếu/sai token trên protected endpoint trả về **HTTP 401 Unauthorized**; lỗi phân quyền trả về **HTTP 403 Forbidden**.
+     - Ánh xạ chính xác toàn bộ mã lỗi backend sang thông điệp tiếng Việt rõ ràng, dễ hiểu.
+     - Các lỗi validation đặt tại trường nhập liệu tương ứng; các lỗi nghiệp vụ chung (sai mật khẩu, tài khoản khóa) đặt tại thông báo form banner/dialog.
   10. **Xử Lý Khoảng Trống Mật Khẩu Tạm Thời (Temporary Password Gap)**:
       - Ghi nhận `TEMPORARY_PASSWORD_FLOW_GAP`: Tài khoản người dùng do admin tạo có mật khẩu tạm thời ở trạng thái `PENDING`. Backend chặn đăng nhập với lỗi `ACCOUNT_PENDING`.
       - Mobile Phase 13 ánh xạ lỗi này rõ ràng: *"Tài khoản của bạn chưa được kích hoạt. Vui lòng liên hệ quản trị viên."*
@@ -1096,9 +1098,13 @@ Current operating mode:
       - `13D`: Profile và Change Password screens.
       - `13E`: Forgot Password và Reset Password screens.
       - `13F`: Settings screen, E2E auth integration, Android build/emulator verification, quét an ninh và đóng gói.
-  13. **Tham Khảo Tái Sử Dụng Nguồn Bên Ngoài**:
-      - Đã tra cứu theo D-057: WorkSphere source (tái sử dụng foundation), registry đã duyệt (`EXT-RES-001`, `002`), tài liệu chính thức của Axios (interceptor pattern), React Navigation (conditional auth flow), và react-native-keychain (keychain storage).
-      - Không cần tải thêm mã nguồn bên ngoài vào quarantine; toàn bộ tài liệu chính thức và mã nền tảng hiện tại là hoàn toàn đầy đủ.
-  14. **Giới Hạn Nền Tảng iOS (iOS Build Limitation)**:
+  13. **Tài Liệu Tham Chiếu Kiến Trúc Bên Ngoài (Required Architectural References)**:
+      - Tuân thủ D-057: Xác lập các tài liệu tham chiếu chuẩn cho triển khai gồm tài liệu chính thức Axios (interceptor separation), React Navigation (conditional auth flow), và react-native-keychain (hardware key storage).
+      - Không tải/clone mã nguồn vào repository WorkSphere; toàn bộ tài liệu kiến trúc và mã nền tảng nội bộ là đầy đủ 100%.
+  14. **Khoảng Trống Kỹ Thuật Đã Xác Minh & Hoãn Lại (Verified Technical Gaps & Deferred Items)**:
+      - `RESET_PASSWORD_DEEP_LINK_DEFERRED`: Chưa có cấu hình deep link cho mobile; token đặt lại mật khẩu trong Phase 13 được nhập thủ công hoặc truyền qua route navigation param kiểm thử.
+      - `SETTINGS_POLICY_URL_DEFERRED`: Chưa có URL chính sách công khai trong canonical docs; SettingsScreen trong Subphase 13F hiển thị thông tin tĩnh nội bộ.
+      - `TEMPORARY_PASSWORD_FLOW_GAP`: Tài khoản PENDING được ánh xạ lỗi thân thiện yêu cầu liên hệ admin; dev E2E sử dụng tài khoản ACTIVE từ E2eUserProvisioner.
+  15. **Giới Hạn Nền Tảng iOS (iOS Build Limitation)**:
       - Module `EnvironmentConfigModule` đã được tích hợp đúng vào Xcode project target (D-054, D-055).
       - Do môi trường host phát triển là Windows, việc biên dịch binary native cho iOS chưa thể thực thi và chưa thể claim PASS native iOS cho đến khi có máy chủ macOS xác minh. Mã nguồn Phase 13 đảm bảo không chứa các giả định Android-only.
