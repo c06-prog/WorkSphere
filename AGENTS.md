@@ -378,3 +378,160 @@ Từ chối và cách ly ngay lập tức bất kỳ tài nguyên nào có một
 
 - Khi hệ điều hành hoặc môi trường phát triển (Antigravity IDE / Windows) hiển thị hộp thoại xin quyền hoặc xác nhận bảo mật, chính sách dự án không được phép và không thể tự ý vượt qua.
 - Agent có trách nhiệm báo cáo rõ ràng và yêu cầu người dùng xác nhận với phạm vi hẹp nhất phục vụ đúng nhiệm vụ.
+
+## Standing Multi-Agent Orchestration, Isolation and Review Policy
+
+Chính sách này xác lập thẩm quyền thường trực, quy chuẩn phân tầng, cơ chế cách ly và giao ước đầu ra cho việc điều phối đa tác nhân (Multi-Agent Orchestration) trong toàn dự án WorkSphere.
+
+### 1. Thẩm Quyền Thường Trực (Standing Authority)
+
+Agent được quyền chủ động sử dụng cơ chế multi-agent (sub-agents) mà không cần xin chỉ thị riêng khi nhiệm vụ thỏa mãn các điều kiện:
+- Nhiệm vụ phân rã được thành ít nhất 2 luồng công việc độc lập về mặt dữ liệu hoặc chức năng;
+- Đợt kiểm toán (audit) hoặc thẩm định chất lượng đòi hỏi phản biện chéo (cross-review) độc lập;
+- Tác vụ bao gồm nhiều hệ thống con (subsystems) không ghi đè lên cùng một tập hợp tệp;
+- Có thể phân vùng đầu ra rõ ràng cho từng tác nhân;
+- Kết quả từ các tác nhân được Điều phối viên (Coordinator) tổng hợp và đối soát nghiêm ngặt.
+
+**Nghiêm cấm sử dụng multi-agent khi:**
+- Nhiệm vụ phạm vi hẹp chỉ sửa đổi từ 1 đến 3 tệp có liên kết chặt chẽ;
+- Nhiệm vụ cấu thành một giao dịch Git nguyên tử duy nhất;
+- Các tác nhân bắt buộc phải chỉnh sửa đồng thời trên cùng một tệp mã nguồn;
+- Nhiệm vụ liên quan đến việc xử lý thông tin xác thực nhạy cảm hoặc bí mật;
+- Nền tảng môi trường không đảm bảo được tính cách ly (workspace/process isolation);
+- Chi phí điều phối (overhead) lớn hơn lợi ích thực thi song song.
+
+Ranh giới giai đoạn lộ trình (Roadmap boundaries) và các quy chuẩn bảo mật dự án luôn có độ ưu tiên cao nhất, tuyệt đối không bị vượt qua bởi cơ chế multi-agent.
+
+### 2. Mô Hình Phân Vai Chuẩn (Standard Role Model)
+
+Khi kích hoạt mô hình đa tác nhân, các tác nhân bắt buộc phải tuân thủ đúng một trong các vai trò chuẩn hóa sau:
+
+1. **Coordinator (Điều phối viên)**:
+   - Phân rã nhiệm vụ, xác định ranh giới và cấp phát phạm vi (scope) cho các worker;
+   - Quản lý vòng đời tác nhân, timeout và thu hồi tài nguyên;
+   - Tuyệt đối không tự ý mở rộng phạm vi phase;
+   - Tổng hợp, đối soát độc lập các báo cáo và ra quyết định kết luận cuối cùng.
+2. **Contract Agent (Tác nhân Hợp đồng)**:
+   - Đọc và phân tích các tài liệu chuẩn mực canonical docs, DTO backend, database schema;
+   - Chỉ hoạt động ở chế độ chỉ đọc (Read-only); nghiêm cấm chỉnh sửa mã nguồn.
+3. **Implementation Agent (Tác nhân Triển khai)**:
+   - Chỉ được phép chỉnh sửa các tệp mã nguồn nằm trong danh sách được cấp quyền (`allowed write paths`);
+   - Tuân thủ coding standards và quy chuẩn kiến trúc hiện hành.
+4. **Test Agent (Tác nhân Kiểm thử)**:
+   - Thực thi các bộ kiểm thử tự động, lint, typecheck, và biên dịch build;
+   - Thu thập kết quả kiểm thử khách quan; nghiêm cấm sửa mã nguồn để ép kiểm thử PASS.
+5. **Security Agent (Tác nhân An ninh)**:
+   - Rà soát secret, token, mật khẩu, rò rỉ bộ nhớ, mạng, lưu trữ native, và kiểm tra giấy phép thư viện theo D-057;
+   - Có thẩm quyền phủ quyết (veto/block) khi phát hiện rủi ro an ninh mức High hoặc Critical.
+6. **Reviewer Agent (Tác nhân Thẩm định)**:
+   - So sánh đối chiếu mã nguồn triển khai thực tế với hợp đồng canonical và DTO;
+   - Không chấp nhận báo cáo nếu thiếu bằng chứng mã nguồn (source evidence).
+7. **Git Integrator (Tác nhân Tích hợp Git)**:
+   - Tác nhân duy nhất được phép stage, commit và push sau khi toàn bộ các cổng kiểm thử (gates) đạt PASS;
+   - Nghiêm cấm dùng `git add -A`, không force push, không rebase main, không reset hard.
+
+*Quy tắc Fallback:* Khi nền tảng không hỗ trợ sub-agent song song thật, một Agent duy nhất có thể đảm nhiệm lần lượt các vai trò này theo quy trình tuần tự (`SEQUENTIAL_MULTI_ROLE_MODE`), nhưng bắt buộc phải xuất riêng biệt từng khối kết quả của từng vai trò.
+
+### 3. Phân Quyền Tệp và Nguyên Tắc Một Người Ghi (File Ownership & Single-Writer Rule)
+
+Mỗi worker khi được giao nhiệm vụ phải được gán thông số phân quyền rõ ràng:
+- `allowed read paths`: Danh mục đường dẫn được phép đọc;
+- `allowed write paths`: Danh mục đường dẫn duy nhất được phép ghi;
+- `forbidden paths`: Danh mục đường dẫn tuyệt đối cấm truy cập hoặc chỉnh sửa;
+- `expected outputs`: Kết quả dự kiến phải hoàn thành;
+- `test responsibility`: Trách nhiệm kiểm thử tương ứng;
+- `stop condition`: Điều kiện dừng tác vụ.
+
+**Nguyên tắc cốt lõi:**
+- Tuyệt đối không để hai tác nhân chỉnh sửa cùng một tệp đồng thời.
+- Nếu nhiều tác nhân cần đóng góp vào một tệp: Duy nhất một Implementation Agent nắm quyền sở hữu ghi trên tệp đó; các tác nhân khác chỉ được đưa ra đề xuất bản vá (patch proposal/recommendation) dưới dạng diff/markdown; Coordinator chịu trách nhiệm hợp nhất.
+- Ngoại trừ Git Integrator, không một worker nào được phép tự ý thực hiện `git add`, `git commit` hoặc `git push`.
+
+### 4. Cơ Chế Cách Ly Nhánh Bằng Git Worktree (Git Worktree Isolation)
+
+Khi nhiều tác nhân cần chỉnh sửa mã nguồn song song, cơ chế cô lập bắt buộc phải áp dụng:
+- Sử dụng Git worktree độc lập đặt tại khu vực cách ly:
+  `git worktree add .external/worktrees/<task-id>-<role> <temporary-branch>`
+- Thư mục worktree nằm trong `.external/` đã được cấu hình `.gitignore` toàn cục, đảm bảo không làm bẩn working tree chính.
+- Mỗi worker làm việc trên một branch/worktree cô lập riêng biệt.
+- Không tự động merge khi các kiểm thử của nhánh con chưa đạt 100% PASS.
+- Coordinator có trách nhiệm kiểm tra `git diff` của worktree trước khi cherry-pick hoặc merge vào nhánh chính.
+- Thu hồi và xóa worktree (`git worktree remove`) chỉ sau khi commit đã được tích hợp thành công hoặc khi có quyết định hủy bỏ.
+- *Trường hợp không hỗ trợ worktree an toàn:* Lập tức chuyển sang chế độ ghi tuần tự một tác nhân (sequential single-writer mode), nghiêm cấm ghi đè đồng thời trên cùng working tree.
+
+### 5. Giao Ước Đầu Ra Chuẩn Hóa Máy Đọc (Structured Output Contract)
+
+Mỗi tác nhân sau khi hoàn thành nhiệm vụ bắt buộc phải trả về khối kết quả có cấu trúc:
+
+```text
+ROLE: <Coordinator | Contract Agent | Implementation Agent | Test Agent | Security Agent | Reviewer Agent | Git Integrator>
+TASK_ID: <Định danh duy nhất của tác vụ>
+CHECKPOINT: <Commit SHA của Git tại thời điểm bắt đầu>
+READ_PATHS: <Danh sách các đường dẫn đã đọc>
+WRITE_PATHS: <Danh sách các đường dẫn được phép ghi>
+FILES_READ: <Danh sách tệp thực tế đã đọc>
+FILES_CHANGED: <Danh sách tệp thực tế đã tạo hoặc sửa đổi>
+COMMANDS_RUN: <Danh sách các lệnh đã chạy kèm mã thoát>
+FINDINGS: <Các phát hiện kỹ thuật, khoảng trống hoặc phân tích>
+TEST_RESULTS: <Kết quả kiểm thử thực tế (pass/fail/skip/coverage)>
+SECURITY_NOTES: <Đánh giá an ninh, secret, permissions, storage, network>
+OPEN_QUESTIONS: <Các câu hỏi mở hoặc quyết định cần ý kiến người dùng>
+CONCLUSION: <PASS | NEEDS_PATCH | BLOCKED | CONTRACT_GAP | SECURITY_RISK | CAPABILITY_UNAVAILABLE>
+```
+
+Tuyệt đối không trả về báo cáo trạng thái chung chung nếu nhiệm vụ yêu cầu kết luận chuyên biệt.
+
+### 6. Thứ Tự Phân Xử Xung Đột (Conflict Resolution Hierarchy)
+
+Khi xảy ra bất đồng hoặc mâu thuẫn dữ liệu giữa hai tác nhân, thứ tự ưu tiên phân xử tuyệt đối như sau:
+1. **Mã nguồn thực tế hiện tại (Current source code)**;
+2. **Lockfiles và đầu ra biên dịch thực tế (Lockfiles & Build output)**;
+3. **Mã nguồn Backend hiện hành (Backend source code)**;
+4. **Tài liệu chuẩn mực dự án (Canonical docs 01–10)**;
+5. **Bộ kiểm thử tự động (Automated tests)**;
+6. **Báo cáo lịch sử (Historical reports)**;
+7. **Ý kiến chủ quan của Agent (Agent opinion)**.
+
+Coordinator có trách nhiệm ghi nhận rõ xung đột, xác minh bằng lệnh thực tế hoặc kiểm tra mã nguồn, không lấy số đông làm căn cứ, và không tự suy diễn dữ kiện. Security Agent có quyền phủ quyết (veto) ngay lập tức khi phát hiện rủi ro an ninh.
+
+### 7. Ngân Sách Lặp Và Thử Lại (Retry and Loop Budget)
+
+Để chống lặp vô hạn và cạn kiệt context:
+- **Đối với mỗi lệnh:** Không thử lại quá 1 lần nếu không có sự thay đổi về giả thuyết kỹ thuật hoặc dữ liệu đầu vào.
+- **Không thăm dò liên tục:** Tuyệt đối không chạy vòng lặp kiểm tra trạng thái lệnh nền (background task status polling); chờ thông báo phản hồi tự động từ hệ thống.
+- **Không phục hồi mù:** Không chạy liên tục `git status` hoặc `git log` chỉ để bù đắp bộ nhớ context.
+- **Không đọc nhật ký hội thoại cũ:** Không đọc `transcript.jsonl` hoặc các tệp trong thư mục `.system_generated/logs` trừ khi có yêu cầu minh thị từ người dùng.
+- **Đối với mỗi worker:**
+  - Tối đa 1 lần kiểm tra phục hồi (recovery check);
+  - Tối đa 1 lần chạy trọn vẹn test suite;
+  - Tối đa 1 lần chạy build biên dịch, trừ khi mã nguồn đã được sửa lỗi sau lần thất bại trước đó;
+  - Nếu vẫn thất bại sau ngân sách cho phép, lập tức trả về kết luận `BLOCKED` kèm chi tiết lỗi thực tế.
+
+### 8. Quản Lý Ngân Sách Ngữ Cảnh (Context Budget)
+
+- Coordinator chỉ cung cấp cho worker các thông tin tối thiểu cần thiết: Git checkpoint hiện tại, mục tiêu nhiệm vụ cụ thể, đường dẫn tệp chính xác, định dạng đầu ra yêu cầu, và danh sách các hành vi bị cấm.
+- Tuyệt đối không sao chép toàn bộ lịch sử cuộc trò chuyện chuyển tiếp cho worker.
+- Worker không đọc toàn bộ báo cáo dự án nếu chỉ cần xác minh một hợp đồng cục bộ.
+- Sau khi context compaction xảy ra: Không cố gắng đọc lại `transcript.jsonl`; đọc trực tiếp `AGENTS.md`, `reports/PROJECT_STATE.md`, `reports/HANDOFF.md` và tài liệu liên quan đến nhiệm vụ hẹp; tiếp tục công việc từ Git checkpoint.
+
+### 9. Ranh Giới An Ninh Tác Nhân (Security Boundaries)
+
+- Tuyệt đối không chia sẻ mật khẩu, token thật, API keys hoặc Authorization header cho các tác nhân con.
+- Nghiêm cấm mọi tác nhân bên ngoài hoặc tác nhân từ xa truy cập:
+  - Tệp `.env` cục bộ;
+  - Khóa bảo mật phần cứng / Keystore / Keychain;
+  - SSH keys;
+  - Profile trình duyệt của người dùng;
+  - Các repository hoặc thư mục nằm ngoài `D:\WorkSphere`;
+  - Cơ sở dữ liệu production;
+  - Nhật ký cá nhân của hệ điều hành.
+- Tuyệt đối không tải mã nguồn WorkSphere lên các dịch vụ đám mây công cộng bên ngoài. Mọi tác nhân tham khảo tài nguyên ngoài bắt buộc phải tuân thủ nghiêm ngặt chính sách D-057.
+
+### 10. Chế Độ Dự Phòng Tuần Tự (Fallback Mode)
+
+Nếu nền tảng không hỗ trợ sub-agent thật hoặc môi trường không cho phép phân tách tiến trình/workspace an toàn:
+- Toàn bộ hệ thống chuyển sang chế độ **`SEQUENTIAL_MULTI_ROLE_MODE`**.
+- Thứ tự thực thi tuần tự của tác nhân duy nhất:
+  `Contract Role` → `Implementation Role` → `Test Role` → `Security Role` → `Reviewer Role` → `Git Integrator Role`.
+- Mỗi vai trò phải hoàn tất và ghi nhận khối kết quả riêng biệt theo hợp đồng đầu ra.
+- Tuyệt đối trung thực về năng lực: Không giả lập hoặc tuyên bố rằng nhiều tác nhân độc lập đã phê duyệt chéo nếu nhiệm vụ thực tế được thực thi tuần tự bởi một mô hình duy nhất.

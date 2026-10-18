@@ -4,19 +4,18 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: Phase 13 Subphase 13A Implementation (Auth DTOs, API Adapter, Pure Validators & Error Mapper)
-- Status: SUBPHASE 13A COMPLETED AND VERIFIED (Ready for Subphase 13B)
-- Subphase 13A Scope:
-  - `mobile/src/features/auth/api/authTypes.ts`: DTOs, runtime guards (`isAuthDepartment`, `isAuthUser`, `isAuthResponse`, `isRefreshResponse`), and AxiosRequestConfig module augmentation (`skipAuthRefresh`, `_retry`).
-  - `mobile/src/features/auth/api/authApi.ts`: Pure transport API adapter with `skipAuthRefresh: true` on public endpoints, clean 204 handler, no storage/navigation side-effects.
-  - `mobile/src/features/auth/validation/authValidation.ts`: Pure validators (`validateLogin`, `validateForgotPassword`, `validateResetPassword`, `validateChangePassword`, `validateUpdateProfile`) and normalizers.
-  - `mobile/src/features/auth/errors/authErrorMapper.ts`: Presentation error mapper mapping 15 backend error codes + transport errors with placement, retryable, clearSession, and traceId preservation.
-  - Test suites: 4 new suites (`authTypes.test.ts`, `authValidation.test.ts`, `authErrorMapper.test.ts`, `authApi.test.ts`), 81 new tests.
-- Decisions: D-059 (Subphase 13A Implementation), D-058 (Phase 13 Architecture & Contract Freeze), D-057, D-056
-- Backend Tests: 307/307 tests PASS (0 failures, 0 errors, Checkstyle 0 violations, BUILD SUCCESS)
-- Mobile Tests: 24/24 suites, 193/193 tests PASS (0 failures, 0 skipped)
-- TypeScript & Lint: `tsc --noEmit` PASS (0 errors), `eslint .` PASS (0 errors)
-- Next Task: Subphase 13B (AuthProvider, State Machine, Login Flow, Local Logout & Navigation Guard)
+- Current Task: Project-Wide Multi-Agent Orchestration Governance (Standing Authority, Isolation & Review Policy)
+- Status: MULTI-AGENT GOVERNANCE ESTABLISHED (D-060 Enforced)
+- Governance Scope:
+  - Antigravity platform capability classified as `TRUE_MULTI_AGENT` with `SEQUENTIAL_MULTI_ROLE_MODE` fallback.
+  - Standing authority added to `AGENTS.md` with explicit conditions and forbidden triggers.
+  - 7 standard roles established: Coordinator, Contract Agent, Implementation Agent, Test Agent, Security Agent, Reviewer Agent, Git Integrator.
+  - Single-writer file ownership and Git worktree isolation in `.external/worktrees/<task-id>-<role>` enforced.
+  - 13-field structured output contract formalized in `reports/runbooks/MULTI_AGENT_ORCHESTRATION.md` and `reports/registry/agent-task-result.schema.json`.
+  - Conflict resolution hierarchy (source > build > backend > canonical > tests > reports > opinion), loop budgets, and context budget rules frozen.
+- Decisions: D-060 (Standing Multi-Agent Orchestration, Isolation and Review Policy), D-059 (Subphase 13A Implementation), D-058 (Phase 13 Architecture & Contract Freeze), D-057, D-056
+- Phase 13 Status: Subphase 13A completed; Phase 13A audit conducted (NEEDS_PATCH for AXIOS_REQUEST_METADATA_TYPING_RISK before Phase 13B); no Phase 13B implementation in this task.
+- Next Task: Phase 13A Axios Typing Patch / Phase 13B implementation per roadmap scheduling.
 - Working tree: clean (sau khi commit)
 
 ## Phase 11 Notification and Personal Dashboard Module: COMPLETED, AUDITED & HARDENED

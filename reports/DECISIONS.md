@@ -1134,3 +1134,43 @@ Current operating mode:
      - Đảm bảo thông điệp đồng nhất chống user-enumeration và không để lọt credential/token/stacktrace ra UI.
   6. **Độ Bao Phủ Kiểm Thử Đơn Vị**:
      - Bổ sung 4 suites kiểm thử (`authTypes.test.ts`, `authValidation.test.ts`, `authErrorMapper.test.ts`, `authApi.test.ts`) với 81 tests mới (tổng số test mobile đạt 24 suites, 193 tests, 100% PASS, 0 failures).
+
+
+## D-060: Quy Định Toàn Dự Án Về Phân Tầng, Cách Ly, Thẩm Định Và Điều Phối Đa Tác Nhân (Standing Multi-Agent Orchestration, Isolation and Review Policy)
+
+- **Ngày quyết định**: 2026-10-18.
+- **Phạm vi**: Toàn bộ dự án WorkSphere, mọi Agent trong mọi phiên hội thoại, quy trình phối hợp đa tác nhân (multi-agent / sub-agents), phân quyền tệp, cô lập môi trường Git và kiểm soát chất lượng.
+- **Tình trạng**: APPROVED / ENFORCED.
+- **Nội dung quyết định**:
+  1. **Phân loại Năng lực Nền tảng (Platform Capability Classification)**:
+     - Nền tảng Antigravity hiện tại được xác minh đạt trạng thái **`TRUE_MULTI_AGENT`**: Hỗ trợ định nghĩa (`define_subagent`), điều phối song song ngầm (`invoke_subagent`), giao tiếp 2 chiều (`send_message`), quản trị tiến trình và hủy bỏ (`manage_subagents`), cô lập workspace (`Workspace: 'branch' | 'share'`), phân bổ vai trò (`Role`), chọn mô hình (`Model`), và lên lịch điều phối (`schedule`).
+     - Duy trì song song cơ chế dự phòng chuẩn **`SEQUENTIAL_MULTI_ROLE_MODE`** khi môi trường hoặc tác vụ không khả thi với luồng song song.
+  2. **Thẩm Quyền Thường Trực Của Agent (Standing Authority)**:
+     - Agent được quyền tự chủ kích hoạt multi-agent khi: tác vụ có $\ge 2$ luồng công việc độc lập; đợt audit cần phản biện chéo khách quan; có nhiều phân hệ không sửa đổi cùng tệp; đầu ra phân vùng rành mạch; và kết quả được Coordinator tổng hợp đối soát.
+     - Nghiêm cấm kích hoạt khi: tác vụ hẹp 1–3 tệp liên quan chặt; tác vụ Git nguyên tử đơn; các worker phải sửa cùng tệp; tác vụ chứa secret; thiếu cơ chế cô lập; hoặc chi phí overhead vượt quá lợi ích.
+     - Ranh giới roadmap và chính sách an ninh luôn là bất biến tối cao.
+  3. **Mô Hình Phân Vai Chuẩn (Standard Role Model)**:
+     - Thiết lập 7 vai trò chuẩn: `Coordinator` (phân rã, điều phối, tổng hợp, quyết định cuối); `Contract Agent` (chỉ đọc, phân tích canonical docs/DTOs); `Implementation Agent` (chỉ sửa các tệp được cấp quyền); `Test Agent` (chạy test, build, không sửa mã để ép PASS); `Security Agent` (rà soát secret, token, quyền hạn, có quyền veto); `Reviewer Agent` (đối soát mã nguồn với hợp đồng, đòi hỏi bằng chứng thực tế); `Git Integrator` (duy nhất nắm quyền commit/push khi mọi cổng PASS).
+  4. **Phân Quyền Tệp và Nguyên Tắc Một Người Ghi (File Ownership & Single-Writer Rule)**:
+     - Mỗi worker bắt buộc phải có thông số: `allowed read paths`, `allowed write paths`, `forbidden paths`, `expected outputs`, `test responsibility`, `stop condition`.
+     - Tuyệt đối cấm hai tác nhân chỉnh sửa cùng một tệp đồng thời. Khi cần đóng góp cùng tệp: duy nhất 1 Implementation Agent ghi mã, các tác nhân khác gửi recommendation/patch proposal, Coordinator kiểm duyệt và hợp nhất.
+  5. **Cơ Chế Cách Ly Nhánh Bằng Git Worktree (Git Worktree Isolation)**:
+     - Khi nhiều tác nhân ghi mã song song: Bắt buộc dùng Git worktree độc lập tại `.external/worktrees/<task-id>-<role> <temporary-branch>`. Thư mục nằm trong `.external/` đã được Git bỏ qua (`.gitignore`), bảo vệ working tree chính không bị ô nhiễm.
+     - Không tự động merge khi test chưa PASS 100%. Coordinator kiểm tra diff trước khi cherry-pick/merge. Thu hồi worktree (`git worktree remove`) ngay sau khi tích hợp hoặc hủy bỏ.
+     - Khi không thể tạo worktree an toàn: Chuyển ngay sang chế độ ghi tuần tự một tác nhân (sequential single-writer mode).
+  6. **Giao Ước Đầu Ra Chuẩn Hóa Máy Đọc (Structured Output Contract)**:
+     - Khối kết quả chuẩn hóa gồm 13 trường: `ROLE`, `TASK_ID`, `CHECKPOINT`, `READ_PATHS`, `WRITE_PATHS`, `FILES_READ`, `FILES_CHANGED`, `COMMANDS_RUN`, `FINDINGS`, `TEST_RESULTS`, `SECURITY_NOTES`, `OPEN_QUESTIONS`, `CONCLUSION`.
+     - Chỉ chấp nhận 6 kết luận chuẩn: `PASS`, `NEEDS_PATCH`, `BLOCKED`, `CONTRACT_GAP`, `SECURITY_RISK`, `CAPABILITY_UNAVAILABLE`.
+  7. **Thứ Tự Phân Xử Xung Đột (Conflict Resolution Hierarchy)**:
+     - Cấp bậc ưu tiên: (1) Mã nguồn thực tế hiện tại $\rightarrow$ (2) Lockfile và đầu ra build $\rightarrow$ (3) Mã nguồn Backend hiện hành $\rightarrow$ (4) Canonical docs 01–10 $\rightarrow$ (5) Automated tests $\rightarrow$ (6) Historical reports $\rightarrow$ (7) Ý kiến chủ quan của Agent.
+     - Không phân xử theo số đông; Security Agent có quyền veto chặn thực thi khi phát hiện rủi ro mức High/Critical.
+  8. **Ngân Sách Lặp Và Thử Lại (Retry and Loop Budget)**:
+     - Mỗi lệnh: tối đa 1 lần thử lại nếu không đổi input/giả thuyết; không polling lệnh nền liên tục; không lặp `git status`/`git log` để bù nhớ context; không đọc `transcript.jsonl` hoặc log cũ trừ khi có yêu cầu cụ thể.
+     - Mỗi worker: tối đa 1 recovery check, 1 full test suite, 1 build run (trừ khi mã nguồn đã được sửa sau lỗi); nếu tiếp tục fail, trả về `BLOCKED`.
+  9. **Quản Lý Ngân Sách Ngữ Cảnh (Context Budget)**:
+     - Coordinator chỉ cung cấp thông tin mục tiêu hẹp tối thiểu cho worker, không forward toàn bộ lịch sử hội thoại.
+     - Sau khi context compaction xảy ra: Tiếp tục từ Git checkpoint và bộ nhớ bền vững (`AGENTS.md`, `PROJECT_STATE.md`, `HANDOFF.md`, và báo cáo chuyên biệt); không đọc lại transcript cũ.
+  10. **Ranh Giới An Ninh Tác Nhân (Security Boundaries)**:
+      - Tuyệt đối không chia sẻ credential, token, Authorization header cho worker; cấm tác nhân ngoài truy cập `.env`, Keystore/Keychain, SSH keys, browser profile, CSDL production, hay thư mục ngoài `D:\WorkSphere`; tuân thủ tuyệt đối chính sách kiểm thẩm tài nguyên bên ngoài D-057.
+  11. **Chế Độ Dự Phòng Tuần Tự (Fallback Mode)**:
+      - Khi không áp dụng true multi-agent: Áp dụng `SEQUENTIAL_MULTI_ROLE_MODE` qua trình tự `Contract` $\rightarrow$ `Implementation` $\rightarrow$ `Test` $\rightarrow$ `Security` $\rightarrow$ `Reviewer` $\rightarrow$ `Git Integrator`. Xuất đầy đủ khối kết quả độc lập cho từng vai trò; trung thực về bản chất thực thi, không giả mạo đánh giá chéo độc lập.

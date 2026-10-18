@@ -18,11 +18,13 @@
   - `mobile/src/features/auth/validation/authValidation.ts`: Pure form validators (`validateLogin`, `validateForgotPassword`, `validateResetPassword`, `validateChangePassword`, `validateUpdateProfile`) and normalizers.
   - `mobile/src/features/auth/errors/authErrorMapper.ts`: Presentation error mapper for 15 backend error codes and 8 transport error kinds with placement, retryable, clearSession, and traceId preservation.
   - Barrel exports: `mobile/src/features/auth/index.ts`, `api/index.ts`, `validation/index.ts`, `errors/index.ts`.
-- Architecture & Decisions: D-058 (Architecture & Contract Freeze), D-059 (Subphase 13A Implementation)
+- Architecture & Decisions: D-058 (Architecture & Contract Freeze), D-059 (Subphase 13A Implementation), D-060 (Standing Multi-Agent Orchestration, Isolation and Review Policy)
+- Multi-Agent Orchestration: Antigravity TRUE_MULTI_AGENT capability verified; D-060 established; Runbook created at reports/runbooks/MULTI_AGENT_ORCHESTRATION.md; Schema at reports/registry/agent-task-result.schema.json; Sequential fallback SEQUENTIAL_MULTI_ROLE_MODE ready.
 - Backend Tests: 307/307 tests PASS (0 failures, 0 errors, Checkstyle 0 violations, BUILD SUCCESS)
 - Mobile Tests: 24/24 test suites, 193/193 tests PASS (4 new suites, 81 new tests, 0 failures, 0 skipped)
 - TypeScript & Lint: `tsc --noEmit` PASS (0 errors), `eslint .` PASS (0 errors)
-- Operational Documentation Checkpoint: reports/DECISIONS.md (D-059), reports/PROJECT_STATE.md, reports/HANDOFF.md
+- Operational Documentation Checkpoint: AGENTS.md, reports/DECISIONS.md (D-060), reports/PROJECT_STATE.md, reports/HANDOFF.md, reports/runbooks/MULTI_AGENT_ORCHESTRATION.md
+
 
 ## Validated Progress
 
