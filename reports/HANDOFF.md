@@ -4,21 +4,21 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: Phase 13B - Auth Provider, Login Flow, Local Logout & Navigation Guard
-- Status: SUBPHASE 13B COMPLETED, VALIDATED & AUDITED (Ready for Subphase 13C review)
-- Phase 13B Scope:
+- Current Task: Phase 13B Concurrency Hardening Patch (Synchronous Auth Operation Locks)
+- Status: SUBPHASE 13B HARDENED, VALIDATED & TESTED (Ready for Subphase 13C review)
+- Phase 13B Scope & Hardening:
   - `mobile/src/app/auth/authTypes.ts`: Domain types for SessionState (`INITIALIZING`, `UNAUTHENTICATED`, `AUTHENTICATED`), AuthOperationState, AuthState, AuthAction, and AuthContextValue.
   - `mobile/src/app/auth/authReducer.ts`: Pure state machine reducer with 7 actions and zero token/password storage invariants.
-  - `mobile/src/app/auth/AuthProvider.tsx`: React Context Provider with safe mount bootstrap, atomic token persistence (Keychain first, memory token second, full rollback on error), duplicate login submit guard, resilient local logout, and useAuth hook.
+  - `mobile/src/app/auth/AuthProvider.tsx`: React Context Provider with safe mount bootstrap, atomic token persistence (Keychain first, memory token second, full rollback on error), synchronous mutex locks (`loginInFlightRef`, `logoutInFlightRef`), unmount guard (`mountedRef`), resilient local logout, and useAuth hook.
   - `mobile/src/app/providers/AppProviders.tsx`: Wrapped children with AuthProvider inside ThemeProvider.
   - `mobile/src/app/navigation/RootNavigator.tsx`: Integrated authentication navigation guard consuming real sessionState from AuthProvider.
   - `mobile/src/features/auth/screens/LoginScreen.tsx`: Production-ready login screen replacing Phase 12 placeholder, with controlled form inputs, field validation, presentation-safe error banner with traceId, and untrimmed password character preservation.
   - Barrel exports: `mobile/src/app/auth/index.ts`.
   - Dedicated Report: `reports/PHASE_13B_AUTH_PROVIDER_LOGIN_REPORT.md`.
-  - Mobile Tests: 28/28 suites, 225/225 tests PASS (31 new tests, 0 failures, 0 skipped).
-  - Android Build: `.\gradlew.bat assembleDebug --no-daemon` BUILD SUCCESSFUL (203 actionable tasks, exit code 0).
-  - Emulator Smoke Test: APK installed and verified on `emulator-5554` (package `com.workspheremobile`), screenshot captured at `reports/screenshots/phase13b_login.png`.
-  - Phase 13C Status: Phase 13C NOT STARTED (Session Restore & Token Refresh Coordinator deferred to next phase).
+  - Mobile Tests: 28/28 suites, 232/232 tests PASS (38 new tests including 7 concurrency/unmount tests, 0 failures, 0 skipped).
+  - Android Build: `.\gradlew.bat assembleDebug --no-daemon` BUILD SUCCESSFUL (exit code 0).
+  - Emulator Smoke Test: APK installed and verified on `emulator-5554` (package `com.workspheremobile`), UI regression smoke verified, screenshot captured at `reports/screenshots/phase13b_login.png`.
+  - Phase 13C Status: Phase 13C NOT STARTED (Session Restore & Token Refresh Coordinator deferred to next phase per frozen plan).
   - Next Action: Phase 13C entry review.
 - Working tree: clean (sau khi commit)
 

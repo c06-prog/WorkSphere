@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useReducer, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useReducer, useRef, ReactNode } from 'react';
 import { authReducer, initialAuthState } from './authReducer';
 import type { AuthContextValue, AuthState } from './authTypes';
 import { authApi } from '../../features/auth/api/authApi';
@@ -19,27 +19,48 @@ export function AuthProvider({ children, initialState }: AuthProviderProps) {
     initialState ? { ...initialAuthState, ...initialState } : initialAuthState
   );
 
+  const mountedRef = useRef(true);
+  const loginInFlightRef = useRef(false);
+  const logoutInFlightRef = useRef(false);
+
   useEffect(() => {
+    mountedRef.current = true;
     // Phase 13B Bootstrap:
     // Memory access token is cleared, session starts UN-AUTHENTICATED.
     // Keychain reading and refresh session restore are strictly deferred to Phase 13C.
     accessTokenStore.clearAccessToken();
     dispatch({ type: 'INITIALIZATION_COMPLETED_UNAUTHENTICATED' });
+
+    return () => {
+      mountedRef.current = false;
+    };
   }, []);
 
   const login = async (loginInput: string, passwordInput: string): Promise<boolean> => {
-    // Guard against duplicate execution while authentication is in-flight
-    if (state.operationState === 'authenticating') {
+    // Synchronous non-render mutex lock: prevents race condition when login() is invoked
+    // multiple times in the same JavaScript tick before React rerenders
+    if (loginInFlightRef.current || state.operationState === 'authenticating') {
       return false;
     }
 
-    dispatch({ type: 'LOGIN_STARTED' });
+    loginInFlightRef.current = true;
+
+    if (mountedRef.current) {
+      dispatch({ type: 'LOGIN_STARTED' });
+    }
 
     try {
       const response = await authApi.login({
         login: loginInput,
         password: passwordInput,
       });
+
+      // Verify component is still mounted before persisting session
+      if (!mountedRef.current) {
+        accessTokenStore.clearAccessToken();
+        await secureStorage.clearRefreshToken();
+        return false;
+      }
 
       // Secure storage sequence:
       // 1. Persist refresh token to Keychain
@@ -50,38 +71,57 @@ export function AuthProvider({ children, initialState }: AuthProviderProps) {
         // Rollback memory and keychain on storage failure
         accessTokenStore.clearAccessToken();
         await secureStorage.clearRefreshToken();
-        const mappedStorageError = mapAuthError(storageError);
-        dispatch({
-          type: 'LOGIN_FAILED',
-          payload: { error: mappedStorageError },
-        });
+        if (mountedRef.current) {
+          const mappedStorageError = mapAuthError(storageError);
+          dispatch({
+            type: 'LOGIN_FAILED',
+            payload: { error: mappedStorageError },
+          });
+        }
+        return false;
+      }
+
+      // Check mountedRef again in case unmount happened during secureStorage.setRefreshToken
+      if (!mountedRef.current) {
+        accessTokenStore.clearAccessToken();
+        await secureStorage.clearRefreshToken();
         return false;
       }
 
       accessTokenStore.setAccessToken(response.accessToken);
-      dispatch({
-        type: 'LOGIN_SUCCEEDED',
-        payload: { user: response.user },
-      });
+      if (mountedRef.current) {
+        dispatch({
+          type: 'LOGIN_SUCCEEDED',
+          payload: { user: response.user },
+        });
+      }
       return true;
     } catch (apiError) {
       // API call failed: storage is untouched
-      const mappedError = mapAuthError(apiError);
-      dispatch({
-        type: 'LOGIN_FAILED',
-        payload: { error: mappedError },
-      });
+      if (mountedRef.current) {
+        const mappedError = mapAuthError(apiError);
+        dispatch({
+          type: 'LOGIN_FAILED',
+          payload: { error: mappedError },
+        });
+      }
       return false;
+    } finally {
+      loginInFlightRef.current = false;
     }
   };
 
   const logoutLocal = async (): Promise<void> => {
-    // Guard against duplicate execution while signout is in-flight
-    if (state.operationState === 'signingOut') {
+    // Synchronous non-render mutex lock: prevents concurrent duplicate logouts in the same tick
+    if (logoutInFlightRef.current || state.operationState === 'signingOut') {
       return;
     }
 
-    dispatch({ type: 'LOGOUT_STARTED' });
+    logoutInFlightRef.current = true;
+
+    if (mountedRef.current) {
+      dispatch({ type: 'LOGOUT_STARTED' });
+    }
 
     try {
       accessTokenStore.clearAccessToken();
@@ -90,12 +130,17 @@ export function AuthProvider({ children, initialState }: AuthProviderProps) {
       // Local logout is resilient: always proceed with local UI teardown even if Keychain reset throws
     } finally {
       accessTokenStore.clearAccessToken();
-      dispatch({ type: 'LOGOUT_COMPLETED' });
+      if (mountedRef.current) {
+        dispatch({ type: 'LOGOUT_COMPLETED' });
+      }
+      logoutInFlightRef.current = false;
     }
   };
 
   const clearAuthError = (): void => {
-    dispatch({ type: 'CLEAR_AUTH_ERROR' });
+    if (mountedRef.current) {
+      dispatch({ type: 'CLEAR_AUTH_ERROR' });
+    }
   };
 
   const contextValue: AuthContextValue = {

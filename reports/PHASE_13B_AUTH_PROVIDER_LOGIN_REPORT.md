@@ -26,8 +26,12 @@ Căn cứ theo kế hoạch `reports/PHASE_13_IMPLEMENTATION_PLAN.md` và các q
      2. Ghi `refreshToken` vào phần cứng an toàn qua `secureStorage.setRefreshToken(...)` (Keychain).
      3. Chỉ khi Keychain ghi thành công mới lưu `accessToken` vào `accessTokenStore.setAccessToken(...)`.
      4. Nếu Keychain ghi thất bại: tự động rollback làm sạch memory và xóa Keychain, chuyển state sang `LOGIN_FAILED`.
-   - Chặn submit trùng lặp (Duplicate submit guard): kiểm tra `operationState === 'authenticating'` trước khi kích hoạt login mới.
-   - Local Logout (`logoutLocal`): xóa Access Token trong memory và xóa Refresh Token trong Keychain, đặt lại state về `UNAUTHENTICATED`. Hoạt động kiên cường ngay cả khi Keychain xóa sinh lỗi (luôn hoàn thành dọn dẹp UI).
+    - Chặn submit trùng lặp (Duplicate submit guard): kiểm tra `operationState === 'authenticating'` trước khi kích hoạt login mới.
+    - **Khoá đồng bộ chống Race Condition (Synchronous Operation Locks):**
+      - Sử dụng `loginInFlightRef` và `logoutInFlightRef` để chặn ngay lập tức mọi lần gọi đồng thời trong cùng JavaScript tick (`Promise.all`), trước khi bất kỳ promise hay dispatch nào kịp chạy.
+      - Sử dụng `mountedRef` để bảo vệ an toàn khi component bị unmount trong lúc request đang xử lý: tự động hủy lưu token, dọn dẹp memory/keychain và không kích hoạt dispatch lên unmounted component.
+      - Đảm bảo mở khoá trong khối `finally` cho mọi trường hợp thành công lẫn thất bại (API rejection, Keychain write failure).
+    - Local Logout (`logoutLocal`): xóa Access Token trong memory và xóa Refresh Token trong Keychain, đặt lại state về `UNAUTHENTICATED`. Hoạt động kiên cường ngay cả khi Keychain xóa sinh lỗi (luôn hoàn thành dọn dẹp UI).
 
 3. **Màn Hình Đăng Nhập Sản Phẩm (`LoginScreen.tsx`):**
    - Thay thế toàn diện placeholder Phase 12 shell.
@@ -52,7 +56,7 @@ Căn cứ theo kế hoạch `reports/PHASE_13_IMPLEMENTATION_PLAN.md` và các q
 ### A. Mã nguồn ứng dụng tạo mới:
 - `mobile/src/app/auth/authTypes.ts`: Định nghĩa kiểu dữ liệu `SessionState`, `AuthOperationState`, `AuthState`, `AuthAction`, `AuthContextValue`.
 - `mobile/src/app/auth/authReducer.ts`: Reducer thuần túy chuyển đổi trạng thái và bảo vệ bất biến bảo mật.
-- `mobile/src/app/auth/AuthProvider.tsx`: React Context Provider, `useAuth` hook, login rollback và local logout.
+- `mobile/src/app/auth/AuthProvider.tsx`: React Context Provider, `useAuth` hook, login rollback, synchronous mutex locks (`loginInFlightRef`, `logoutInFlightRef`), unmount guard (`mountedRef`) và resilient local logout.
 - `mobile/src/app/auth/index.ts`: Barrel export.
 
 ### B. Mã nguồn ứng dụng cập nhật:
@@ -63,7 +67,7 @@ Căn cứ theo kế hoạch `reports/PHASE_13_IMPLEMENTATION_PLAN.md` và các q
 
 ### C. Test suites tạo mới:
 - `mobile/__tests__/auth/authReducer.test.ts`: 10/10 tests PASS (kiểm thử 7 actions, chuyển đổi trạng thái, bảo mật không lưu token/mật khẩu).
-- `mobile/__tests__/auth/AuthProvider.test.tsx`: 8/8 tests PASS (mount bootstrap, login flow, rollback khi Keychain lỗi, API failure, duplicate login guard, local logout resilience, clearAuthError).
+- `mobile/__tests__/auth/AuthProvider.test.tsx`: 15/15 tests PASS (mount bootstrap, login flow, rollback khi Keychain lỗi, API failure, duplicate login guard, local logout resilience, clearAuthError, synchronous concurrency lock, lock release after success/API rejection/Keychain write failure, concurrent logoutLocal, unmount safety rollback).
 - `mobile/__tests__/auth/LoginScreen.test.tsx`: 8/8 tests PASS (render controls, validation, normalized username, untrimmed password, error banner, traceId, navigation, loading state).
 - `mobile/__tests__/auth/authNavigationGuard.test.tsx`: 3/3 tests PASS (cách ly stack tương ứng `INITIALIZING`, `UNAUTHENTICATED`, `AUTHENTICATED`).
 
@@ -86,18 +90,14 @@ Căn cứ theo kế hoạch `reports/PHASE_13_IMPLEMENTATION_PLAN.md` và các q
 ### B. Jest Unit & Integration Test Suites
 - Lệnh chạy: `npm test -- --runInBand`
 - **Kết quả:**
-  ```text
-  Test Suites: 28 passed, 28 total
-  Tests:       225 passed, 225 total
-  Snapshots:   0 total
-  Time:        10.431 s
-  Ran all test suites.
-  ```
-- **Tăng trưởng số lượng kiểm thử:** Từ 24 suites (194 tests) tại Phase 13A patch lên **28 suites (225 tests)** tại Phase 13B (tăng 4 suites, 31 tests), tỷ lệ đạt 100%.
+  - Test Suites: 28 passed, 28 total
+  - Tests: 232 passed, 232 total (38 tests mới trong Phase 13B bao gồm 7 tests concurrency/hardening mới)
+  - Snapshots: 0 total
+  - Tỷ lệ đạt: 100%
 
 ### C. Android Native Build
 - Lệnh chạy: `.\gradlew.bat assembleDebug --no-daemon`
-- **Kết quả:** **BUILD SUCCESSFUL in 37s** (203 actionable tasks: 16 executed, 187 up-to-date).
+- **Kết quả:** **BUILD SUCCESSFUL** (exit code 0).
 - Tạo thành công: `mobile/android/app/build/outputs/apk/debug/app-debug.apk`.
 
 ### D. Smoke Test Trên Thiết Bị Thực Tế (`emulator-5554`)
@@ -105,6 +105,7 @@ Căn cứ theo kế hoạch `reports/PHASE_13_IMPLEMENTATION_PLAN.md` và các q
 - Khởi chạy `com.workspheremobile/.MainActivity`: Thành công.
 - Trạng thái cửa sổ: `mCurrentFocus=Window{... com.workspheremobile/com.workspheremobile.MainActivity}`.
 - Kiểm tra render: Màn hình Login xuất hiện hoàn chỉnh, không gặp crash hay lỗi liên kết native.
+- *Lưu ý:* Đây là UI regression smoke test xác nhận render native, không phải full E2E login bằng credential thật.
 
 ---
 
@@ -113,10 +114,10 @@ Căn cứ theo kế hoạch `reports/PHASE_13_IMPLEMENTATION_PLAN.md` và các q
 1. **Không cài package mới:** Không bổ sung Redux, Zustand, React Hook Form hay Zod; tuân thủ nghiêm ngặt React Context + useReducer theo tiêu chuẩn.
 2. **Không chạm backend/migrations:** Thư mục `backend/` và các tệp SQL Flyway giữ nguyên vẹn 100%.
 3. **Không gọi API Refresh hay cài Refresh Coordinator:** Tuân thủ phân đoạn kiến trúc, toàn bộ tác vụ refresh và session restore được bảo lưu cho Phase 13C.
-4. **Không gọi Server Logout:** `logoutLocal` chỉ thực hiện dọn dẹp local token và Keychain; remote logout (`/auth/logout`, `/auth/logout-all`) được bảo lưu cho Phase 13F.
+4. **Không gọi Server Logout:** `logoutLocal` chỉ thực hiện dọn dẹp local token và Keychain; remote logout (`/auth/logout`, `/auth/logout-all`) được bảo lưu cho Phase 13C theo kế hoạch triển khai đã đóng băng (`reports/PHASE_13_IMPLEMENTATION_PLAN.md`).
 5. **Không lộ thông tin nhạy cảm:** Không có console log nào in Access Token, Refresh Token, mật khẩu hay thông tin xác thực của người dùng. Mật khẩu được truyền nguyên vẹn không qua `trim()`.
 
 ---
 
 ## 5. Kết Luận
-Phase 13B hoàn thành xuất sắc toàn bộ tiêu chí kỹ thuật và quy chuẩn quản trị dự án. Sẵn sàng tích hợp commit và bàn giao cho Subphase 13C.
+Phase 13B hoàn thành xuất sắc toàn bộ tiêu chí kỹ thuật, xử lý triệt để finding `AUTH_LOGIN_DUPLICATE_RACE`, hardening `AUTH_LOGOUT_DUPLICATE_RACE` và `AUTH_ASYNC_UNMOUNT_RISK`. Sẵn sàng tích hợp commit và bàn giao cho Subphase 13C.

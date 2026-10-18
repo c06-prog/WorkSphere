@@ -248,4 +248,206 @@ describe('AuthProvider & useAuth hook', () => {
     expect(result.current.lastAuthError).toBeNull();
     expect(result.current.operationState).toBe('idle');
   });
+
+  test('concurrency: simultaneous login calls in the same tick invoke API only once and reject duplicate', async () => {
+    let resolveLogin: (res: AuthResponse) => void = () => {};
+    const pendingPromise = new Promise<AuthResponse>(resolve => {
+      resolveLogin = resolve;
+    });
+    (authApi.login as jest.Mock).mockReturnValueOnce(pendingPromise);
+    (secureStorage.setRefreshToken as jest.Mock).mockResolvedValue(undefined);
+
+    const { result } = await renderHook(() => useAuth(), {
+      wrapper: ({ children }) => <AuthProvider>{children}</AuthProvider>,
+    });
+
+    let res1Promise: Promise<boolean>;
+    let res2Promise: Promise<boolean>;
+
+    await act(async () => {
+      // Both called in the exact same synchronous execution block
+      res1Promise = result.current.login('user1', 'Password123');
+      res2Promise = result.current.login('user2', 'Password123');
+    });
+
+    let res1: boolean | undefined;
+    let res2: boolean | undefined;
+
+    await act(async () => {
+      resolveLogin(mockAuthResponse);
+      const [r1, r2] = await Promise.all([res1Promise, res2Promise]);
+      res1 = r1;
+      res2 = r2;
+    });
+
+    expect(authApi.login).toHaveBeenCalledTimes(1);
+    expect(res1).toBe(true);
+    expect(res2).toBe(false);
+    expect(result.current.sessionState).toBe('AUTHENTICATED');
+  });
+
+  test('lock release: allows subsequent login call after previous login succeeded', async () => {
+    (authApi.login as jest.Mock)
+      .mockResolvedValueOnce(mockAuthResponse)
+      .mockResolvedValueOnce(mockAuthResponse);
+    (secureStorage.setRefreshToken as jest.Mock).mockResolvedValue(undefined);
+
+    const { result } = await renderHook(() => useAuth(), {
+      wrapper: ({ children }) => <AuthProvider>{children}</AuthProvider>,
+    });
+
+    let firstSuccess = false;
+    await act(async () => {
+      firstSuccess = await result.current.login('user1', 'Password123');
+    });
+    expect(firstSuccess).toBe(true);
+    expect(authApi.login).toHaveBeenCalledTimes(1);
+
+    // Logout to return to UNAUTHENTICATED
+    await act(async () => {
+      await result.current.logoutLocal();
+    });
+    expect(result.current.sessionState).toBe('UNAUTHENTICATED');
+
+    // Subsequent login after lock was released
+    let secondSuccess = false;
+    await act(async () => {
+      secondSuccess = await result.current.login('user1', 'Password123');
+    });
+    expect(secondSuccess).toBe(true);
+    expect(authApi.login).toHaveBeenCalledTimes(2);
+  });
+
+  test('lock release: allows subsequent login call after API rejection', async () => {
+    (authApi.login as jest.Mock)
+      .mockRejectedValueOnce(new Error('Network failure'))
+      .mockResolvedValueOnce(mockAuthResponse);
+    (secureStorage.setRefreshToken as jest.Mock).mockResolvedValue(undefined);
+
+    const { result } = await renderHook(() => useAuth(), {
+      wrapper: ({ children }) => <AuthProvider>{children}</AuthProvider>,
+    });
+
+    let firstSuccess = true;
+    await act(async () => {
+      firstSuccess = await result.current.login('user1', 'Password123');
+    });
+    expect(firstSuccess).toBe(false);
+    expect(result.current.operationState).toBe('error');
+
+    // Subsequent login after failure
+    let secondSuccess = false;
+    await act(async () => {
+      secondSuccess = await result.current.login('user1', 'Password123');
+    });
+    expect(secondSuccess).toBe(true);
+    expect(authApi.login).toHaveBeenCalledTimes(2);
+    expect(result.current.sessionState).toBe('AUTHENTICATED');
+  });
+
+  test('lock release: allows subsequent login call after Keychain write failure', async () => {
+    (authApi.login as jest.Mock)
+      .mockResolvedValueOnce(mockAuthResponse)
+      .mockResolvedValueOnce(mockAuthResponse);
+    (secureStorage.setRefreshToken as jest.Mock)
+      .mockRejectedValueOnce(new Error('Keychain locked'))
+      .mockResolvedValueOnce(undefined);
+
+    const { result } = await renderHook(() => useAuth(), {
+      wrapper: ({ children }) => <AuthProvider>{children}</AuthProvider>,
+    });
+
+    let firstSuccess = true;
+    await act(async () => {
+      firstSuccess = await result.current.login('user1', 'Password123');
+    });
+    expect(firstSuccess).toBe(false);
+    expect(result.current.operationState).toBe('error');
+
+    // Subsequent login after failure
+    let secondSuccess = false;
+    await act(async () => {
+      secondSuccess = await result.current.login('user1', 'Password123');
+    });
+    expect(secondSuccess).toBe(true);
+    expect(authApi.login).toHaveBeenCalledTimes(2);
+    expect(result.current.sessionState).toBe('AUTHENTICATED');
+  });
+
+  test('concurrency: concurrent logoutLocal calls in same tick clear storage only once', async () => {
+    let resolveClear: () => void = () => {};
+    const pendingClear = new Promise<void>(resolve => {
+      resolveClear = resolve;
+    });
+    (secureStorage.clearRefreshToken as jest.Mock).mockReturnValueOnce(pendingClear);
+
+    const { result } = await renderHook(() => useAuth(), {
+      wrapper: ({ children }) => (
+        <AuthProvider
+          initialState={{
+            sessionState: 'AUTHENTICATED',
+            operationState: 'idle',
+            currentUser: mockSampleUser,
+            initialized: true,
+          }}
+        >
+          {children}
+        </AuthProvider>
+      ),
+    });
+
+    let p1: Promise<void>;
+    let p2: Promise<void>;
+
+    await act(async () => {
+      // Both invoked in same synchronous block
+      p1 = result.current.logoutLocal();
+      p2 = result.current.logoutLocal();
+    });
+
+    await act(async () => {
+      resolveClear();
+      await Promise.all([p1, p2]);
+    });
+
+    expect(secureStorage.clearRefreshToken).toHaveBeenCalledTimes(1);
+    expect(result.current.sessionState).toBe('UNAUTHENTICATED');
+  });
+
+  test('unmount safety: aborts and rolls back storage when component unmounts while login is in-flight', async () => {
+    let resolveLogin: (res: AuthResponse) => void = () => {};
+    const pendingPromise = new Promise<AuthResponse>(resolve => {
+      resolveLogin = resolve;
+    });
+    (authApi.login as jest.Mock).mockReturnValueOnce(pendingPromise);
+    (secureStorage.setRefreshToken as jest.Mock).mockResolvedValue(undefined);
+
+    const { result, unmount } = await renderHook(() => useAuth(), {
+      wrapper: ({ children }) => <AuthProvider>{children}</AuthProvider>,
+    });
+
+    let loginPromise!: Promise<boolean>;
+    await act(async () => {
+      loginPromise = result.current.login('user1', 'Password123');
+    });
+
+    await act(async () => {
+      unmount();
+    });
+
+    let success: boolean | undefined;
+    await act(async () => {
+      resolveLogin(mockAuthResponse);
+      success = await loginPromise;
+    });
+
+    expect(success).toBe(false);
+    // Verified memory and keychain cleared on unmounted completion
+    expect(accessTokenStore.clearAccessToken).toHaveBeenCalled();
+    expect(secureStorage.clearRefreshToken).toHaveBeenCalled();
+    // Did NOT save tokens or transition to authenticated
+    expect(accessTokenStore.setAccessToken).not.toHaveBeenCalled();
+    expect(secureStorage.setRefreshToken).not.toHaveBeenCalled();
+  });
+
 });
