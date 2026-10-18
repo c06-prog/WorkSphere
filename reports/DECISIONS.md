@@ -963,3 +963,36 @@ Current operating mode:
      - Ghi nhận yêu cầu vận hành: Kiểm thử E2E đăng nhập thật trên backend live bị chặn cho đến khi cơ chế khởi tạo tài khoản dev an toàn được kích hoạt (chỉ áp dụng profile dev/local, tắt trên production, mật khẩu inject từ biến môi trường, không in log mật khẩu).
   5. **Ranh Giới Thực Thi Phase 13**:
      - Khẳng định Phase 13 Mobile Authentication chưa bắt đầu triển khai code (chưa triển khai Login, Refresh, Session Restore, Logout hay Profile).
+
+## D-056: Cơ Chế Khởi Tạo Tài Khoản Kiểm Thử E2E Dev-Only An Toàn (E2eUserProvisioner)
+
+- **Ngày quyết định**: 2026-10-18.
+- **Phạm vi**: Backend `backend/src/main/java/com/worksphere/identity/dev/E2eUserProvisioner.java`, `backend/src/main/resources/application-dev.yml`, Quy chuẩn khởi tạo tài khoản dev/local phục vụ kiểm thử E2E Phase 13 Mobile Authentication.
+- **Tình trạng**: APPROVED / IMPLEMENTED.
+- **Nội dung quyết định**:
+  1. **Phương Án Khởi Tạo (Provisioning Approach)**:
+     - Lựa chọn Phương án B: Dev-only Spring Boot runner (`E2eUserProvisioner` implements `CommandLineRunner`).
+     - Runner chạy trên profile `dev` (`@Profile("dev")`) và yêu cầu cờ tường minh `worksphere.dev.e2e-user.enabled=true` (`@ConditionalOnProperty`). Mặc định là `false` (disabled) và không kích hoạt khi thiếu thuộc tính.
+     - Trên môi trường production (`prod` profile) hoặc khi không bật cờ, bean hoàn toàn không được khởi tạo, không truy cập CSDL và không tạo tài khoản.
+  2. **Tiêm Thông Tin Xác Thực Ngoại Vi (External Credential Injection)**:
+     - Tuân thủ nghiêm ngặt D-055: Thông tin xác thực được nạp qua biến môi trường hoặc thuộc tính cấu hình ngoài Git:
+       - `WORKSPHERE_DEV_E2E_USER_ENABLED`: Bật cờ provisioning (`true`).
+       - `WORKSPHERE_E2E_LOGIN`: Tên người dùng hoặc email nhận diện (tự động phân giải nếu là email).
+       - `WORKSPHERE_E2E_USERNAME` / `WORKSPHERE_E2E_EMAIL`: Khai báo chi tiết nếu cần phân tách.
+       - `WORKSPHERE_E2E_PASSWORD`: Mật khẩu tài khoản kiểm thử local.
+       - `WORKSPHERE_E2E_FULL_NAME`: Họ và tên hiển thị (mặc định "E2E Test User").
+     - Tuyệt đối không hardcode mật khẩu mặc định hoặc fallback trong source hay configuration.
+     - Kiểm tra an toàn: Ném ngoại lệ và dừng khởi tạo an toàn nếu cờ bật nhưng thiếu login hoặc password; thông điệp ngoại lệ tuyệt đối không chứa giá trị credential.
+  3. **Quyền Hạn Tối Thiểu (Least Privilege) & Trạng Thái Tài Khoản**:
+     - Tài khoản được gán vai trò tối thiểu `EMPLOYEE` (không cấp `ADMIN`, `PROJECT_MANAGER` hay `HR_ADMIN`).
+     - Tài khoản được khởi tạo trực tiếp ở trạng thái `ACTIVE` nhằm khắc phục `TEMPORARY_PASSWORD_FLOW_GAP` (vốn chặn đăng nhập người dùng `PENDING` khi chưa có giao diện đổi mật khẩu lần đầu).
+     - Mật khẩu được băm an toàn thông qua bean `PasswordEncoder` chuẩn của WorkSphere (BCrypt).
+  4. **Tính Lũy Đẳng (Idempotency) & Bảo Vệ Xung Đột (Collision Protection)**:
+     - Runner kiểm tra sự tồn tại của tài khoản qua username hoặc email trước khi tạo.
+     - Nếu tài khoản chuyên dụng đã tồn tại (khớp cả username và email): Ghi nhận đã tồn tại và bỏ qua an toàn (skip), không tạo bản ghi trùng lặp, không cập nhật lại password hay role ngoài ý muốn.
+     - Nếu phát hiện xung đột không khớp (ví dụ: trùng email nhưng khác username, hoặc ngược lại): Báo lỗi xung đột `COLLISION` an toàn và dừng thực hiện để bảo vệ dữ liệu người dùng khác.
+  5. **Ghi Log An Toàn (Safe Generic Logging)**:
+     - Nhật ký chỉ ghi nhận các thông điệp chung: `E2E user provisioning is disabled`, `E2E user account already exists. Skipping provisioning.`, `E2E user account provisioned successfully.`.
+     - Tuyệt đối không in giá trị login, email, password, password_hash, token hay đối tượng cấu hình ra console/log.
+  6. **Giải Quyết Finding**:
+     - Khắc phục và đóng `AUTH_TEST_ACCOUNT_PROVISIONING_REQUIRED`.

@@ -5,16 +5,17 @@
 - Branch: main
 - Phase 12 Completion Checkpoint: `bdd56778c9e64104b47d85a16e61431ccf1ac899` (`docs(agent): checkpoint phase 12 completion`)
 - Pre-Phase 13 Readiness Base: `a9c59259904f2dd6e9bd38e4ca63c1a88c89c474` (`feat(mobile): finalize pre-auth runtime readiness`)
-- Current Status: Pre-Phase 13 iOS Bridge Target & Test-Account Policy Patch COMPLETED AND AUDITED
+- Current Status: Pre-Phase 13 Dev Auth Test Account Provisioning COMPLETED AND AUDITED
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening
 
-- Latest Validated Patch: This commit (`fix(mobile): register ios environment bridge`)
-- Commit message: `fix(mobile): register ios environment bridge`
-- Pre-Phase 13 Patch Status: COMPLETED, AUDITED, HARDENED AND VALIDATED
+- Latest Validated Implementation: This commit (`feat(dev): add secure auth test account provisioning`)
+- Commit message: `feat(dev): add secure auth test account provisioning`
+- Pre-Phase 13 Provisioning Status: COMPLETED, AUDITED, HARDENED AND VALIDATED
+- Backend Tests: 307/307 tests PASS (0 failures, 0 errors, Checkstyle 0 violations, BUILD SUCCESS)
 - Mobile Tests: 20/20 test suites, 112/112 tests PASS (0 failures, 0 skipped)
-- Operational Documentation Checkpoint: reports/DECISIONS.md (D-055), reports/PHASE_13_AUTH_AUDIT.md, reports/PROJECT_STATE.md, reports/HANDOFF.md
+- Operational Documentation Checkpoint: reports/DECISIONS.md (D-056), reports/runbooks/PHASE_13_LOCAL_AUTH_E2E.md, reports/PRE_PHASE_13_AUTH_PROVISIONING_REPORT.md, reports/PROJECT_STATE.md, reports/HANDOFF.md
 
 ## Validated Progress
 
@@ -304,6 +305,7 @@
 
 ## Resolved Prerequisites & Readiness Items
 
+- AUTH_TEST_ACCOUNT_PROVISIONING_RESOLVED: Cơ chế E2eUserProvisioner chỉ kích hoạt trên profile dev (@Profile("dev")), cờ worksphere.dev.e2e-user.enabled=true, nạp credential từ bên ngoài Git, trạng thái ACTIVE, role EMPLOYEE, bảo vệ collision và idempotent.
 - PRODUCTION_ENVIRONMENT_WIRING_RESOLVED: Cấu hình API Base URL native & JS hoàn tất qua EnvironmentConfigModule, BuildConfig và Info.plist với kiểm soát nghiêm ngặt HTTPS và fail-fast cho Release build.
 - KEYCHAIN_NATIVE_OPERATION_SMOKE_RESOLVED: Kiểm thử CRUD phần cứng Keystore/Keychain hoàn tất trên emulator-5554 (Android 15, API 35) với dọn dẹp sạch sẽ 100%.
 - ASYNC_STORAGE_NATIVE_OPERATION_SMOKE_RESOLVED: Kiểm thử CRUD ghi đĩa AsyncStorage hoàn tất trên emulator-5554 trên khóa allowlisted @worksphere/theme_preference với dọn dẹp sạch sẽ 100%.
@@ -313,8 +315,8 @@
 - **Giai đoạn 13: Mobile Authentication** (theo đúng `docs/08_DEVELOPMENT_ROADMAP.md` Mục 17, P0).
   - Scope: Splash, Login, Forgot Password, Profile, Change Password, Settings; Form validation, gọi API login, Secure Storage lưu token, tự thêm access token vào request, refresh token, xử lý logout, xử lý tài khoản bị khóa, xử lý token hết hạn, điều hướng Auth và Main.
   - DoD: Đăng nhập end-to-end hoạt động, token được lưu an toàn, refresh không tạo vòng lặp, logout xóa phiên, mobile không hiện màn hình được bảo vệ khi chưa đăng nhập.
-  - Pre-Phase 13 Runtime Readiness: ĐÃ HOÀN THÀNH, KIỂM CHỨNG VÀ XÁC THỰC TOÀN DIỆN (20/20 suites, 112/112 tests PASS, Android assembleDebug BUILD SUCCESS, Keychain & AsyncStorage native CRUD PASS trên emulator-5554).
-  - Phase 13 chưa bắt đầu trong nhiệm vụ này. Bước kế tiếp: Kiểm toán hợp đồng và chuẩn bị triển khai Phase 13.
+  - Pre-Phase 13 Runtime Readiness & Provisioning: ĐÃ HOÀN THÀNH, KIỂM CHỨNG VÀ XÁC THỰC TOÀN DIỆN (307/307 backend tests PASS, 20/20 mobile suites 112/112 tests PASS, E2eUserProvisioner validated, runbook created).
+  - Phase 13 chưa bắt đầu trong nhiệm vụ này. Bước kế tiếp: Quyết định kiến trúc & đóng băng hợp đồng Phase 13.
 
 ## Trust Rules
 

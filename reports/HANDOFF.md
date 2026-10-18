@@ -4,15 +4,12 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: Pre-Phase 13 Runtime Readiness - Production Environment Wiring & Native Storage CRUD Smoke
-- Pre-Phase 13 Readiness Status: COMPLETED, AUDITED, HARDENED AND VALIDATED
-- Phase 12 Status: COMPLETED, AUDITED, HARDENED, RECONCILED AND VALIDATED
-- Latest Checkpoint Commit: `bdd56778c9e64104b47d85a16e61431ccf1ac899` (`docs(agent): checkpoint phase 12 completion`)
-- Environment Wiring: Minimal native module (`EnvironmentConfigModule`), Gradle `BuildConfig` with fail-fast HTTPS release validation, iOS `Info.plist` bridge, dynamic TypeScript resolution with emulator default (`http://10.0.2.2:8080/api/v1`).
-- Native Storage CRUD Smoke: Validated on real Android Emulator (`emulator-5554`, Android 15, API 35) for Keychain (`react-native-keychain`) and AsyncStorage (`@react-native-async-storage/async-storage`) with 100% cleanup and zero secret leakage.
+- Current Task: Pre-Phase 13 Dev Auth Test Account Provisioning
+- Pre-Phase 13 Provisioning Status: COMPLETED, AUDITED, HARDENED AND VALIDATED
+- Provisioning Mechanism: E2eUserProvisioner (@Profile("dev"), @ConditionalOnProperty worksphere.dev.e2e-user.enabled=true), least-privilege EMPLOYEE role, ACTIVE status, collision-resistant, idempotent.
+- Backend Tests: 307/307 tests PASS (298 previous + 9 new unit & bean tests, Checkstyle 0 violations, BUILD SUCCESS)
 - Mobile Tests: 20/20 suites, 112/112 tests PASS (0 failures, 0 skipped)
-- Android Clean Build: `BUILD SUCCESSFUL in 4m 44s` (assembleDebug)
-- Emulator Regression: Login shell (`SCR-AUTH-02`) to Forgot Password (`SCR-AUTH-03`) and back verified on `emulator-5554`.
+- Runbook: tracked at reports/runbooks/PHASE_13_LOCAL_AUTH_E2E.md
 - Phase 13: CHƯA BẮT ĐẦU.
 - Working tree: clean (sau khi commit)
 
@@ -134,7 +131,7 @@
 - `TASK_DELETE_RULE_AMBIGUITY_DEFERRED`: Định nghĩa “Business history quan trọng” chưa đầy đủ trong canonical docs; giữ logic xét status history.
 - `TASK_FLYWAY_CONFIGURATION_MODULE_LOCATION_LOW`: TaskFlywayConfiguration hiện ở task.infrastructure. Có thể chuyển sang shared.infrastructure trong đợt refactor riêng.
 - `DATA_INTEGRITY_ERROR_MAPPING_FALLBACK_LOW`: Exception mapping cho task_assignments có thể nâng cấp sang trích xuất constraint PostgreSQL driver tương tự Asset module.
-- `AUTH_TEST_ACCOUNT_PROVISIONING_REQUIRED`: Kiểm thử E2E đăng nhập thật trên backend live đòi hỏi cơ chế khởi tạo tài khoản dev an toàn, lũy đẳng, chỉ kích hoạt trên profile dev/local.
+- `AUTH_TEST_ACCOUNT_PROVISIONING_RESOLVED`: Khắc phục triệt để qua E2eUserProvisioner (D-056). Mặc định disabled, chỉ chạy trên profile dev khi có cờ tường minh và nạp biến môi trường ngoài Git.
 - `TEMPORARY_PASSWORD_FLOW_GAP`: Luồng kích hoạt và endpoint thiết lập mật khẩu lần đầu tiếp tục hoãn; mobile mapping ACCOUNT_PENDING sang thông báo liên hệ admin.
 - `TEAM_API_CONTRACT_GAP`: Team REST controllers hoãn vì `06_API_CONTRACT.md` chưa định nghĩa endpoints.
 - `PUT_ME_PASSWORD_TEST_GAP`: Test coverage cho luồng đổi mật khẩu người dùng hiện tại tiếp tục hoãn.
@@ -144,9 +141,9 @@
 - **Giai đoạn 13: Mobile Authentication** (theo đúng `docs/08_DEVELOPMENT_ROADMAP.md` Mục 17, P0).
   - Scope: Splash, Login, Forgot Password, Profile, Change Password, Settings; Form validation, gọi API login, Secure Storage lưu token, tự thêm access token vào request, refresh token, xử lý logout, xử lý tài khoản bị khóa, xử lý token hết hạn, điều hướng Auth và Main.
   - DoD: Đăng nhập end-to-end hoạt động, token được lưu an toàn, refresh không tạo vòng lặp, logout xóa phiên, mobile không hiện màn hình được bảo vệ khi chưa đăng nhập.
-  - Pre-Phase 13 Readiness & Patch: ĐÃ HOÀN THÀNH VÀ KIỂM CHỨNG (20/20 suites, 112/112 tests PASS, iOS bridge target registered, safe test-account policy defined).
-  - Kết luận Audit Phase 13: `PHASE_13_AUDIT_READY_FOR_DECISION` (yêu cầu quyết định cơ chế provisioning tài khoản dev trước khi kiểm thử E2E live login).
-  - Phase 13 chưa bắt đầu trong nhiệm vụ này.
+  - Pre-Phase 13 Readiness & Provisioning: ĐÃ HOÀN THÀNH VÀ KIỂM CHỨNG (307/307 backend tests PASS, 20/20 mobile suites 112/112 tests PASS, E2eUserProvisioner, D-056, Runbook sẵn sàng).
+  - Kết luận Audit & Provisioning: `PRE_PHASE_13_AUTH_PROVISIONING_PASS_PUSHED` (sẵn sàng cho quyết định kiến trúc Phase 13).
+  - Phase 13 chưa bắt đầu trong nhiệm vụ này. Bước tiếp theo: Quyết định kiến trúc & đóng băng hợp đồng Phase 13.
 
 ## New Session Procedure
 
