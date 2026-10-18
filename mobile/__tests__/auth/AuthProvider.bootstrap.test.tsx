@@ -156,4 +156,34 @@ describe('AuthProvider Session Bootstrap Lifecycle', () => {
     // authApi.getCurrentUser should not be called since component unmounted
     expect(authApi.getCurrentUser).not.toHaveBeenCalled();
   });
+
+  test('EXACTLY-ONCE TERMINAL CLEANUP: 3 concurrent 401 failures coalesce into exactly one cleanup execution', async () => {
+    const { notifyUnauthorized } = require('../../src/shared/api/apiClient');
+
+    // Mount AuthProvider initialized to AUTHENTICATED
+    const { result } = await renderHook(() => useAuth(), {
+      wrapper: ({ children }) => (
+        <AuthProvider initialState={{ sessionState: 'AUTHENTICATED', currentUser: mockUser }}>
+          {children}
+        </AuthProvider>
+      ),
+    });
+
+    jest.clearAllMocks();
+
+    // Trigger 3 concurrent notifyUnauthorized calls simultaneously
+    await act(async () => {
+      await Promise.all([
+        notifyUnauthorized(),
+        notifyUnauthorized(),
+        notifyUnauthorized(),
+      ]);
+    });
+
+    // Verify exactly-once cleanup
+    expect(accessTokenStore.clearAccessToken).toHaveBeenCalledTimes(1);
+    expect(secureStorage.clearRefreshToken).toHaveBeenCalledTimes(1);
+    expect(result.current.sessionState).toBe('UNAUTHENTICATED');
+    expect(result.current.currentUser).toBeNull();
+  });
 });

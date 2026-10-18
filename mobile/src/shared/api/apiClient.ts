@@ -11,8 +11,34 @@ let unauthorizedHandler: UnauthorizedHandler | null = null;
 let tokenRefreshHandler: TokenRefreshHandler | null = null;
 
 /**
+ * Registers the global 401 Unauthorized callback with ownership protection.
+ * Returns an unregister function that only clears the handler if it is still the active one.
+ */
+export function registerUnauthorizedHandler(handler: UnauthorizedHandler): () => void {
+  unauthorizedHandler = handler;
+  return () => {
+    if (unauthorizedHandler === handler) {
+      unauthorizedHandler = null;
+    }
+  };
+}
+
+/**
+ * Registers the token refresh coordinator handler with ownership protection.
+ * Returns an unregister function that only clears the handler if it is still the active one.
+ */
+export function registerTokenRefreshHandler(handler: TokenRefreshHandler): () => void {
+  tokenRefreshHandler = handler;
+  return () => {
+    if (tokenRefreshHandler === handler) {
+      tokenRefreshHandler = null;
+    }
+  };
+}
+
+/**
  * Injects or clears the global 401 Unauthorized callback.
- * Typically wired in Phase 13 to trigger session invalidation or navigation to Login.
+ * Kept for backward compatibility.
  */
 export function setUnauthorizedHandler(handler: UnauthorizedHandler | null): void {
   unauthorizedHandler = handler;
@@ -20,7 +46,7 @@ export function setUnauthorizedHandler(handler: UnauthorizedHandler | null): voi
 
 /**
  * Injects or clears the token refresh coordinator handler.
- * Wired in Phase 13C to perform single-flight token refresh without circular module dependencies.
+ * Kept for backward compatibility.
  */
 export function setTokenRefreshHandler(handler: TokenRefreshHandler | null): void {
   tokenRefreshHandler = handler;

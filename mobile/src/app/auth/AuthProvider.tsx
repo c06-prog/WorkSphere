@@ -13,8 +13,8 @@ import { authApi } from '../../features/auth/api/authApi';
 import { mapAuthError } from '../../features/auth/errors/authErrorMapper';
 import { accessTokenStore } from '../../shared/storage/accessTokenStore';
 import { secureStorage } from '../../shared/storage/secureStorage';
-import { setTokenRefreshHandler, setUnauthorizedHandler } from '../../shared/api/apiClient';
-import { refreshAccessToken } from './refreshCoordinator';
+import { registerTokenRefreshHandler, registerUnauthorizedHandler } from '../../shared/api/apiClient';
+import { invalidateRefreshCoordinator, refreshAccessToken } from './refreshCoordinator';
 import { isNormalizedApiError } from '../../shared/api/apiError';
 
 export const AuthContext = createContext<AuthContextValue | null>(null);
@@ -36,20 +36,38 @@ export function AuthProvider({ children, initialState }: AuthProviderProps) {
   const bootstrapInFlightRef = useRef(false);
   // Monotonically increasing session generation ID to discard stale async callbacks
   const sessionEpochRef = useRef(1);
+  // Exactly-once terminal cleanup promise coalescing concurrent 401 callers
+  const terminalCleanupPromiseRef = useRef<Promise<void> | null>(null);
 
   /**
-   * Internal terminal cleanup helper: cleans memory & keychain and notifies reducer
+   * Internal terminal cleanup helper: cleans memory & keychain and notifies reducer.
+   * Deduplicated via terminalCleanupPromiseRef so concurrent 401 failures share a single cleanup execution.
    */
-  const handleTerminalCleanup = useCallback(async () => {
-    sessionEpochRef.current += 1;
-    accessTokenStore.clearAccessToken();
-    try {
-      await secureStorage.clearRefreshToken();
-    } catch {
-      // Best-effort
+  const handleTerminalCleanup = useCallback(async (): Promise<void> => {
+    if (terminalCleanupPromiseRef.current) {
+      return terminalCleanupPromiseRef.current;
     }
-    if (mountedRef.current) {
-      dispatch({ type: 'BOOTSTRAP_TERMINAL_FAILED' });
+
+    const cleanupPromise = (async () => {
+      sessionEpochRef.current += 1;
+      invalidateRefreshCoordinator();
+      accessTokenStore.clearAccessToken();
+      try {
+        await secureStorage.clearRefreshToken();
+      } catch {
+        // Best-effort
+      }
+      if (mountedRef.current) {
+        dispatch({ type: 'BOOTSTRAP_TERMINAL_FAILED' });
+      }
+    })();
+
+    terminalCleanupPromiseRef.current = cleanupPromise;
+
+    try {
+      await cleanupPromise;
+    } finally {
+      terminalCleanupPromiseRef.current = null;
     }
   }, []);
 
@@ -135,19 +153,19 @@ export function AuthProvider({ children, initialState }: AuthProviderProps) {
   useEffect(() => {
     mountedRef.current = true;
 
-    // Register refresh coordinator with apiClient transport
-    setTokenRefreshHandler(refreshAccessToken);
+    // Register refresh coordinator with apiClient transport (ownership protected)
+    const unregisterRefresh = registerTokenRefreshHandler(refreshAccessToken);
 
-    // Register 401 unauthorized cleanup handler
-    setUnauthorizedHandler(handleTerminalCleanup);
+    // Register 401 unauthorized cleanup handler (ownership protected)
+    const unregisterUnauthorized = registerUnauthorizedHandler(handleTerminalCleanup);
 
     // Execute cold-start bootstrap if uninitialized
     runBootstrap();
 
     return () => {
       mountedRef.current = false;
-      setTokenRefreshHandler(null);
-      setUnauthorizedHandler(null);
+      unregisterRefresh();
+      unregisterUnauthorized();
     };
   }, [handleTerminalCleanup, runBootstrap]);
 
@@ -158,6 +176,7 @@ export function AuthProvider({ children, initialState }: AuthProviderProps) {
 
     loginInFlightRef.current = true;
     sessionEpochRef.current += 1;
+    invalidateRefreshCoordinator();
     const loginEpoch = sessionEpochRef.current;
 
     if (mountedRef.current) {
@@ -237,6 +256,7 @@ export function AuthProvider({ children, initialState }: AuthProviderProps) {
 
     logoutInFlightRef.current = true;
     sessionEpochRef.current += 1;
+    invalidateRefreshCoordinator();
 
     if (mountedRef.current) {
       dispatch({ type: 'LOGOUT_STARTED' });
@@ -276,6 +296,7 @@ export function AuthProvider({ children, initialState }: AuthProviderProps) {
 
     logoutInFlightRef.current = true;
     sessionEpochRef.current += 1;
+    invalidateRefreshCoordinator();
 
     if (mountedRef.current) {
       dispatch({ type: 'LOGOUT_STARTED' });
@@ -313,6 +334,7 @@ export function AuthProvider({ children, initialState }: AuthProviderProps) {
 
     logoutInFlightRef.current = true;
     sessionEpochRef.current += 1;
+    invalidateRefreshCoordinator();
 
     if (mountedRef.current) {
       dispatch({ type: 'LOGOUT_STARTED' });

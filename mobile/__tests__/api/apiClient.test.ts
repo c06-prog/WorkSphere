@@ -281,5 +281,41 @@ describe('ApiClient and Transport Interceptors', () => {
       expect(mockRefresh).not.toHaveBeenCalled();
       setTokenRefreshHandler(null);
     });
+
+    test('HANDLER OWNERSHIP: unregistering previous handler does not remove newer registered handler', async () => {
+      const {
+        registerUnauthorizedHandler,
+        registerTokenRefreshHandler,
+      } = require('../../src/shared/api/apiClient');
+
+      const handlerA = jest.fn();
+      const handlerB = jest.fn();
+
+      const unregisterA = registerUnauthorizedHandler(handlerA);
+      const unregisterB = registerUnauthorizedHandler(handlerB);
+
+      // Unregistering A must NOT remove B
+      unregisterA();
+      await notifyUnauthorized();
+
+      expect(handlerA).not.toHaveBeenCalled();
+      expect(handlerB).toHaveBeenCalledTimes(1);
+
+      // Unregistering B removes B
+      unregisterB();
+      await notifyUnauthorized();
+      expect(handlerB).toHaveBeenCalledTimes(1);
+
+      // Same test for token refresh handler
+      const refreshA = jest.fn().mockResolvedValue('token-a');
+      const refreshB = jest.fn().mockResolvedValue('token-b');
+
+      const unregisterRefA = registerTokenRefreshHandler(refreshA);
+      const unregisterRefB = registerTokenRefreshHandler(refreshB);
+
+      unregisterRefA();
+      // Handler B remains active
+      unregisterRefB();
+    });
   });
 });

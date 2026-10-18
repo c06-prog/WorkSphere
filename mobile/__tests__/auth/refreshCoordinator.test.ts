@@ -2,6 +2,8 @@ import {
   refreshAccessToken,
   resetRefreshCoordinatorForTests,
   refreshTransport,
+  invalidateRefreshCoordinator,
+  getRefreshGeneration,
 } from '../../src/app/auth/refreshCoordinator';
 import { secureStorage } from '../../src/shared/storage/secureStorage';
 import { accessTokenStore } from '../../src/shared/storage/accessTokenStore';
@@ -147,5 +149,164 @@ describe('Single-Flight RefreshCoordinator', () => {
 
     expect(secureStorage.getRefreshToken).toHaveBeenCalledTimes(2);
   });
-});
 
+  test('G. STALE REFRESH RACE (Test A): Refresh starts -> invalidated by session replacement -> late refresh aborts without overwriting storage', async () => {
+    (secureStorage.getRefreshToken as jest.Mock).mockResolvedValue('old-refresh-token-123');
+
+    let resolveHttp: any;
+    let postStarted: () => void = () => {};
+    const postStartedPromise = new Promise<void>(resolve => {
+      postStarted = resolve;
+    });
+    const pendingHttp = new Promise(resolve => {
+      resolveHttp = resolve;
+    });
+
+    jest.spyOn(refreshTransport, 'post').mockImplementation((() => {
+      postStarted();
+      return pendingHttp;
+    }) as any);
+
+    // 1. Refresh flight starts in generation 1
+    const refreshFlight = refreshAccessToken();
+
+    // Ensure flight is awaiting network
+    await postStartedPromise;
+
+    // 2. User logs in, causing invalidateRefreshCoordinator() to increment generation
+    invalidateRefreshCoordinator();
+    expect(getRefreshGeneration()).toBe(2);
+
+    // 3. Deferred HTTP transport completes after invalidation
+    resolveHttp({
+      data: {
+        success: true,
+        data: mockRefreshResponse,
+        timestamp: '2026-10-18T12:00:00Z',
+      },
+    });
+
+    // 4. Stale refresh flight must reject and MUST NOT commit rotated tokens
+    await expect(refreshFlight).rejects.toThrow(
+      'Phiên làm mới đã bị hủy bởi tác vụ xác thực mới hơn'
+    );
+
+    expect(secureStorage.setRefreshToken).not.toHaveBeenCalled();
+    expect(accessTokenStore.setAccessToken).not.toHaveBeenCalled();
+  });
+
+  test('H. STALE REFRESH RACE (Test B): Logout completes during Keychain write window -> post-write check aborts publishing access token', async () => {
+    (secureStorage.getRefreshToken as jest.Mock).mockResolvedValue('old-refresh-token-123');
+
+    jest.spyOn(refreshTransport, 'post').mockResolvedValueOnce({
+      data: {
+        success: true,
+        data: mockRefreshResponse,
+        timestamp: '2026-10-18T12:00:00Z',
+      },
+    });
+
+    // Simulate invalidation right during Keychain write
+    (secureStorage.setRefreshToken as jest.Mock).mockImplementationOnce(async () => {
+      invalidateRefreshCoordinator();
+    });
+
+    const refreshFlight = refreshAccessToken();
+
+    await expect(refreshFlight).rejects.toThrow(
+      'Phiên làm mới đã bị hủy bởi tác vụ xác thực mới hơn'
+    );
+
+    // Access token must NOT be committed
+    expect(accessTokenStore.setAccessToken).not.toHaveBeenCalled();
+  });
+
+  test('I. GENERATION COEXISTENCE (Test C): Generation A invalidated -> Generation B starts -> Flight A does not reset Flight B', async () => {
+    (secureStorage.getRefreshToken as jest.Mock).mockResolvedValue('old-refresh-token-123');
+
+    let flightAPostStarted: () => void = () => {};
+    const flightAPostStartedPromise = new Promise<void>(resolve => {
+      flightAPostStarted = resolve;
+    });
+
+    let resolveFlightA: (val: any) => void = () => {};
+    const pendingHttpA = new Promise(resolve => {
+      resolveFlightA = resolve;
+    });
+
+    let resolveFlightB: (val: any) => void = () => {};
+    const pendingHttpB = new Promise(resolve => {
+      resolveFlightB = resolve;
+    });
+
+    let flightBPostStarted: () => void = () => {};
+    const flightBPostStartedPromise = new Promise<void>(resolve => {
+      flightBPostStarted = resolve;
+    });
+
+    let callCount = 0;
+    jest.spyOn(refreshTransport, 'post').mockImplementation((() => {
+      callCount += 1;
+      if (callCount === 1) {
+        flightAPostStarted();
+        return pendingHttpA;
+      }
+      flightBPostStarted();
+      return pendingHttpB;
+    }) as any);
+    (secureStorage.setRefreshToken as jest.Mock).mockResolvedValue(undefined);
+
+    // Flight A starts in Gen 1
+    const flightA = refreshAccessToken();
+
+    // Guarantee Flight A is actively awaiting HTTP
+    await flightAPostStartedPromise;
+
+    // Invalidation increments to Gen 2
+    invalidateRefreshCoordinator();
+
+    // Flight B starts in Gen 2
+    const flightB = refreshAccessToken();
+
+    // Guarantee Flight B is actively awaiting HTTP
+    await flightBPostStartedPromise;
+
+    // Flight A completes after invalidation
+    resolveFlightA({
+      data: {
+        success: true,
+        data: {
+          accessToken: 'token-a-jwt',
+          refreshToken: 'refresh-a-xyz',
+          tokenType: 'Bearer',
+          accessTokenExpiresIn: 900,
+          refreshTokenExpiresIn: 604800,
+        },
+        timestamp: '2026-10-18T12:00:00Z',
+      },
+    });
+
+    await expect(flightA).rejects.toThrow(
+      'Phiên làm mới đã bị hủy bởi tác vụ xác thực mới hơn'
+    );
+
+    // Flight B resolves successfully
+    resolveFlightB({
+      data: {
+        success: true,
+        data: {
+          accessToken: 'token-b-jwt',
+          refreshToken: 'refresh-b-xyz',
+          tokenType: 'Bearer',
+          accessTokenExpiresIn: 900,
+          refreshTokenExpiresIn: 604800,
+        },
+        timestamp: '2026-10-18T12:00:00Z',
+      },
+    });
+
+    const resultB = await flightB;
+    expect(resultB).toBe('token-b-jwt');
+    expect(accessTokenStore.setAccessToken).toHaveBeenCalledWith('token-b-jwt');
+  });
+});

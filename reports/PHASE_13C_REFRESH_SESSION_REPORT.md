@@ -46,12 +46,12 @@ Phase 13C establishes robust, single-flight token refresh coordination, cold-sta
 
 ### 2.1 Mobile Unit & Integration Tests (Jest)
 - Total test suites: **31 passed, 31 total**
-- Total tests: **253 passed, 253 total** (0 failures, 0 skipped)
-- New / updated test suites:
-  - `mobile/__tests__/auth/refreshCoordinator.test.ts` (6 tests: single-flight deduplication, atomic rotation, failure handling, isolation)
-  - `mobile/__tests__/auth/AuthProvider.bootstrap.test.tsx` (6 tests: absent token unauthenticated, successful bootstrap, recoverable network preservation, terminal 401 cleanup, retry recovery)
+- Total tests: **258 passed, 258 total** (0 failures, 0 skipped)
+- Hardened test suites:
+  - `mobile/__tests__/auth/refreshCoordinator.test.ts` (9 tests: single-flight deduplication, atomic rotation, failure handling, isolation, stale refresh race A, stale refresh race B, generation coexistence)
+  - `mobile/__tests__/auth/AuthProvider.bootstrap.test.tsx` (7 tests: absent token unauthenticated, successful bootstrap, recoverable network preservation, terminal 401 cleanup, concurrent 401 terminal cleanup coalescing, retry recovery)
   - `mobile/__tests__/auth/AuthProvider.logout.test.tsx` (5 tests: remote logout cleanup, network failure resilience, logoutAll, mutex locks)
-  - `mobile/__tests__/api/apiClient.test.ts` (13 tests: retry-once, 401 handling, non-refreshable endpoints exclusion)
+  - `mobile/__tests__/api/apiClient.test.ts` (14 tests: retry-once, 401 handling, non-refreshable endpoints exclusion, handler ownership unregister safety)
   - `mobile/__tests__/auth/authReducer.test.ts` (11 tests: state machine transitions, canRetryBootstrap lifecycle, security invariants)
 
 ### 2.2 Static Analysis & Quality Gates
@@ -60,7 +60,7 @@ Phase 13C establishes robust, single-flight token refresh coordination, cold-sta
 - `npm run typecheck`: **0 errors**
 
 ### 2.3 Android Build & Smoke Test
-- Gradle Build: `.\gradlew.bat assembleDebug --no-daemon` -> **BUILD SUCCESSFUL in 6m 1s**
+- Gradle Build: `.\gradlew.bat assembleDebug --no-daemon` -> **BUILD SUCCESSFUL**
 - Device Verification: `emulator-5554` running Android 15 (API 35).
 - APK Installation: `app-debug.apk` successfully streamed and installed (`Success`).
 - Runtime Smoke Test: Application `com.workspheremobile/.MainActivity` launched successfully (PID `24109`), SoLoader initialized without crash, and process terminated cleanly.
@@ -72,3 +72,21 @@ Phase 13C establishes robust, single-flight token refresh coordination, cold-sta
 - Zero changes to backend Java source code or Flyway SQL migrations.
 - Out-of-scope Phase 13D features (Profile, Change Password, Forgot/Reset Password, User Settings) remain untouched.
 - Invariants verified: Auth tokens are never stored in React state or plain text storage.
+
+---
+
+## 4. Phase 13C Concurrency Hardening Patch Summary
+
+### 4.1 Findings Resolved
+1. **STALE_REFRESH_TOKEN_COMMIT_RISK (HIGH)**:
+   - Added monotonic `refreshGeneration` counter and `invalidateRefreshCoordinator()` in `refreshCoordinator.ts`.
+   - Verified generation in 3 critical positions: (1) before HTTP call, (2) before writing rotated token to Keychain, (3) after Keychain write before publishing access token into memory.
+   - Synchronously invoked `invalidateRefreshCoordinator()` in `AuthProvider.tsx` upon `login`, `logout`, `logoutAll`, `logoutLocal`, and terminal cleanup.
+   - Any stale flight in progress aborts immediately with rejection and does not overwrite current storage or clear newer tokens.
+
+2. **TERMINAL_CLEANUP_DEDUP_GAP (MEDIUM)**:
+   - Added `terminalCleanupPromiseRef` in `AuthProvider.tsx`.
+   - Multiple concurrent 401 terminal rejection errors coalesce into exactly one session cleanup, one Keychain clear, and one unauthenticated state dispatch.
+
+3. **HANDLER_OWNERSHIP_RACE_NOTE (LOW/MEDIUM)**:
+   - Implemented `registerUnauthorizedHandler` and `registerTokenRefreshHandler` in `apiClient.ts` returning unregister closures that check reference identity before clearing, preventing race conditions during provider unmount/remount.

@@ -7,21 +7,19 @@
 - Pre-Phase 13 Readiness Base: `a9c59259904f2dd6e9bd38e4ca63c1a88c89c474` (`feat(mobile): finalize pre-auth runtime readiness`)
 - Phase 13B Checkpoint: `d81717ecda52fd6883746f1ad4234979a6eceaed` (`feat(mobile): implement auth provider and login flow`)
 - Phase 13B Hardening: `93ae7a33c4ee87870416fe9ccf0ac798c3daeabc` (`fix(mobile): harden auth provider concurrency`)
-- Current Status: Phase 13 Subphase 13C (Single-Flight Refresh, Session Bootstrap, Remote Logout) COMPLETED & VALIDATED
+- Current Status: Phase 13 Subphase 13C Concurrency Hardening COMPLETED & VALIDATED
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening
 
-- Latest Validated Implementation: `feat(mobile): add refresh and session bootstrap`
-- Subphase 13C Implementation & Hardening:
-  - `mobile/src/app/auth/refreshCoordinator.ts`: Dedicated isolated refresh transport, single-flight refresh concurrency coordinator (`refreshPromise`), atomic token rotation in Keychain before memory commit, and rollback handling.
-  - `mobile/src/shared/api/apiClient.ts`: 401 interceptor enhancements with 5 eligibility checks, retry-once semantics (`_retry = true`), and excluded auth endpoints (`/auth/login`, `/auth/refresh`, `/auth/logout`, `/auth/logout-all`, `/auth/forgot-password`, `/auth/reset-password`).
-  - `mobile/src/app/auth/AuthProvider.tsx`: Cold-start session bootstrap reading Keychain, network error recoverable preservation (`canRetryBootstrap = true`), terminal 401 cleanup, session epoch guard (`sessionEpochRef`), and remote `logout` / `logoutAll` / `retryBootstrap`.
-  - `mobile/src/app/navigation/RootNavigator.tsx`: Recoverable bootstrap failure UI with retry button and fallback local logout button.
-  - Mobile Tests: 31/31 test suites, 253/253 tests PASS (21 new tests across 3 new test suites, 0 failures, 0 skipped).
+- Latest Validated Implementation: `fix(mobile): harden auth refresh concurrency`
+- Subphase 13C Concurrency Hardening:
+  - `mobile/src/app/auth/refreshCoordinator.ts`: Monotonic `refreshGeneration` counter, pre-network, pre-Keychain write, and post-Keychain write generation checks to prevent stale flights from overwriting session data or publishing outdated access tokens (`STALE_REFRESH_TOKEN_COMMIT_RISK`).
+  - `mobile/src/app/auth/AuthProvider.tsx`: Synchronous `invalidateRefreshCoordinator()` on `login`, `logout`, `logoutAll`, `logoutLocal`, and terminal cleanup; `terminalCleanupPromiseRef` coalesces concurrent 401 terminal rejections into a single session cleanup execution (`TERMINAL_CLEANUP_DEDUP_GAP`).
+  - `mobile/src/shared/api/apiClient.ts`: Added `registerUnauthorizedHandler` and `registerTokenRefreshHandler` returning identity-safe unregister closures (`HANDLER_OWNERSHIP_RACE_NOTE`).
+  - Mobile Tests: 31/31 test suites, 258/258 tests PASS (0 failures, 0 skipped).
   - TypeScript & Lint: `tsc --noEmit` PASS (0 errors), `eslint .` PASS (0 errors, 0 warnings).
   - Android Build: `.\gradlew.bat assembleDebug --no-daemon` BUILD SUCCESSFUL (exit code 0).
-  - Emulator Smoke Test: APK installed and verified on `emulator-5554` (package `com.workspheremobile`), launched successfully (PID 24109).
   - Dedicated Report: `reports/PHASE_13C_REFRESH_SESSION_REPORT.md`.
   - Next Action: Phase 13D entry review.
 
