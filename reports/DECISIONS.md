@@ -1116,8 +1116,8 @@ Current operating mode:
 - **Tình trạng**: APPROVED / COMPLETED.
 - **Nội dung quyết định**:
   1. **Khắc Phục Module Augmentation Cho Axios Config**:
-     - Bổ sung định nghĩa `skipAuthRefresh?: boolean` và `_retry?: boolean` cho `AxiosRequestConfig` trong `mobile/src/features/auth/api/authTypes.ts` mà không sửa core API module.
-     - Cho phép transport adapter đánh dấu các request công khai bỏ qua bộ điều phối làm mới token tự động.
+     - Định nghĩa `skipAuthRefresh?: boolean` và `_retry?: boolean` cho `AxiosRequestConfig` được chuẩn hóa tại `mobile/src/shared/api/axios.d.ts` thuộc tầng shared transport theo kết quả Phase 13A audit (giải quyết triệt để `AXIOS_REQUEST_METADATA_TYPING_RISK`).
+     - Tách biệt hoàn toàn concern giữa DTO feature thuần túy (`authTypes.ts`) và cấu hình transport của Axios; cho phép transport adapter đánh dấu các request công khai bỏ qua bộ điều phối làm mới token tự động mà không vi phạm ranh giới phân tầng D-053.
   2. **Structural Runtime Type Guards**:
      - Triển khai các guard thuần `isAuthDepartment`, `isAuthUser`, `isAuthResponse`, `isRefreshResponse`.
      - Kiểm tra kiểu dữ liệu và cấu trúc trả về từ backend mà không ném ngoại lệ chứa giá trị token/mật khẩu, từ chối an toàn các payload không hợp lệ trước khi chuyển tiếp cho state layer.

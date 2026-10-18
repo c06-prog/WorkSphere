@@ -113,4 +113,22 @@ describe('ApiClient and Transport Interceptors', () => {
     const result = await http.get('/projects');
     expect(result).toEqual(mockData);
   });
+
+  test('http.post forwards skipAuthRefresh in config argument without leaking into request body', async () => {
+    const postSpy = jest.spyOn(apiClient, 'post').mockResolvedValueOnce({
+      data: {
+        success: true,
+        data: { ok: true },
+        timestamp: '2026-10-18T12:00:00Z',
+      },
+    } as AxiosResponse);
+
+    const payload = { login: 'user1', password: 'password123' };
+    const config: AxiosRequestConfig = { skipAuthRefresh: true };
+
+    const result = await http.post('/auth/login', payload, config);
+    expect(result).toEqual({ ok: true });
+    expect(postSpy).toHaveBeenCalledWith('/auth/login', payload, { skipAuthRefresh: true });
+    expect(payload).not.toHaveProperty('skipAuthRefresh');
+  });
 });

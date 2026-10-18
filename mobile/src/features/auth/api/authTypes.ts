@@ -4,14 +4,6 @@
  * Canonical Source: backend/src/main/java/com/worksphere/identity/api/dto/**
  */
 
-// Module augmentation for AxiosRequestConfig to support typed request metadata
-declare module 'axios' {
-  export interface AxiosRequestConfig {
-    skipAuthRefresh?: boolean;
-    _retry?: boolean;
-  }
-}
-
 /**
  * Login Request DTO
  * Aligned with LoginRequest.java
