@@ -35,6 +35,14 @@ export function invalidateSessionCredentials(): number {
 }
 
 /**
+ * Returns whether an in-memory access token is currently present.
+ * Read-only inspection; does not mutate credentials.
+ */
+export function hasActiveAccessToken(): boolean {
+  return accessTokenStore.getAccessToken() !== null;
+}
+
+/**
  * Enqueues an asynchronous credential transaction into the FIFO queue.
  * Ensures that if `operation` throws, future operations still execute.
  */
@@ -139,6 +147,22 @@ export async function clearSessionCredentials(expectedGeneration?: number): Prom
     } catch {
       // Best-effort Keychain clear
     }
+  });
+}
+
+/**
+ * Narrowly scoped bootstrap helper: clears stale in-memory access token only.
+ * Serialized in the credential queue.
+ * Does NOT clear the Keychain refresh token, preserving persistent session for bootstrap.
+ * Verifies generation if expectedGeneration is provided.
+ */
+export async function clearAccessTokenForBootstrap(expectedGeneration?: number): Promise<void> {
+  return enqueueCredentialTransaction(async () => {
+    if (expectedGeneration !== undefined && credentialGeneration !== expectedGeneration) {
+      return;
+    }
+
+    accessTokenStore.clearAccessToken();
   });
 }
 

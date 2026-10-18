@@ -7,22 +7,20 @@
 - Pre-Phase 13 Readiness Base: `a9c59259904f2dd6e9bd38e4ca63c1a88c89c474` (`feat(mobile): finalize pre-auth runtime readiness`)
 - Phase 13B Checkpoint: `d81717ecda52fd6883746f1ad4234979a6eceaed` (`feat(mobile): implement auth provider and login flow`)
 - Phase 13B Hardening: `93ae7a33c4ee87870416fe9ccf0ac798c3daeabc` (`fix(mobile): harden auth provider concurrency`)
-- Current Status: Phase 13 Subphase 13C Final Token Commit Serialization COMPLETED & VALIDATED
+- Current Status: Phase 13 Subphase 13C Bootstrap Credential Mutation COMPLETED & VALIDATED
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening
 
-- Latest Validated Implementation: `fix(mobile): serialize auth credential commits`
-- Subphase 13C Token Commit Serialization Patch:
-  - `mobile/src/app/auth/sessionCredentialCoordinator.ts`: Global serialized FIFO credential queue (`credentialQueue`) governing all Keychain writes/clears and memory access token updates. Enforces `expectedGeneration` verification immediately prior to Keychain mutation, ensuring delayed stale refresh flights cannot overwrite newer login sessions (`STALE_REFRESH_KEYCHAIN_OVERWRITE_RISK`) or repopulate storage after logout (`LOGOUT_STALE_REFRESH_REPOPULATION_GAP`).
-  - `mobile/src/app/auth/refreshCoordinator.ts`: Re-exports generation helpers and routes credential commits/clears through `sessionCredentialCoordinator`.
-  - `mobile/src/app/auth/AuthProvider.tsx`: Login and logout flows commit/clear credentials strictly through `sessionCredentialCoordinator`.
-  - Deterministic Tests: Added `sessionCredentialCoordinator.test.ts` proving Login-wins, Logout-wins, and queue error-recovery semantics.
-  - Mobile Tests: 32/32 test suites, 261/261 tests PASS (0 failures, 0 skipped).
+- Latest Validated Implementation: `fix(mobile): centralize bootstrap credential cleanup`
+- Subphase 13C Bootstrap Credential Mutation Patch:
+  - `mobile/src/app/auth/sessionCredentialCoordinator.ts`: Added `clearAccessTokenForBootstrap(expectedGeneration?)` and `hasActiveAccessToken()`. All production credential mutations and access token inspections are fully centralized in the coordinator.
+  - `mobile/src/app/auth/AuthProvider.tsx`: Eliminated direct calls to `accessTokenStore.clearAccessToken()` and `accessTokenStore.getAccessToken()`. Bootstrap memory token cleanup is routed through the serialized FIFO queue without touching Keychain refresh tokens.
+  - Mobile Tests: 32/32 test suites, 262/262 tests PASS (0 failures, 0 skipped).
   - TypeScript & Lint: `tsc --noEmit` PASS (0 errors), `eslint .` PASS (0 errors, 0 warnings).
   - Android Build: `.\gradlew.bat assembleDebug --no-daemon` BUILD SUCCESSFUL (203 actionable tasks, exit code 0).
   - Dedicated Report: `reports/PHASE_13C_REFRESH_SESSION_REPORT.md`.
-  - Next Action: Independent final verification before Phase 13D.
+  - Next Action: Ready for Phase 13D entry review.
 
 
 

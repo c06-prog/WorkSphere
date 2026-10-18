@@ -46,9 +46,9 @@ Phase 13C establishes robust, single-flight token refresh coordination, cold-sta
 
 ### 2.1 Mobile Unit & Integration Tests (Jest)
 - Total test suites: **32 passed, 32 total**
-- Total tests: **261 passed, 261 total** (0 failures, 0 skipped)
+- Total tests: **262 passed, 262 total** (0 failures, 0 skipped)
 - Hardened test suites:
-  - `mobile/__tests__/auth/sessionCredentialCoordinator.test.ts` (3 tests: deterministic Login-wins, deterministic Logout-wins, queue failure recovery)
+  - `mobile/__tests__/auth/sessionCredentialCoordinator.test.ts` (4 tests: deterministic Login-wins, deterministic Logout-wins, queue failure recovery, bootstrap access token cleanup)
   - `mobile/__tests__/auth/refreshCoordinator.test.ts` (9 tests: single-flight deduplication, atomic rotation, failure handling, isolation, stale refresh race A, stale refresh race B, generation coexistence)
   - `mobile/__tests__/auth/AuthProvider.bootstrap.test.tsx` (7 tests: absent token unauthenticated, successful bootstrap, recoverable network preservation, terminal 401 cleanup, concurrent 401 terminal cleanup coalescing, retry recovery)
   - `mobile/__tests__/auth/AuthProvider.logout.test.tsx` (5 tests: remote logout cleanup, network failure resilience, logoutAll, mutex locks)
@@ -61,7 +61,7 @@ Phase 13C establishes robust, single-flight token refresh coordination, cold-sta
 - `npm run typecheck`: **0 errors**
 
 ### 2.3 Android Build & Smoke Test
-- Gradle Build: `.\gradlew.bat assembleDebug --no-daemon` -> **BUILD SUCCESSFUL in 6m 0s** (203 actionable tasks, exit code 0)
+- Gradle Build: `.\gradlew.bat assembleDebug --no-daemon` -> **BUILD SUCCESSFUL** (203 actionable tasks, exit code 0)
 - Device Verification: `emulator-5554` running Android 15 (API 35).
 - APK Installation: `app-debug.apk` successfully streamed and installed (`Success`).
 - Runtime Smoke Test: Application `com.workspheremobile/.MainActivity` launched successfully (PID `24109`), SoLoader initialized without crash, and process terminated cleanly.
@@ -108,3 +108,14 @@ Phase 13C establishes robust, single-flight token refresh coordination, cold-sta
      - `1. DETERMINISTIC LOGIN-WINS TEST`: Demonstrates that when a delayed refresh A is held during Keychain write while login B invalidates and commits, refresh A rejects and final Keychain / memory tokens belong exclusively to B.
      - `2. DETERMINISTIC LOGOUT-WINS TEST`: Demonstrates that when refresh A is delayed while logout occurs, refresh A rejects and final Keychain / memory state is strictly `null`.
      - `3. FAILURE RECOVERY TEST`: Proves that a failed credential transaction (e.g. Keychain write error) does not poison or block subsequent queued transactions.
+
+---
+
+## 6. Phase 13C Bootstrap Credential Mutation Patch
+
+### 6.1 Architecture & Findings Resolved
+1. **BOOTSTRAP_CREDENTIAL_MUTATION_BYPASS**:
+   - Removed direct `accessTokenStore.clearAccessToken()` and `accessTokenStore.getAccessToken()` from `AuthProvider.tsx`.
+   - Introduced `clearAccessTokenForBootstrap(expectedGeneration?)` and `hasActiveAccessToken()` in `sessionCredentialCoordinator.ts`.
+   - `runBootstrap()` now purges stale in-memory access tokens through the serialized queue without touching or clearing persistent Keychain refresh tokens.
+   - 100% of production credential mutations across mobile source now reside exclusively within `sessionCredentialCoordinator.ts`.

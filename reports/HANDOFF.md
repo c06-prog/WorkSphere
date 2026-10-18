@@ -4,18 +4,16 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: Phase 13C Final Token Commit Serialization Patch
-- Status: SUBPHASE 13C SERIALIZED, HARDENED & TESTED (Ready for final verification before Phase 13D)
-- Phase 13C Token Commit Serialization Scope:
-  - `mobile/src/app/auth/sessionCredentialCoordinator.ts`: Global serialized FIFO credential queue (`credentialQueue`) governing all Keychain writes/clears and memory access token updates. Enforces `expectedGeneration` verification immediately prior to Keychain mutation, ensuring delayed stale refresh flights cannot overwrite newer login sessions (`STALE_REFRESH_KEYCHAIN_OVERWRITE_RISK`) or repopulate storage after logout (`LOGOUT_STALE_REFRESH_REPOPULATION_GAP`).
-  - `mobile/src/app/auth/refreshCoordinator.ts`: Routes credential commit/clears through `sessionCredentialCoordinator`.
-  - `mobile/src/app/auth/AuthProvider.tsx`: Login and logout flows commit/clear credentials strictly through `sessionCredentialCoordinator`.
-  - Deterministic Tests: Added `sessionCredentialCoordinator.test.ts` proving Login-wins, Logout-wins, and queue error-recovery semantics.
+- Current Task: Phase 13C Final Bootstrap Credential Mutation Patch
+- Status: SUBPHASE 13C FULLY CENTRALIZED, HARDENED & TESTED (Ready for Phase 13D review)
+- Phase 13C Bootstrap Credential Mutation Scope:
+  - `mobile/src/app/auth/sessionCredentialCoordinator.ts`: Added `clearAccessTokenForBootstrap(expectedGeneration?)` and `hasActiveAccessToken()`. Centralizes 100% of production credential mutations and access token inspections in the coordinator.
+  - `mobile/src/app/auth/AuthProvider.tsx`: Eliminated direct calls to `accessTokenStore.clearAccessToken()` and `accessTokenStore.getAccessToken()`. Bootstrap memory token cleanup is routed through the serialized FIFO queue without touching Keychain refresh tokens.
   - Dedicated Report: `reports/PHASE_13C_REFRESH_SESSION_REPORT.md`.
-  - Mobile Tests: 32/32 test suites, 261/261 tests PASS (0 failures, 0 skipped).
+  - Mobile Tests: 32/32 test suites, 262/262 tests PASS (0 failures, 0 skipped).
   - TypeScript & Lint: `tsc --noEmit` PASS (0 errors), `eslint .` PASS (0 errors, 0 warnings).
   - Android Build: `.\gradlew.bat assembleDebug --no-daemon` BUILD SUCCESSFUL (203 actionable tasks, exit code 0).
-  - Next Action: Independent final verification before Phase 13D.
+  - Next Action: Phase 13D entry review.
 - Working tree: clean (sau khi commit)
 
 ## Phase 11 Notification and Personal Dashboard Module: COMPLETED, AUDITED & HARDENED

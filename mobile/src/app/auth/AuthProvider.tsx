@@ -11,7 +11,6 @@ import { authReducer, initialAuthState } from './authReducer';
 import type { AuthContextValue, AuthState } from './authTypes';
 import { authApi } from '../../features/auth/api/authApi';
 import { mapAuthError } from '../../features/auth/errors/authErrorMapper';
-import { accessTokenStore } from '../../shared/storage/accessTokenStore';
 import { secureStorage } from '../../shared/storage/secureStorage';
 import { registerTokenRefreshHandler, registerUnauthorizedHandler } from '../../shared/api/apiClient';
 import { refreshAccessToken } from './refreshCoordinator';
@@ -19,6 +18,8 @@ import {
   invalidateSessionCredentials,
   commitLoginCredentials,
   clearSessionCredentials,
+  clearAccessTokenForBootstrap,
+  hasActiveAccessToken,
 } from './sessionCredentialCoordinator';
 import { isNormalizedApiError } from '../../shared/api/apiError';
 
@@ -93,8 +94,8 @@ export function AuthProvider({ children, initialState }: AuthProviderProps) {
     }
 
     try {
-      // 1. Clear any stale in-memory token from previous lifecycle
-      accessTokenStore.clearAccessToken();
+      // 1. Clear any stale in-memory token from previous lifecycle via coordinator
+      await clearAccessTokenForBootstrap();
 
       // 2. Read refreshToken from Keychain
       const existingRefreshToken = await secureStorage.getRefreshToken();
@@ -257,7 +258,7 @@ export function AuthProvider({ children, initialState }: AuthProviderProps) {
 
     try {
       const token = await secureStorage.getRefreshToken();
-      if (token && accessTokenStore.getAccessToken()) {
+      if (token && hasActiveAccessToken()) {
         try {
           await authApi.logout({ refreshToken: token });
         } catch {
@@ -291,7 +292,7 @@ export function AuthProvider({ children, initialState }: AuthProviderProps) {
     }
 
     try {
-      if (accessTokenStore.getAccessToken()) {
+      if (hasActiveAccessToken()) {
         try {
           await authApi.logoutAll();
         } catch {

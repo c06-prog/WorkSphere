@@ -4,6 +4,7 @@ import {
   commitLoginCredentials,
   commitRefreshedCredentials,
   clearSessionCredentials,
+  clearAccessTokenForBootstrap,
   resetSessionCredentialCoordinatorForTests,
 } from '../../src/app/auth/sessionCredentialCoordinator';
 import { secureStorage } from '../../src/shared/storage/secureStorage';
@@ -155,5 +156,20 @@ describe('sessionCredentialCoordinator', () => {
 
     expect(mockKeychainToken).toBe('refresh-success');
     expect(mockMemoryAccessToken).toBe('access-success');
+  });
+
+  test('4. BOOTSTRAP CLEANUP TEST: clears memory access token while preserving Keychain refresh token', async () => {
+    mockKeychainToken = 'persisted-refresh-token';
+    mockMemoryAccessToken = 'stale-access-token';
+
+    const currentGen = getSessionCredentialGeneration();
+
+    // Enqueue clearAccessTokenForBootstrap
+    await clearAccessTokenForBootstrap(currentGen);
+
+    // In-memory access token cleared
+    expect(mockMemoryAccessToken).toBeNull();
+    // Keychain refresh token retained intact
+    expect(mockKeychainToken).toBe('persisted-refresh-token');
   });
 });
