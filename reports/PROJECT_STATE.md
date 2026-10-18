@@ -3,17 +3,17 @@
 ## Git Checkpoint
 
 - Branch: main
-- Latest Validated Implementation: `53f91ffe86fa282d063a65a1aeb1ca9549b6ea4d`
-- Final Audit Reconciliation: `28d238d22d80625243c6ecd634321077874f3697`
-- Memory Checkpoint: This checkpoint commit (`docs(agent): checkpoint phase 12 completion`)
+- Phase 12 Completion Checkpoint: `bdd56778c9e64104b47d85a16e61431ccf1ac899` (`docs(agent): checkpoint phase 12 completion`)
+- Current Status: Pre-Phase 13 Runtime Readiness COMPLETED, AUDITED AND VALIDATED
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening
 
-- Latest Validated Implementation Commit: `53f91ffe86fa282d063a65a1aeb1ca9549b6ea4d`
-- Commit message: `fix(mobile): harden local storage key policy`
-- Phase 12 Status: COMPLETED, AUDITED, HARDENED, RECONCILED AND VALIDATED
-- Operational Documentation Checkpoint: reports/DECISIONS.md (D-053), reports/PHASE_12_FINAL_AUDIT.md, reports/PROJECT_STATE.md, reports/HANDOFF.md
+- Latest Validated Pre-Phase 13 Readiness Commit: This commit (`feat(mobile): finalize pre-auth runtime readiness`)
+- Commit message: `feat(mobile): finalize pre-auth runtime readiness`
+- Pre-Phase 13 Readiness Status: COMPLETED, AUDITED, HARDENED AND VALIDATED
+- Mobile Tests: 20/20 test suites, 112/112 tests PASS (0 failures, 0 skipped)
+- Operational Documentation Checkpoint: reports/DECISIONS.md (D-054), reports/PRE_PHASE_13_READINESS_REPORT.md, reports/PROJECT_STATE.md, reports/HANDOFF.md
 
 ## Validated Progress
 
@@ -293,9 +293,6 @@
 - TEMPORARY_PASSWORD_FLOW_GAP: Luồng kích hoạt và endpoint thiết lập mật khẩu lần đầu tiếp tục hoãn.
 - TEAM_API_CONTRACT_GAP: Team REST controllers hoãn vì `06_API_CONTRACT.md` chưa định nghĩa endpoints.
 - PUT_ME_PASSWORD_TEST_GAP: Test coverage cho luồng đổi mật khẩu người dùng hiện tại tiếp tục hoãn.
-- PRODUCTION_ENVIRONMENT_WIRING_DEFERRED: Cấu hình môi trường đa bản phát hành (multi-flavor buildConfig) hoãn đến Phase 15.
-- KEYCHAIN_NATIVE_OPERATION_SMOKE_DEFERRED: Kiểm thử CRUD phần cứng Keychain thực tế trên thiết bị hoãn đến luồng Auth Phase 13.
-- ASYNC_STORAGE_NATIVE_OPERATION_SMOKE_DEFERRED: Kiểm thử CRUD ghi đĩa AsyncStorage thực tế trên thiết bị hoãn đến luồng Auth Phase 13.
 - AXIOS_MULTIPART_CONTENT_TYPE_OVERRIDE_REQUIRED: Ghi đè thủ công header Content-Type khi upload tệp nhị phân hoãn đến Phase 14+.
 - FONT_INTER_ASSET_BUNDLING_DEFERRED: Phông chữ Inter asset chưa bundle; mobile sử dụng system font mặc định (thuộc tính fontFamily được omit trong typography tokens).
 - MOBILE_ICON_PACKAGE_DEFERRED: Thư viện vector icon bên thứ ba hoãn đến Phase 13/14 UI refinement.
@@ -304,13 +301,19 @@
 - ANDROID_NATIVE_CI_BUILD_DEFERRED: Biên dịch Android native trên GitHub Actions runner hoãn lại.
 - PHASE_13_AUTH_FLOWS_DEFERRED: Toàn bộ luồng đăng nhập, refresh token, phục hồi phiên và đăng xuất thuộc quyền sở hữu của Phase 13.
 
+## Resolved Prerequisites & Readiness Items
+
+- PRODUCTION_ENVIRONMENT_WIRING_RESOLVED: Cấu hình API Base URL native & JS hoàn tất qua EnvironmentConfigModule, BuildConfig và Info.plist với kiểm soát nghiêm ngặt HTTPS và fail-fast cho Release build.
+- KEYCHAIN_NATIVE_OPERATION_SMOKE_RESOLVED: Kiểm thử CRUD phần cứng Keystore/Keychain hoàn tất trên emulator-5554 (Android 15, API 35) với dọn dẹp sạch sẽ 100%.
+- ASYNC_STORAGE_NATIVE_OPERATION_SMOKE_RESOLVED: Kiểm thử CRUD ghi đĩa AsyncStorage hoàn tất trên emulator-5554 trên khóa allowlisted @worksphere/theme_preference với dọn dẹp sạch sẽ 100%.
+
 ## Next Permitted Phase
 
 - **Giai đoạn 13: Mobile Authentication** (theo đúng `docs/08_DEVELOPMENT_ROADMAP.md` Mục 17, P0).
   - Scope: Splash, Login, Forgot Password, Profile, Change Password, Settings; Form validation, gọi API login, Secure Storage lưu token, tự thêm access token vào request, refresh token, xử lý logout, xử lý tài khoản bị khóa, xử lý token hết hạn, điều hướng Auth và Main.
   - DoD: Đăng nhập end-to-end hoạt động, token được lưu an toàn, refresh không tạo vòng lặp, logout xóa phiên, mobile không hiện màn hình được bảo vệ khi chưa đăng nhập.
-  - Phase 12 (Khởi tạo ứng dụng mobile): ĐÃ HOÀN THÀNH, KIỂM TOÁN, LÀM CỨNG, ĐỐI SOÁT VÀ ĐÓNG MEMORY CHECKPOINT TOÀN DIỆN (20/20 suites, 106/106 tests PASS, Android assembleDebug BUILD SUCCESS, emulator smoke verified).
-  - Phase 13 chưa bắt đầu trong nhiệm vụ này.
+  - Pre-Phase 13 Runtime Readiness: ĐÃ HOÀN THÀNH, KIỂM CHỨNG VÀ XÁC THỰC TOÀN DIỆN (20/20 suites, 112/112 tests PASS, Android assembleDebug BUILD SUCCESS, Keychain & AsyncStorage native CRUD PASS trên emulator-5554).
+  - Phase 13 chưa bắt đầu trong nhiệm vụ này. Bước kế tiếp: Kiểm toán hợp đồng và chuẩn bị triển khai Phase 13.
 
 ## Trust Rules
 

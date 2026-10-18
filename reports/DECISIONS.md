@@ -903,3 +903,32 @@ Current operating mode:
      - `ANDROID_NATIVE_CI_BUILD_DEFERRED` (Biên dịch Android native trên GitHub Actions runner hoãn lại).
      - `PHASE_13_AUTH_FLOWS_DEFERRED` (Toàn bộ luồng đăng nhập, refresh token, phục hồi phiên và đăng xuất thuộc quyền sở hữu của Phase 13).
   10. **Chuyển Giao Roadmap Tiếp Theo**: Đóng hoàn tất Phase 12. Giai đoạn tiếp theo được phép triển khai là `Giai đoạn 13: Mobile Authentication` (`docs/08_DEVELOPMENT_ROADMAP.md` Mục 17, P0). Nghiêm cấm bắt đầu Phase 13 trong nhiệm vụ đóng checkpoint này.
+
+## D-054: Pre-Phase 13 Runtime Readiness - Production Environment Wiring và Native Storage Smoke
+
+- **Ngày quyết định**: 2026-10-18.
+- **Phạm vi**: Ứng dụng di động WorkSphere (`mobile/`), Cấu hình API Base URL native & JS, Kiểm chứng CRUD phần cứng Keystore/Keychain và ổ đĩa AsyncStorage trên thiết bị giả lập trước Phase 13.
+- **Tình trạng**: APPROVED / RESOLVED.
+- **Nội dung quyết định**:
+  1. **Cơ chế Cấu hình Môi trường API Base URL (Environment Wiring)**:
+     - Lựa chọn giải pháp Native Module Bridge tối giản (`EnvironmentConfigModule`) kết hợp Android Gradle `BuildConfig` và iOS `Info.plist` (`WORKSPHERE_API_BASE_URL`).
+     - Tránh phát sinh trôi dạt mã nguồn (không sinh file code tạm thời trong build task); giữ khả năng tương thích tuyệt đối với Jest và Metro.
+     - Kiểm soát chặt chẽ cấu hình phát hành (Release Build): Gradle bắt buộc thuộc tính `-PWORKSPHERE_API_BASE_URL=https://<domain>/api/v1` khi thực hiện các tác vụ release. Nếu thiếu hoặc sử dụng HTTP cleartext, quá trình cấu hình Gradle lập tức dừng lại với thông báo lỗi rõ ràng và an toàn (`GradleException`).
+     - Bản build Debug: Mặc định an toàn vào URL giả lập chuẩn `http://10.0.2.2:8080/api/v1` khi thuộc tính không được truyền; cho phép ghi đè URL cục bộ qua Gradle property cho thiết bị thật khi cần.
+     - Chuẩn hóa URL: Loại bỏ triệt để dấu gạch chéo dư thừa trong path; đảm bảo kết thúc đúng một hậu tố duy nhất `/api/v1`.
+     - Bảo vệ không hạ cấp (Downgrade Protection): TypeScript chặn hoàn toàn hành vi hạ cấp môi trường từ production sang non-production tại runtime qua `setEnvironmentConfig`.
+  2. **Kiểm chứng CRUD Native Storage trên Giả lập Thực tế (Emulator Smoke)**:
+     - Đã chứng minh thực tế trên Android Emulator (`emulator-5554`, Android 15, API 35) qua chu trình CRUD hoàn chỉnh:
+       - **Keychain (`react-native-keychain`)**: `clear -> initial null -> set synthetic token -> get & compare equality in memory -> clear -> post-clear null`. Toàn bộ token giả lập được xóa sạch trong khối `finally`; tuyệt đối không in giá trị token ra log, màn hình, hay lưu vào báo cáo.
+       - **AsyncStorage (`@react-native-async-storage/async-storage`)**: `remove -> initial null -> set 'system' -> get & compare equality -> remove -> post-remove null` trên khóa allowlisted `@worksphere/theme_preference`. Toàn bộ dữ liệu được dọn dẹp sạch sẽ trong khối `finally`.
+  3. **Dọn dẹp Khung Kiểm Thử Tạm Thời (Harness Cleanup)**:
+     - Khung kiểm thử tạm thời trong `App.tsx` đã được hoàn nguyên 100% về mã nguồn gốc; không tạo màn hình ẩn hay dev menu trong mã nguồn phát hành.
+     - Xác nhận `git grep` không còn bất kỳ chuỗi token giả lập nào (`worksphere-phase13-smoke-refresh-token`) trong mã nguồn mobile.
+  4. **Giải Quyết Hạng Mục Hoãn (Resolved Deferred Items)**:
+     - Chuyển 3 hạng mục hoãn sang trạng thái RESOLVED:
+       - `PRODUCTION_ENVIRONMENT_WIRING_RESOLVED`
+       - `KEYCHAIN_NATIVE_OPERATION_SMOKE_RESOLVED`
+       - `ASYNC_STORAGE_NATIVE_OPERATION_SMOKE_RESOLVED`
+  5. **Chuyển giao cho Phase 13**:
+     - Hoàn tất mọi điều kiện tiên quyết về runtime và lưu trữ native cho Phase 13 Mobile Authentication.
+     - Bước tiếp theo: Thực hiện kiểm toán hợp đồng và chuẩn bị triển khai Phase 13 Authentication. Không bắt đầu code Phase 13 trong nhiệm vụ này.

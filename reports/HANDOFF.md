@@ -4,19 +4,15 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: Phase 12 completed; memory checkpoint closed
+- Current Task: Pre-Phase 13 Runtime Readiness - Production Environment Wiring & Native Storage CRUD Smoke
+- Pre-Phase 13 Readiness Status: COMPLETED, AUDITED, HARDENED AND VALIDATED
 - Phase 12 Status: COMPLETED, AUDITED, HARDENED, RECONCILED AND VALIDATED
-- Latest Validated Phase 12 Implementation: `53f91ffe86fa282d063a65a1aeb1ca9549b6ea4d`
-- Final Audit Reconciliation: `28d238d22d80625243c6ecd634321077874f3697`
-- Phase 12 Memory Checkpoint: This checkpoint commit (`docs(agent): checkpoint phase 12 completion`)
-- Phase 12 Tooling Checkpoint: `ab006e409a57bec93bd98b03b38d5188b98304f8`
-- Phase 12A Scaffold Baseline Checkpoint: `d61358e3e2322ae8933c6b241680ddc563594d6e`
-- Phase 12A Environment/CI Patch: `dd6e9eef69876837bf9383e6137d3105daefaa5d`
-- Phase 12B Status: THEME FOUNDATION & NAVIGATION SHELL PASS & PATCHED (`7b3b0ea446128811ec9f5f55e51bf249bae23e47`)
-- Phase 12C Status: 10 SHARED COMPONENTS FOUNDATION PASS & PATCHED (`bcc881bcf322e892905356411e5f3d77f01de09f`)
-- Phase 12D Status: NETWORK, STORAGE & AUTH STATE FOUNDATION PASS & PATCHED (`53f91ffe86fa282d063a65a1aeb1ca9549b6ea4d`)
-- Phase 12 Final Audit: COMPLETED, RECONCILED WITH SOURCE TRUTH, PASS (20/20 suites, 106/106 tests PASS, Android assembleDebug clean build PASS, emulator smoke verified)
-- Phase 12 Checkpoint: ĐÃ ĐÓNG HOÀN TẤT.
+- Latest Checkpoint Commit: `bdd56778c9e64104b47d85a16e61431ccf1ac899` (`docs(agent): checkpoint phase 12 completion`)
+- Environment Wiring: Minimal native module (`EnvironmentConfigModule`), Gradle `BuildConfig` with fail-fast HTTPS release validation, iOS `Info.plist` bridge, dynamic TypeScript resolution with emulator default (`http://10.0.2.2:8080/api/v1`).
+- Native Storage CRUD Smoke: Validated on real Android Emulator (`emulator-5554`, Android 15, API 35) for Keychain (`react-native-keychain`) and AsyncStorage (`@react-native-async-storage/async-storage`) with 100% cleanup and zero secret leakage.
+- Mobile Tests: 20/20 suites, 112/112 tests PASS (0 failures, 0 skipped)
+- Android Clean Build: `BUILD SUCCESSFUL in 4m 44s` (assembleDebug)
+- Emulator Regression: Login shell (`SCR-AUTH-02`) to Forgot Password (`SCR-AUTH-03`) and back verified on `emulator-5554`.
 - Phase 13: CHƯA BẮT ĐẦU.
 - Working tree: clean (sau khi commit)
 
@@ -147,8 +143,8 @@
 - **Giai đoạn 13: Mobile Authentication** (theo đúng `docs/08_DEVELOPMENT_ROADMAP.md` Mục 17, P0).
   - Scope: Splash, Login, Forgot Password, Profile, Change Password, Settings; Form validation, gọi API login, Secure Storage lưu token, tự thêm access token vào request, refresh token, xử lý logout, xử lý tài khoản bị khóa, xử lý token hết hạn, điều hướng Auth và Main.
   - DoD: Đăng nhập end-to-end hoạt động, token được lưu an toàn, refresh không tạo vòng lặp, logout xóa phiên, mobile không hiện màn hình được bảo vệ khi chưa đăng nhập.
-  - Phase 12 (Khởi tạo ứng dụng mobile): ĐÃ HOÀN THÀNH, KIỂM TOÁN, LÀM CỨNG, ĐỐI SOÁT VÀ ĐÓNG CHECKPOINT TOÀN DIỆN.
-  - Phase 13 chưa bắt đầu trong nhiệm vụ này.
+  - Pre-Phase 13 Runtime Readiness: ĐÃ HOÀN THÀNH, KIỂM CHỨNG VÀ XÁC THỰC TOÀN DIỆN (20/20 suites, 112/112 tests PASS, Android assembleDebug BUILD SUCCESS, Keychain & AsyncStorage native CRUD PASS trên emulator-5554).
+  - Phase 13 chưa bắt đầu trong nhiệm vụ này. Bước kế tiếp: Kiểm toán hợp đồng và chuẩn bị triển khai Phase 13.
 
 ## New Session Procedure
 

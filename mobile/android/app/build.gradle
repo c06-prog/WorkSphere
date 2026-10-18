@@ -72,10 +72,38 @@ def enableProguardInReleaseBuilds = false
  */
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
+def normalizeAndValidateApiUrl(String rawUrl, boolean isRelease) {
+    if (!rawUrl || rawUrl.trim().isEmpty()) {
+        throw new GradleException("API Base URL must be a non-empty string.")
+    }
+    def trimmed = rawUrl.trim()
+    def isHttps = trimmed.toLowerCase().startsWith("https://")
+    def isHttp = trimmed.toLowerCase().startsWith("http://")
+    if (!isHttps && !isHttp) {
+        throw new GradleException("Malformed WORKSPHERE_API_BASE_URL: Must begin with http:// or https://: \"${trimmed}\"")
+    }
+    if (isRelease && !isHttps) {
+        throw new GradleException("Security violation: Production WORKSPHERE_API_BASE_URL must use HTTPS: \"${trimmed}\"")
+    }
+    def sanitized = trimmed.replaceAll('/+$', '')
+    if (!sanitized.toLowerCase().endsWith("/api/v1")) {
+        sanitized = "${sanitized}/api/v1"
+    }
+    return sanitized
+}
+
+def isReleaseTaskRequested = gradle.startParameter.taskNames.any { taskName ->
+    taskName.toLowerCase().contains("release")
+}
+
 android {
     ndkVersion rootProject.ext.ndkVersion
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
+
+    buildFeatures {
+        buildConfig true
+    }
 
     namespace "com.workspheremobile"
     defaultConfig {
@@ -96,6 +124,9 @@ android {
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
+            def debugProp = project.findProperty("WORKSPHERE_API_BASE_URL")?.toString()?.trim()
+            def debugUrl = debugProp ? normalizeAndValidateApiUrl(debugProp, false) : "http://10.0.2.2:8080/api/v1"
+            buildConfigField "String", "API_BASE_URL", "\"${debugUrl}\""
         }
         release {
             // Caution! In production, you need to generate your own keystore file.
@@ -103,6 +134,20 @@ android {
             signingConfig signingConfigs.debug
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
+
+            if (isReleaseTaskRequested) {
+                def releaseProp = project.findProperty("WORKSPHERE_API_BASE_URL")?.toString()?.trim()
+                if (!releaseProp) {
+                    throw new GradleException(
+                        "Release build failed: WORKSPHERE_API_BASE_URL Gradle property is required for release builds.\n" +
+                        "Provide it via -PWORKSPHERE_API_BASE_URL=https://<your-domain>/api/v1"
+                    )
+                }
+                def releaseUrl = normalizeAndValidateApiUrl(releaseProp, true)
+                buildConfigField "String", "API_BASE_URL", "\"${releaseUrl}\""
+            } else {
+                buildConfigField "String", "API_BASE_URL", "\"\""
+            }
         }
     }
 }
