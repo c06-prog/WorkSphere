@@ -4,17 +4,16 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: Phase 13D Profile, Edit Profile, and Change Password Implementation
-- Status: SUBPHASE 13D COMPLETED, VALIDATED & TESTED
-- Phase 13D Scope:
-  - `mobile/src/features/profile/screens/ProfileScreen.tsx`: Profile screen (`SCR-ACC-01`) fetching `GET /me`, rendering profile details and initials placeholder, triggering logout confirmation dialog (`SCR-ACC-04`).
-  - `mobile/src/features/profile/screens/EditProfileScreen.tsx`: Profile edit screen utilizing `PUT /me` with client-side validation and immediate `AuthProvider` synchronization via `updateCurrentUser`.
-  - `mobile/src/features/profile/screens/ChangePasswordScreen.tsx`: Change password screen (`SCR-ACC-02`) utilizing `PUT /me/password`, strictly preserving untrimmed passwords, mapping specific backend codes, and maintaining active session per backend contract.
-  - Integration: Protected routes wired in `MainTabNavigator.tsx`, accessible from `MoreScreen.tsx`.
-  - Mobile Tests: 35/35 test suites, 290/290 tests PASS (0 failures, 0 skipped).
+- Current Task: Phase 13E Forgot Password and Reset Password Implementation
+- Status: SUBPHASE 13E COMPLETED, VALIDATED & TESTED
+- Phase 13E Scope:
+  - `mobile/src/features/auth/screens/ForgotPasswordScreen.tsx`: Forgot password screen (`SCR-AUTH-03`) utilizing `POST /auth/forgot-password` with email normalization, anti-enumeration invariant (uniform safe success feedback), and duplicate submission lock.
+  - `mobile/src/features/auth/screens/ResetPasswordScreen.tsx`: Reset password screen (`SCR-AUTH-04`) utilizing `POST /auth/reset-password` supporting optional typed route parameter `token` with fallback manual entry, untrimmed password handling, specific backend error code placement mapping, and navigation reset to Login.
+  - `mobile/__tests__/navigation.test.tsx`: Route shell assertions updated to production `SCR-AUTH-04` components.
+  - Mobile Tests: 37/37 test suites, 314/314 tests PASS (0 failures, 0 skipped).
   - TypeScript & Lint: `tsc --noEmit` PASS (0 errors), `eslint .` PASS (0 errors, 0 warnings).
   - Android Build: `.\gradlew.bat assembleDebug --no-daemon` BUILD SUCCESSFUL (203 actionable tasks, exit code 0).
-  - Dedicated Report: `reports/PHASE_13D_PROFILE_PASSWORD_REPORT.md`.
+  - Dedicated Report: `reports/PHASE_13E_FORGOT_RESET_REPORT.md`.
 
 ## Phase 11 Notification and Personal Dashboard Module: COMPLETED, AUDITED & HARDENED
 

@@ -144,7 +144,7 @@ describe('RootNavigator Session Abstraction & Navigation Shell', () => {
       );
     }
 
-    const { getByTestId, getByText } = await render(
+    const { getByTestId, getByText, getAllByText } = await render(
       <AppProviders initialMetrics={TEST_INITIAL_METRICS}>
         <ResetPasswordTestHarness />
       </AppProviders>
@@ -152,9 +152,8 @@ describe('RootNavigator Session Abstraction & Navigation Shell', () => {
 
     // Verify SCR-AUTH-04 visible
     expect(getByTestId('screen-reset-password')).toBeTruthy();
-    expect(getByText('Reset Password')).toBeTruthy();
     expect(getByText('SCR-AUTH-04')).toBeTruthy();
-    expect(getByText('SCR-AUTH-04: Reset Password Screen (Phase 12 Shell)')).toBeTruthy();
+    expect(getAllByText('Đặt lại mật khẩu').length).toBeGreaterThanOrEqual(1);
     expect(getByTestId('btn-back-to-login-from-reset')).toBeTruthy();
 
     // Verify navigation action back to Login
