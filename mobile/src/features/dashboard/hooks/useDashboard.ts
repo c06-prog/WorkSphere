@@ -3,9 +3,9 @@
  * Connects mobile Dashboard Screen (SCR-MAIN-01) to dashboardApi.getMyDashboard().
  *
  * Core Guarantees:
- * - Generation counter pattern (latest-request-wins): stale responses discarded.
- * - Explicit mounted lifecycle guard: prevents state updates after unmount.
- * - Same-tick / in-flight dedup lock: rapid clicks or StrictMode effects trigger only 1 active fetch.
+ * - Single-flight request deduplication: At most one dashboard network request is active at any time.
+ *   Concurrent load/refresh calls share the active request; a new request starts only after the current flight settles.
+ * - Generation and mounted guards defensively prevent stale/lifecycle state commits.
  * - Initial loading vs pull-to-refresh separation: failure during pull-to-refresh preserves existing data.
  * - Lock release after success, network failure, timeout, or malformed response rejection.
  */

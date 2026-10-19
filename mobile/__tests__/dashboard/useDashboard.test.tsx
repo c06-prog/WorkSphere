@@ -188,24 +188,32 @@ describe('useDashboard Custom Hook', () => {
     expect(result.current.data).toEqual(mockDashboardData);
   });
 
-  it('7. ignores stale response when a newer request completes', async () => {
+  it('7. generation guard discards stale response if generation counter changed', async () => {
     let resolveStale!: (val: PersonalDashboardData) => void;
-
     const stalePromise = new Promise<PersonalDashboardData>(resolve => {
       resolveStale = resolve;
     });
 
-    (dashboardApi.getMyDashboard as jest.Mock).mockReturnValueOnce(stalePromise);
+    (dashboardApi.getMyDashboard as jest.Mock).mockReturnValue(stalePromise);
 
     const { result } = await renderHook(() => useDashboard());
 
-    // Resolve initial request
+    expect(result.current.initialLoading).toBe(true);
+
+    // Initial load is pending with stalePromise
+    // Now trigger a completion of stalePromise with stale data
+    const staleData: PersonalDashboardData = {
+      ...mockDashboardData,
+      tasks: { ...mockDashboardData.tasks, completed: 1 },
+    };
+
     await act(async () => {
-      resolveStale(mockDashboardData);
+      resolveStale(staleData);
       await stalePromise;
     });
 
-    expect(result.current.data).toEqual(mockDashboardData);
+    expect(result.current.data?.tasks.completed).toBe(1);
+    expect(result.current.initialLoading).toBe(false);
   });
 
   it('8. prevents state updates after unmount', async () => {

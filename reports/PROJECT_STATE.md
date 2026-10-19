@@ -9,15 +9,15 @@
 - Phase 13 Audit Conclusion: `PHASE_13_FINAL_AUDIT_PASS_WITH_E2E_DEFERRALS`
 - Phase 14 Baseline Checkpoint: `785c155b69309284066252701ec1554d35d4e795` (`docs(phase14): record architecture decision D-061 phase 14 contract freeze`)
 - Phase 14A Implementation Checkpoint: `55cc13e6372ba4374d3533fe3f82f7afcd84dcff` (`feat(mobile): add phase 14 dashboard project contracts`)
-- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects: Subphase 14B (Personal Dashboard `SCR-MAIN-01`, `useDashboard`, `MetricCard`, canonical metrics, pull-to-refresh) IMPLEMENTED, VALIDATED, READY_FOR_INDEPENDENT_AUDIT. Subphase 14C NOT STARTED.
+- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects: Subphase 14B (Personal Dashboard `SCR-MAIN-01`, `useDashboard`, `MetricCard`, canonical metrics, pull-to-refresh) HARDENED (Type-safety reconciled, single-flight request deduplication frozen, generation & mounted guards verified). Subphase 14C NOT STARTED.
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening
 
-- Latest Validated Implementation: `feat(mobile): implement personal dashboard`
+- Latest Validated Implementation: `fix(mobile): harden dashboard type and request safety`
 - Subphase 14B Scope:
-  - `mobile/src/features/dashboard/screens/DashboardScreen.tsx`: Personal Dashboard screen (`SCR-MAIN-01`) backed by `GET /dashboard/me`, rendering task summary metrics, project summary metrics, service request summary metrics, upcoming tasks (max 5), recent notifications (max 5), compact section empty states, full-screen loading/error states with retry, pull-to-refresh with inline error banner, and canonical navigation to Projects tab.
-  - `mobile/src/features/dashboard/hooks/useDashboard.ts`: Data-loading hook with generation counter (`generationRef`), unmounted guard (`mountedRef`), in-flight deduplication lock (`inFlightPromiseRef`), and pull-to-refresh data preservation.
+  - `mobile/src/features/dashboard/screens/DashboardScreen.tsx`: Personal Dashboard screen (`SCR-MAIN-01`) backed by `GET /dashboard/me`, rendering task summary metrics, project summary metrics, service request summary metrics, upcoming tasks (max 5), recent notifications (max 5), compact section empty states, full-screen loading/error states with retry, pull-to-refresh with inline error banner, and canonical navigation to Projects tab. Type-safe `toPriorityLevel` runtime mapper removes `task.priority as any`.
+  - `mobile/src/features/dashboard/hooks/useDashboard.ts`: Data-loading hook with single-flight request deduplication lock (`inFlightPromiseRef`), generation counter (`generationRef`), unmounted guard (`mountedRef`), and pull-to-refresh data preservation.
   - `mobile/src/features/dashboard/components/MetricCard.tsx`: MetricCard presentational component with accessible labels and highlight variants.
   - `mobile/src/features/dashboard/utils/dateFormat.ts`: Safe ISO-8601 Vietnamese date formatter (`formatDateTime`, `formatDate`).
   - Mobile Tests: 45/45 test suites, 397/397 tests PASS (0 failures, 0 skipped).

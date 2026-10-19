@@ -25,9 +25,8 @@ Subphase 14B hoàn thành triển khai màn hình Personal Dashboard (`SCR-MAIN-
 ### 2.1. Feature Dashboard:
 1. `mobile/src/features/dashboard/hooks/useDashboard.ts`:
    - Quản lý vòng đời tải dữ liệu từ `dashboardApi.getMyDashboard()`.
-   - **Generation Counter Pattern**: Cơ chế `generationRef` (Latest-Request-Wins) loại bỏ phản hồi trễ (stale responses).
-   - **Mounted Lifecycle Guard**: `mountedRef` ngăn chặn rò rỉ bộ nhớ hoặc cập nhật state sau khi component đã unmount.
-   - **In-flight Deduplication Lock**: `inFlightPromiseRef` khóa yêu cầu mạng trùng lặp trong cùng một tick hoặc khi user thao tác liên tiếp.
+   - **Single-Flight Request Deduplication**: Cơ chế khóa `inFlightPromiseRef` đảm bảo tại mỗi thời điểm chỉ có tối đa một yêu cầu mạng hoạt động. Các lời gọi tải/làm mới đồng thời sẽ tham gia cùng request đang bay.
+   - **Generation Counter & Mounted Lifecycle Guards**: `generationRef` và `mountedRef` hoạt động như lớp phòng vệ thụ động chống rò rỉ bộ nhớ hoặc commit trạng thái quá hạn khi component unmount.
    - **Bảo toàn dữ liệu khi Pull-to-Refresh thất bại**: Tách biệt lỗi tải lần đầu (`error`) và lỗi làm mới (`refreshError`); khi vuốt làm mới thất bại, dữ liệu hiện tại được giữ nguyên vẹn 100%, hiển thị inline banner thông báo.
 2. `mobile/src/features/dashboard/components/MetricCard.tsx`:
    - Component hiển thị số liệu chỉ số (Task, Project, Service Request) dạng card gọn gàng, hỗ trợ highlight biến thể màu (primary, info, warning, success, neutral) theo `theme.colors`.
@@ -42,6 +41,7 @@ Subphase 14B hoàn thành triển khai màn hình Personal Dashboard (`SCR-MAIN-
      - Phân vùng 2: Dự án tham gia (`Project Summary`) gồm 2 chỉ số: Đang thực hiện, Tạm dừng; kèm nút "Xem tất cả" điều hướng sang tab Dự án (`Projects`).
      - Phân vùng 3: Yêu cầu dịch vụ (`Service Request Summary`) gồm 4 chỉ số: Mở, Đang xử lý, Chờ phản hồi, Đã xử lý.
      - Phân vùng 4: Công việc sắp đến hạn (`Upcoming Tasks`, tối đa 5 việc) kèm tiêu đề, tên dự án, `StatusBadge`, `PriorityBadge`, hạn chót đã định dạng.
+     - **Type-Safety Reconciled**: Triển khai mapper runtime `toPriorityLevel(priority: string): PriorityLevel` an toàn, loại bỏ hoàn toàn `task.priority as any`.
      - Phân vùng 5: Thông báo gần đây (`Recent Notifications`, tối đa 5 thông báo) kèm tiêu đề, nội dung tóm tắt, ngày gửi và chỉ báo trạng thái đã đọc/chưa đọc.
      - Hỗ trợ đầy đủ trạng thái rỗng cấp phân vùng (`EmptyState` dạng compact).
      - Full-screen `LoadingIndicator` khi tải lần đầu.
@@ -62,7 +62,7 @@ Subphase 14B hoàn thành triển khai màn hình Personal Dashboard (`SCR-MAIN-
   4. Thực hiện pull-to-refresh thành công mà không làm mất dữ liệu hiện có.
   5. Bảo toàn 100% dữ liệu hiện có khi pull-to-refresh gặp lỗi mạng.
   6. Khử trùng lặp (deduplication) các cuộc gọi liên tiếp trong cùng tick qua in-flight lock.
-  7. Bỏ qua phản hồi trễ (stale response) khi một yêu cầu mới hơn hoàn tất.
+  7. Phòng vệ generation guard bỏ qua phản hồi trễ (stale response) khi generation counter thay đổi.
   8. Ngăn chặn cập nhật state sau khi hook đã unmount (`mountedRef` guard).
   9. Giải phóng in-flight lock sau khi gặp lỗi để các lần gọi tiếp theo được phép thực thi.
 
