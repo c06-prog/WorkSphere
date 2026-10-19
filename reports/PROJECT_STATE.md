@@ -8,20 +8,21 @@
 - Phase 13B Checkpoint: `d81717ecda52fd6883746f1ad4234979a6eceaed` (`feat(mobile): implement auth provider and login flow`)
 - Phase 13B Hardening: `93ae7a33c4ee87870416fe9ccf0ac798c3daeabc` (`fix(mobile): harden auth provider concurrency`)
 - Phase 13C Strict Eligibility Checkpoint: `d59457278c2c43f02e0187bf6a3e5c7c0415cd6c` (`fix(mobile): tighten refresh eligibility and cleanup`)
-- Current Status: Phase 13 Subphase 13E Forgot Password and Reset Password COMPLETED & VALIDATED
+- Current Status: Phase 13 Subphase 13F Settings, Security Hardening and Finalization COMPLETED & VALIDATED
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening
 
-- Latest Validated Implementation: `feat(mobile): implement forgot and reset password`
-- Subphase 13E Scope:
-  - `mobile/src/features/auth/screens/ForgotPasswordScreen.tsx`: Forgot password screen (`SCR-AUTH-03`) utilizing `POST /auth/forgot-password` with email normalization, anti-enumeration invariant (uniform safe success feedback), and duplicate submission lock.
-  - `mobile/src/features/auth/screens/ResetPasswordScreen.tsx`: Reset password screen (`SCR-AUTH-04`) utilizing `POST /auth/reset-password` supporting optional typed route parameter `token` with fallback manual entry, untrimmed password handling, specific backend error code placement mapping, and navigation reset to Login.
-  - `mobile/__tests__/navigation.test.tsx`: Route shell assertions updated to production `SCR-AUTH-04` components.
-  - Mobile Tests: 37/37 test suites, 314/314 tests PASS (0 failures, 0 skipped).
+- Latest Validated Implementation: `feat(mobile): implement settings and finalize phase 13`
+- Subphase 13F Scope:
+  - `mobile/src/features/more/screens/SettingsScreen.tsx`: Settings screen (`SCR-ACC-03`, `SCR-ACC-04`) rendering safe account summary, authoritative app version (`0.0.1`), informational preferences (theme, notification, policy `SETTINGS_POLICY_URL_DEFERRED`), navigation to Profile, and duplicate-protected logout confirmation dialog.
+  - `mobile/src/features/more/screens/MoreScreen.tsx`: Added navigation button to Settings (`btn-navigate-settings`).
+  - `mobile/src/app/navigation/MainTabNavigator.tsx`: Registered `Settings` protected route.
+  - `mobile/src/shared/config/appInfo.ts`: Authoritative app version source from package metadata (`MOBILE_APP_VERSION_NATIVE_WIRING_DEFERRED`).
+  - Mobile Tests: 38/38 test suites, 325/325 tests PASS (0 failures, 0 skipped).
   - TypeScript & Lint: `tsc --noEmit` PASS (0 errors), `eslint .` PASS (0 errors, 0 warnings).
-  - Android Build: `.\gradlew.bat assembleDebug --no-daemon` BUILD SUCCESSFUL (203 actionable tasks, exit code 0).
-  - Dedicated Report: `reports/PHASE_13E_FORGOT_RESET_REPORT.md`.
+  - Android Build: `.\gradlew.bat clean && .\gradlew.bat assembleDebug --no-daemon` BUILD SUCCESSFUL (203 actionable tasks, exit code 0).
+  - Dedicated Report: `reports/PHASE_13F_SETTINGS_FINAL_REPORT.md`.
 
 
 

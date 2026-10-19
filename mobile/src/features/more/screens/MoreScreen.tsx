@@ -22,6 +22,14 @@ export function MoreScreen() {
           onPress={() => navigation.navigate('Profile')}
           accessibilityLabel="Xem hồ sơ cá nhân"
           testID="btn-navigate-profile"
+          style={styles.buttonSpacing}
+        />
+        <AppButton
+          title="Cài đặt ứng dụng"
+          variant="outline"
+          onPress={() => navigation.navigate('Settings')}
+          accessibilityLabel="Xem cài đặt ứng dụng"
+          testID="btn-navigate-settings"
         />
       </View>
     </PlaceholderScreen>
@@ -31,6 +39,9 @@ export function MoreScreen() {
 const styles = StyleSheet.create({
   actionContainer: {
     marginTop: 16,
+  },
+  buttonSpacing: {
+    marginBottom: 12,
   },
 });
 

@@ -103,6 +103,26 @@ describe('RootNavigator Session Abstraction & Navigation Shell', () => {
     });
   });
 
+  test('Main tab navigation: navigating from More to Settings works', async () => {
+    const { getByTestId, getByLabelText, getByText } = await render(
+      <AppRoot sessionState="AUTHENTICATED" />
+    );
+
+    // Navigate to More tab
+    fireEvent.press(getByLabelText('Tab 5: Thêm'));
+    await waitFor(() => {
+      expect(getByTestId('screen-more')).toBeTruthy();
+      expect(getByTestId('btn-navigate-settings')).toBeTruthy();
+    });
+
+    // Press Settings button
+    fireEvent.press(getByTestId('btn-navigate-settings'));
+    await waitFor(() => {
+      expect(getByTestId('screen-settings')).toBeTruthy();
+      expect(getByText('SCR-ACC-03')).toBeTruthy();
+    });
+  });
+
   test('Auth stack navigation: navigating from Login to ForgotPassword works', async () => {
     const { getByTestId, getByText } = await render(<AppRoot sessionState="UNAUTHENTICATED" />);
 

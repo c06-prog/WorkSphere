@@ -4,7 +4,7 @@ import { DashboardScreen } from '../../features/dashboard/screens';
 import { ProjectsScreen } from '../../features/projects/screens';
 import { TasksScreen } from '../../features/tasks/screens';
 import { ServiceRequestsScreen } from '../../features/serviceRequests/screens';
-import { MoreScreen } from '../../features/more/screens';
+import { MoreScreen, SettingsScreen } from '../../features/more/screens';
 import {
   ProfileScreen,
   EditProfileScreen,
@@ -115,6 +115,15 @@ export function MainTabNavigator() {
           tabBarButton: () => null,
           tabBarItemStyle: { display: 'none' },
           headerTitle: 'Đổi mật khẩu',
+        }}
+      />
+      <Tab.Screen
+        name="Settings"
+        component={SettingsScreen}
+        options={{
+          tabBarButton: () => null,
+          tabBarItemStyle: { display: 'none' },
+          headerTitle: 'Cài đặt',
         }}
       />
     </Tab.Navigator>
