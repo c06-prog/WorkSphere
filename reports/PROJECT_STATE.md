@@ -7,7 +7,7 @@
 - Phase 13 Final Implementation Checkpoint: `29c68ab9e00fbc3faea52106e182ff9f9905ff01` (`feat(mobile): implement settings and finalize phase 13`)
 - Phase 13 Final Reconciliation Checkpoint: `0f17f6be5ea267518fc66a97631f1b351a430b1a` (`docs(audit): reconcile project state and handoff for phase 13 final audit`)
 - Phase 13 Audit Conclusion: `PHASE_13_FINAL_AUDIT_PASS_WITH_E2E_DEFERRALS`
-- Current Status: Phase 13 Mobile Authentication IMPLEMENTED, AUDITED, HARDENED, RECONCILED, MEMORY_CHECKPOINT_CLOSED
+- Current Status: Phase 13 Mobile Authentication IMPLEMENTED, AUDITED, HARDENED, RECONCILED, MEMORY_CHECKPOINT_CLOSED. Phase 14 Mobile Dashboard and Projects: PRE-AUDIT COMPLETED (AUDIT_COMPLETE), Implementation NOT STARTED.
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening
@@ -336,6 +336,10 @@
 - **Giai đoạn 14: Mobile Dashboard và Projects** (theo đúng `docs/08_DEVELOPMENT_ROADMAP.md` Mục 18, P0).
   - Scope: Dashboard cá nhân (tích hợp `GET /api/v1/dashboard/me`), Danh sách dự án, Chi tiết dự án, Thành viên dự án.
   - Phụ thuộc: Phase 13 Mobile Authentication đã hoàn tất và kiểm toán độc lập PASS (`PHASE_13_FINAL_AUDIT_PASS_WITH_E2E_DEFERRALS`).
+  - Pre-audit Report: `reports/PRE_PHASE_14_DASHBOARD_PROJECTS_AUDIT.md`.
+  - Phase 14 Audit Status: `AUDIT_COMPLETE`.
+  - Phase 14 Implementation Status: `NOT STARTED`.
+  - Next Action: `PHASE 14 DECISION FREEZE / CONTRACT RECONCILIATION`.
 
 ## Trust Rules
 
