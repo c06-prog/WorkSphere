@@ -14,7 +14,7 @@
  * - Permission-gated Create Project button checking PROJECT_CREATE.
  */
 
-import React, { useContext } from 'react';
+import React from 'react';
 import {
   FlatList,
   Pressable,
@@ -24,10 +24,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
 import { useAppTheme } from '../../../app/providers/ThemeProvider';
-import { AuthContext } from '../../../app/auth/AuthProvider';
-import { MainTabNavProp } from '../../../app/navigation/types';
 import { EmptyState, ErrorState, LoadingIndicator } from '../../../shared/components';
 import { SearchBar } from '../../../shared/components/SearchBar';
 import { ProjectStatus, ProjectSummary } from '../api/projectTypes';
@@ -39,18 +36,21 @@ interface StatusFilterOption {
   label: string;
 }
 
+/**
+ * Canonical Project List Status Filter Chips (SCR-PRJ-01)
+ * Source: design/02_SCREEN_INVENTORY.md & design/04_WIREFRAME_SPEC.md
+ * Canonical chips: Tất cả, Đang chạy (ACTIVE), Bản nháp (DRAFT), Tạm dừng (ON_HOLD).
+ * COMPLETED remains supported by backend and transport types, but is excluded from primary list chips per canonical UI wireframe.
+ */
 const STATUS_FILTERS: StatusFilterOption[] = [
   { status: undefined, label: 'Tất cả' },
   { status: 'ACTIVE', label: 'Đang chạy' },
   { status: 'DRAFT', label: 'Bản nháp' },
   { status: 'ON_HOLD', label: 'Tạm dừng' },
-  { status: 'COMPLETED', label: 'Hoàn thành' },
 ];
 
 export function ProjectsScreen() {
   const theme = useAppTheme();
-  const navigation = useNavigation<MainTabNavProp<'Projects'>>();
-  const auth = useContext(AuthContext);
 
   const {
     projects,
@@ -70,16 +70,6 @@ export function ProjectsScreen() {
     retryPagination,
     clearFilters,
   } = useProjects();
-
-  const canCreateProject = auth?.currentUser?.permissions?.includes('PROJECT_CREATE') ?? false;
-
-  const handleCardPress = (projectId: string) => {
-    navigation.navigate('ProjectDetail', { projectId });
-  };
-
-  const handleCreatePress = () => {
-    navigation.navigate('CreateProject');
-  };
 
   const isQueryActive = search.trim().length > 0 || statusFilter !== undefined;
 
@@ -121,7 +111,7 @@ export function ProjectsScreen() {
     <View style={styles.headerContainer}>
       <Text style={styles.screenIdHidden}>SCR-PRJ-01</Text>
 
-      {/* Top Title Bar with optional Create Action */}
+      {/* Top Title Bar */}
       <View style={styles.topBar}>
         <View>
           <Text
@@ -134,29 +124,6 @@ export function ProjectsScreen() {
             SCR-PRJ-01: Quản lý và theo dõi tiến độ dự án
           </Text>
         </View>
-
-        {canCreateProject ? (
-          <Pressable
-            onPress={handleCreatePress}
-            style={({ pressed }) => [
-              styles.createButton,
-              {
-                backgroundColor: theme.colors.primary,
-                borderRadius: theme.radii.medium,
-                paddingHorizontal: theme.spacing.md,
-                paddingVertical: theme.spacing.xs,
-                opacity: pressed ? 0.85 : 1,
-              },
-            ]}
-            testID="btn-create-project"
-            accessibilityRole="button"
-            accessibilityLabel="Tạo dự án mới"
-          >
-            <Text style={[theme.typography.body, styles.createButtonText, { color: theme.colors.onPrimary }]}>
-              + Tạo mới
-            </Text>
-          </Pressable>
-        ) : null}
       </View>
 
       {/* Controlled Search Bar */}
@@ -299,8 +266,6 @@ export function ProjectsScreen() {
       <EmptyState
         title="Bạn chưa tham gia dự án nào"
         description="Bạn chưa được phân công hoặc chưa tham gia vào bất kỳ dự án nào trong hệ thống."
-        actionTitle={canCreateProject ? 'Tạo dự án mới' : undefined}
-        onAction={canCreateProject ? handleCreatePress : undefined}
         testID="projects-empty-all"
       />
     );
@@ -311,7 +276,7 @@ export function ProjectsScreen() {
       <FlatList<ProjectSummary>
         data={projects}
         keyExtractor={item => item.id}
-        renderItem={({ item }) => <ProjectCard project={item} onPress={handleCardPress} />}
+        renderItem={({ item }) => <ProjectCard project={item} />}
         ListHeaderComponent={renderHeader}
         ListFooterComponent={renderFooter}
         ListEmptyComponent={renderEmpty}
@@ -362,14 +327,6 @@ const styles = StyleSheet.create({
   },
   pageTitle: {
     fontWeight: '700',
-  },
-  createButton: {
-    minHeight: 36,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  createButtonText: {
-    fontWeight: '600',
   },
   filterChipsRow: {
     flexDirection: 'row',

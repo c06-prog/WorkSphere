@@ -148,37 +148,45 @@ describe('ProjectsScreen (SCR-PRJ-01)', () => {
     expect(getByText('WorkSphere Platform')).toBeTruthy();
   });
 
-  it('4. navigates to ProjectDetail with projectId when project card is pressed', async () => {
+  it('4. renders non-interactive Project cards in 14C without attempting ProjectDetail navigation', async () => {
     (useProjects as jest.Mock).mockReturnValue(defaultMockHookReturn);
 
     const { getByTestId } = await renderScreenWithAuth();
 
     const card = getByTestId('project-card-prj-2026-001');
+    expect(card).toBeTruthy();
+
+    // In Phase 14C, cards are non-interactive summary containers; pressing does not trigger navigation
     fireEvent.press(card);
-
-    expect(mockNavigate).toHaveBeenCalledWith('ProjectDetail', {
-      projectId: 'f81d4fae-7dec-11d0-a765-00a0c91e6bf6',
-    });
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 
-  it('5. shows Create Project button when user has PROJECT_CREATE permission and navigates', async () => {
+  it('5. does not render Create Project button while CreateProject capability is deferred to 14E', async () => {
     (useProjects as jest.Mock).mockReturnValue(defaultMockHookReturn);
 
-    const { getByTestId } = await renderScreenWithAuth(['PROJECT_READ', 'PROJECT_CREATE']);
-
-    const createBtn = getByTestId('btn-create-project');
-    expect(createBtn).toBeTruthy();
-
-    fireEvent.press(createBtn);
-    expect(mockNavigate).toHaveBeenCalledWith('CreateProject');
-  });
-
-  it('6. hides Create Project button when user lacks PROJECT_CREATE permission', async () => {
-    (useProjects as jest.Mock).mockReturnValue(defaultMockHookReturn);
-
-    const { queryByTestId } = await renderScreenWithAuth(['PROJECT_READ']);
+    // Even if user has PROJECT_CREATE permission, client capability is deferred until 14E
+    const { queryByTestId } = await renderScreenWithAuth(['PROJECT_READ', 'PROJECT_CREATE']);
 
     expect(queryByTestId('btn-create-project')).toBeNull();
+  });
+
+  it('6. exposes exact canonical status filter chips (Tất cả, Đang chạy, Bản nháp, Tạm dừng)', async () => {
+    (useProjects as jest.Mock).mockReturnValue(defaultMockHookReturn);
+
+    const { getByTestId, queryByTestId, getByText } = await renderScreenWithAuth();
+
+    expect(getByTestId('filter-chip-all')).toBeTruthy();
+    expect(getByTestId('filter-chip-active')).toBeTruthy();
+    expect(getByTestId('filter-chip-draft')).toBeTruthy();
+    expect(getByTestId('filter-chip-on_hold')).toBeTruthy();
+
+    expect(getByText('Tất cả')).toBeTruthy();
+    expect(getByText('Đang chạy')).toBeTruthy();
+    expect(getByText('Bản nháp')).toBeTruthy();
+    expect(getByText('Tạm dừng')).toBeTruthy();
+
+    // COMPLETED is excluded from primary status filter chips per canonical wireframe
+    expect(queryByTestId('filter-chip-completed')).toBeNull();
   });
 
   it('7. displays filter-specific empty state when query returns no results', async () => {

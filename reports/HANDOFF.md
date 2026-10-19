@@ -4,9 +4,9 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: PHASE 14C - PROJECT LIST (SCR-PRJ-01)
-- Status: Phase 14C IMPLEMENTED, AUDITED, TESTED (useProjects hook with 300ms debounce and latest-query-wins concurrency, ProjectCard component, ProjectsScreen container, 48/48 test suites, 425/425 tests pass, clean Android build). READY FOR 14D PROJECT DETAIL.
-- Baseline Checkpoint: `232e63dd4d99e5ae3f85a6870665daf7a1740698`
+- Current Task: PHASE 14C - PROJECT LIST (SCR-PRJ-01) HARDENING
+- Status: Phase 14C IMPLEMENTED, AUDITED, HARDENED, TESTED (useProjects hook with 300ms debounce and latest-query-wins concurrency, non-interactive ProjectCard staged for 14D, canonical 4-chip filter, capability-gated CreateProject staged for 14E, 48/48 test suites, 425/425 tests pass, clean Android build). READY FOR 14D PROJECT DETAIL.
+- Baseline Checkpoint: `3ca43fd70e071fe4d302ef134b935231b6aae37a`
 - Phase 14C Report: `reports/PHASE_14C_PROJECT_LIST_REPORT.md`
 - Next Action: `PHASE 14D - PROJECT DETAIL (SCR-PRJ-02)`
 - Scope Boundary:

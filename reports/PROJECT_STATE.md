@@ -9,16 +9,16 @@
 - Phase 13 Audit Conclusion: `PHASE_13_FINAL_AUDIT_PASS_WITH_E2E_DEFERRALS`
 - Phase 14 Baseline Checkpoint: `785c155b69309284066252701ec1554d35d4e795` (`docs(phase14): record architecture decision D-061 phase 14 contract freeze`)
 - Phase 14A Implementation Checkpoint: `55cc13e6372ba4374d3533fe3f82f7afcd84dcff` (`feat(mobile): add phase 14 dashboard project contracts`)
-- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects: Subphase 14C (Project List `SCR-PRJ-01`, `useProjects`, `ProjectCard`, 300ms debounce, status filter chips, FlatList pagination, pull-to-refresh, latest-query-wins concurrency) IMPLEMENTED & TESTED. Subphase 14D NOT STARTED.
+- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects: Subphase 14C (Project List `SCR-PRJ-01`, `useProjects`, `ProjectCard`, 300ms debounce, status filter chips, FlatList pagination, pull-to-refresh, latest-query-wins concurrency, capability gating for staged routes) IMPLEMENTED, HARDENED & TESTED. Subphase 14D NOT STARTED.
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening
 
-- Latest Validated Implementation: `feat(mobile): implement project list screen`
+- Latest Validated Implementation: `fix(mobile): harden project list staged navigation`
 - Subphase 14C Scope:
   - `mobile/src/features/projects/hooks/useProjects.ts`: Data-loading hook with 300ms search debouncing, status filter handling, FlatList pagination (`page=0, size=20, sort=createdAt,desc`), pull-to-refresh, retryPagination, and `queryGenerationRef` latest-query-wins concurrency.
-  - `mobile/src/features/projects/components/ProjectCard.tsx`: ProjectCard component rendering canonical code, name, description, status badge, priority badge, manager, progress bar (clamped 0..100), member count, task summary metrics, formatted date, >=48dp touch target, and security protection (no raw UUIDs rendered).
-  - `mobile/src/features/projects/screens/ProjectsScreen.tsx`: Complete screen container with search bar, status filter chips, FlatList, pull-to-refresh, initial/refresh/pagination error states, permission check (`PROJECT_CREATE`), and differentiated empty states.
+  - `mobile/src/features/projects/components/ProjectCard.tsx`: ProjectCard component rendering canonical code, name, description, status badge, priority badge, manager, progress bar (clamped 0..100), member count, task summary metrics, formatted date, >=48dp touch target, non-interactive until Phase 14D registers `ProjectDetail`, and security protection (no raw UUIDs rendered).
+  - `mobile/src/features/projects/screens/ProjectsScreen.tsx`: Complete screen container with search bar, 4 canonical status filter chips (`Tất cả`, `Đang chạy`, `Bản nháp`, `Tạm dừng`), FlatList, pull-to-refresh, initial/refresh/pagination error states, staged navigation gating (`CreateProject` enabled in 14E), and differentiated empty states.
   - Mobile Tests: 48/48 test suites, 425/425 tests PASS (0 failures, 0 skipped).
   - TypeScript & Lint: `tsc --noEmit` PASS (0 errors), `eslint .` PASS (0 errors, 0 warnings).
   - Android Build: `.\gradlew.bat assembleDebug --no-daemon` BUILD SUCCESSFUL (203 actionable tasks, exit code 0).

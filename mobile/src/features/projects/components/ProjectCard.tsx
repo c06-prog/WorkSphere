@@ -19,38 +19,33 @@
  */
 
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { useAppTheme } from '../../../app/providers/ThemeProvider';
 import { PriorityBadge, StatusBadge } from '../../../shared/components';
 import { ProjectSummary } from '../api/projectTypes';
 
 export interface ProjectCardProps {
   project: ProjectSummary;
-  onPress: (projectId: string) => void;
+  onPress?: (projectId: string) => void;
   testID?: string;
 }
 
-export function ProjectCard({ project, onPress, testID }: ProjectCardProps) {
+export function ProjectCard({ project, onPress: _onPress, testID }: ProjectCardProps) {
   const theme = useAppTheme();
 
   // Defensive progress clamping: 0..100
   const clampedProgress = Math.max(0, Math.min(100, Math.round(project.progressPercent ?? 0)));
-
-  const handlePress = () => {
-    onPress(project.id);
-  };
 
   const formattedDate = project.plannedEndDate
     ? project.plannedEndDate.split('-').reverse().join('/')
     : 'Chưa xác định';
 
   return (
-    <Pressable
-      onPress={handlePress}
+    <View
       testID={testID ?? `project-card-${project.code.toLowerCase()}`}
-      accessibilityRole="button"
+      accessible={true}
       accessibilityLabel={`Dự án ${project.code}: ${project.name}, Trạng thái: ${project.status}, Tiến độ: ${clampedProgress} phần trăm, Quản lý: ${project.manager.fullName}`}
-      style={({ pressed }) => [
+      style={[
         styles.card,
         {
           backgroundColor: theme.colors.surface,
@@ -58,7 +53,6 @@ export function ProjectCard({ project, onPress, testID }: ProjectCardProps) {
           borderRadius: theme.radii.medium,
           padding: theme.spacing.md,
           marginBottom: theme.spacing.sm,
-          opacity: pressed ? 0.85 : 1,
         },
       ]}
     >
@@ -150,7 +144,7 @@ export function ProjectCard({ project, onPress, testID }: ProjectCardProps) {
           </Text>
         </Text>
       </View>
-    </Pressable>
+    </View>
   );
 }
 

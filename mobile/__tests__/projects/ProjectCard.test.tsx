@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, fireEvent } from '@testing-library/react-native';
+import { render } from '@testing-library/react-native';
 import { ProjectCard } from '../../src/features/projects/components/ProjectCard';
 import { ProjectSummary } from '../../src/features/projects/api/projectTypes';
 import { AppProviders } from '../../src/app/providers';
@@ -34,11 +34,10 @@ describe('ProjectCard Component', () => {
     updatedAt: '2026-10-19T08:00:00Z',
   };
 
-  it('renders all canonical project fields correctly', async () => {
-    const handlePress = jest.fn();
-    const { getByText, queryByText } = await render(
+  it('renders all canonical project fields correctly with accessible summary', async () => {
+    const { getByText, queryByText, getByTestId } = await render(
       <AppProviders>
-        <ProjectCard project={mockProject} onPress={handlePress} />
+        <ProjectCard project={mockProject} />
       </AppProviders>
     );
 
@@ -53,31 +52,35 @@ describe('ProjectCard Component', () => {
     expect(getByText('8 người')).toBeTruthy();
     expect(getByText('22/30')).toBeTruthy();
 
+    // Accessible container summary
+    const card = getByTestId('project-card-prj-2026-001');
+    expect(card.props.accessibilityLabel).toContain('Dự án PRJ-2026-001: WorkSphere Platform Revamp');
+    expect(card.props.accessibilityLabel).toContain('Trạng thái: ACTIVE');
+    expect(card.props.accessibilityLabel).toContain('Tiến độ: 75 phần trăm');
+    expect(card.props.accessibilityLabel).toContain('Quản lý: Nguyễn Văn A');
+
     // Security check: raw UUIDs must NOT be rendered
     expect(queryByText('f81d4fae-7dec-11d0-a765-00a0c91e6bf6')).toBeNull();
     expect(queryByText('e92d4fae-7dec-11d0-a765-00a0c91e6bf7')).toBeNull();
   });
 
-  it('triggers onPress with project.id UUID when tapped', async () => {
-    const handlePress = jest.fn();
+  it('remains a non-interactive summary container in Phase 14C (no button role)', async () => {
     const { getByTestId } = await render(
       <AppProviders>
-        <ProjectCard project={mockProject} onPress={handlePress} />
+        <ProjectCard project={mockProject} />
       </AppProviders>
     );
 
     const card = getByTestId('project-card-prj-2026-001');
-    fireEvent.press(card);
-
-    expect(handlePress).toHaveBeenCalledTimes(1);
-    expect(handlePress).toHaveBeenCalledWith('f81d4fae-7dec-11d0-a765-00a0c91e6bf6');
+    // In Phase 14C, ProjectCard does NOT expose accessibilityRole="button"
+    expect(card.props.accessibilityRole).toBeUndefined();
   });
 
   it('defensively clamps progress percentage to 0..100', async () => {
     const overflowProject = { ...mockProject, progressPercent: 120 };
     const { getByText } = await render(
       <AppProviders>
-        <ProjectCard project={overflowProject} onPress={jest.fn()} />
+        <ProjectCard project={overflowProject} />
       </AppProviders>
     );
 

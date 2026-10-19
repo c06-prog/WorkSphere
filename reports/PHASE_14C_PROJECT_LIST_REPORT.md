@@ -55,9 +55,12 @@ The `useProjects` hook implements monotonic generation tracking (`queryGeneratio
 ### D. Security & Accessibility
 
 - **No Raw UUIDs in UI**: Project UUIDs are never exposed in user-facing text elements. Accessible labels identify cards by code and name (`Dự án PRJ-001: WorkSphere Platform`).
-- **Touch Target**: Project cards and action buttons maintain $\ge 48\times 48\,\text{dp}$ touch targets conforming to accessibility guidelines.
+- **Touch Target**: Project cards maintain $\ge 48\times 48\,\text{dp}$ touch targets conforming to accessibility guidelines.
 - **Clamped Progress**: `progressPercent` values are clamped safely to the $0..100$ range before rendering.
-- **Permission Gating**: Entry to Create Project (`+ Tạo mới`) is gated by checking `auth.user.permissions.includes('PROJECT_CREATE')`.
+- **Capability Gating & Staged Navigation**:
+  - `ProjectCard`: Rendered non-interactively without `onPress` navigation to prevent routing to unmounted `ProjectDetail` until Phase 14D.
+  - `ProjectsScreen`: `+ Tạo mới` button and empty state create actions are gated until Phase 14E provides the real `CreateProject` destination, eliminating broken route navigation while preserving permission detection.
+- **Canonical Filter Chips**: Reconciled to exact wireframe intersection (`Tất cả`, `Đang chạy (ACTIVE)`, `Bản nháp (DRAFT)`, `Tạm dừng (ON_HOLD)`). `COMPLETED` is excluded from primary chips per wireframe spec.
 
 ---
 
