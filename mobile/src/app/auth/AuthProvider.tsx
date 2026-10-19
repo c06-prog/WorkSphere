@@ -8,7 +8,7 @@ import React, {
   ReactNode,
 } from 'react';
 import { authReducer, initialAuthState } from './authReducer';
-import type { AuthContextValue, AuthState } from './authTypes';
+import type { AuthContextValue, AuthState, AuthUser } from './authTypes';
 import { authApi } from '../../features/auth/api/authApi';
 import { mapAuthError } from '../../features/auth/errors/authErrorMapper';
 import { secureStorage } from '../../shared/storage/secureStorage';
@@ -344,6 +344,12 @@ export function AuthProvider({ children, initialState }: AuthProviderProps) {
     }
   };
 
+  const updateCurrentUser = useCallback((user: AuthUser): void => {
+    if (mountedRef.current) {
+      dispatch({ type: 'USER_PROFILE_UPDATED', payload: { user } });
+    }
+  }, []);
+
   const contextValue: AuthContextValue = {
     sessionState: state.sessionState,
     operationState: state.operationState,
@@ -357,6 +363,7 @@ export function AuthProvider({ children, initialState }: AuthProviderProps) {
     logoutAll,
     retryBootstrap,
     clearAuthError,
+    updateCurrentUser,
   };
 
   return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>;

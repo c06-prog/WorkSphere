@@ -1,6 +1,8 @@
 import type { AuthUser } from '../../features/auth/api/authTypes';
 import type { AuthPresentationError } from '../../features/auth/errors/authErrorMapper';
 
+export type { AuthUser };
+
 export type SessionState = 'INITIALIZING' | 'UNAUTHENTICATED' | 'AUTHENTICATED';
 
 export type AuthOperationState = 'idle' | 'authenticating' | 'signingOut' | 'error';
@@ -25,6 +27,7 @@ export type AuthAction =
   | { type: 'LOGIN_FAILED'; payload: { error: AuthPresentationError } }
   | { type: 'LOGOUT_STARTED' }
   | { type: 'LOGOUT_COMPLETED' }
+  | { type: 'USER_PROFILE_UPDATED'; payload: { user: AuthUser } }
   | { type: 'CLEAR_AUTH_ERROR' };
 
 export interface AuthContextValue {
@@ -40,4 +43,5 @@ export interface AuthContextValue {
   logoutAll?: () => Promise<void>;
   retryBootstrap: () => Promise<void>;
   clearAuthError: () => void;
+  updateCurrentUser?: (user: AuthUser) => void;
 }

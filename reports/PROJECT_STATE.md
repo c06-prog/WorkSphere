@@ -7,20 +7,22 @@
 - Pre-Phase 13 Readiness Base: `a9c59259904f2dd6e9bd38e4ca63c1a88c89c474` (`feat(mobile): finalize pre-auth runtime readiness`)
 - Phase 13B Checkpoint: `d81717ecda52fd6883746f1ad4234979a6eceaed` (`feat(mobile): implement auth provider and login flow`)
 - Phase 13B Hardening: `93ae7a33c4ee87870416fe9ccf0ac798c3daeabc` (`fix(mobile): harden auth provider concurrency`)
-- Current Status: Phase 13 Subphase 13C Strict Eligibility and Single Cleanup Owner COMPLETED & VALIDATED
+- Phase 13C Strict Eligibility Checkpoint: `d59457278c2c43f02e0187bf6a3e5c7c0415cd6c` (`fix(mobile): tighten refresh eligibility and cleanup`)
+- Current Status: Phase 13 Subphase 13D Profile, Edit Profile, and Change Password COMPLETED & VALIDATED
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening
 
-- Latest Validated Implementation: `fix(mobile): tighten refresh eligibility and cleanup`
-- Subphase 13C Strict Eligibility and Single Cleanup Owner Patch:
-  - `mobile/src/shared/api/apiClient.ts`: `isEligibleForRefresh` strictly requires valid `ApiResponse` error envelope with `success === false` and `code === 'UNAUTHORIZED'`. Non-envelope 401s or non-UNAUTHORIZED codes never trigger refresh. Added comprehensive matrix tests for payloads A through F.
-  - `mobile/src/app/auth/refreshCoordinator.ts`: Removed redundant `clearSessionCredentials` on server refresh rejection. `AuthProvider`'s unauthorized handler is established as the sole terminal cleanup owner for server rejections. `refreshCoordinator` retains cleanup ownership strictly for local atomic commit failures (Keychain hardware write error).
-  - Mobile Tests: 32/32 test suites, 269/269 tests PASS (0 failures, 0 skipped).
+- Latest Validated Implementation: `feat(mobile): implement profile and change password`
+- Subphase 13D Scope:
+  - `mobile/src/features/profile/screens/ProfileScreen.tsx`: Profile screen (`SCR-ACC-01`) fetching `GET /me`, rendering profile details and initials placeholder, triggering logout confirmation dialog (`SCR-ACC-04`).
+  - `mobile/src/features/profile/screens/EditProfileScreen.tsx`: Profile edit screen utilizing `PUT /me` with client-side validation and immediate `AuthProvider` synchronization via `updateCurrentUser`.
+  - `mobile/src/features/profile/screens/ChangePasswordScreen.tsx`: Change password screen (`SCR-ACC-02`) utilizing `PUT /me/password`, strictly preserving untrimmed passwords, mapping specific backend codes, and maintaining active session per backend contract.
+  - Integration: Protected routes wired in `MainTabNavigator.tsx`, accessible from `MoreScreen.tsx`.
+  - Mobile Tests: 35/35 test suites, 290/290 tests PASS (0 failures, 0 skipped).
   - TypeScript & Lint: `tsc --noEmit` PASS (0 errors), `eslint .` PASS (0 errors, 0 warnings).
   - Android Build: `.\gradlew.bat assembleDebug --no-daemon` BUILD SUCCESSFUL (203 actionable tasks, exit code 0).
-  - Dedicated Report: `reports/PHASE_13C_REFRESH_SESSION_REPORT.md`.
-  - Next Action: Narrow post-patch audit.
+  - Dedicated Report: `reports/PHASE_13D_PROFILE_PASSWORD_REPORT.md`.
 
 
 

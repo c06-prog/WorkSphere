@@ -115,6 +115,12 @@ export function authReducer(state: AuthState, action: AuthAction): AuthState {
         operationState: state.operationState === 'error' ? 'idle' : state.operationState,
       };
 
+    case 'USER_PROFILE_UPDATED':
+      return {
+        ...state,
+        currentUser: action.payload.user,
+      };
+
     default:
       return state;
   }

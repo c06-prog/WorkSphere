@@ -21,6 +21,9 @@ export type MainTabParamList = {
   Tasks: undefined;
   ServiceRequests: undefined;
   More: undefined;
+  Profile: undefined;
+  EditProfile: undefined;
+  ChangePassword: undefined;
 };
 
 export type RootStackParamList = {
@@ -39,3 +42,6 @@ export type MainTabNavProp<RouteName extends keyof MainTabParamList> =
 
 export type MainTabScreenRouteProp<RouteName extends keyof MainTabParamList> =
   RouteProp<MainTabParamList, RouteName>;
+
+export type ProfileNavigationProp<RouteName extends keyof MainTabParamList> =
+  NativeStackNavigationProp<MainTabParamList, RouteName>;

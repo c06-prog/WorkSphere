@@ -4,17 +4,17 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: Phase 13C Strict Refresh Eligibility and Single Cleanup Owner Patch
-- Status: SUBPHASE 13C FULLY CENTRALIZED, HARDENED & TESTED (Ready for narrow post-patch audit)
-- Phase 13C Strict Eligibility and Single Cleanup Owner Scope:
-  - `mobile/src/shared/api/apiClient.ts`: `isEligibleForRefresh` strictly requires valid `ApiResponse` error envelope with `success === false` and `code === 'UNAUTHORIZED'`. Non-envelope 401s or non-UNAUTHORIZED codes never trigger refresh. Added comprehensive matrix tests for payloads A through F.
-  - `mobile/src/app/auth/refreshCoordinator.ts`: Removed redundant `clearSessionCredentials` on server refresh rejection. `AuthProvider`'s unauthorized handler is established as the sole terminal cleanup owner for server rejections. `refreshCoordinator` retains cleanup ownership strictly for local atomic commit failures (Keychain hardware write error).
-  - Dedicated Report: `reports/PHASE_13C_REFRESH_SESSION_REPORT.md`.
-  - Mobile Tests: 32/32 test suites, 269/269 tests PASS (0 failures, 0 skipped).
+- Current Task: Phase 13D Profile, Edit Profile, and Change Password Implementation
+- Status: SUBPHASE 13D COMPLETED, VALIDATED & TESTED
+- Phase 13D Scope:
+  - `mobile/src/features/profile/screens/ProfileScreen.tsx`: Profile screen (`SCR-ACC-01`) fetching `GET /me`, rendering profile details and initials placeholder, triggering logout confirmation dialog (`SCR-ACC-04`).
+  - `mobile/src/features/profile/screens/EditProfileScreen.tsx`: Profile edit screen utilizing `PUT /me` with client-side validation and immediate `AuthProvider` synchronization via `updateCurrentUser`.
+  - `mobile/src/features/profile/screens/ChangePasswordScreen.tsx`: Change password screen (`SCR-ACC-02`) utilizing `PUT /me/password`, strictly preserving untrimmed passwords, mapping specific backend codes, and maintaining active session per backend contract.
+  - Integration: Protected routes wired in `MainTabNavigator.tsx`, accessible from `MoreScreen.tsx`.
+  - Mobile Tests: 35/35 test suites, 290/290 tests PASS (0 failures, 0 skipped).
   - TypeScript & Lint: `tsc --noEmit` PASS (0 errors), `eslint .` PASS (0 errors, 0 warnings).
   - Android Build: `.\gradlew.bat assembleDebug --no-daemon` BUILD SUCCESSFUL (203 actionable tasks, exit code 0).
-  - Next Action: Narrow post-patch audit.
-- Working tree: clean (sau khi commit)
+  - Dedicated Report: `reports/PHASE_13D_PROFILE_PASSWORD_REPORT.md`.
 
 ## Phase 11 Notification and Personal Dashboard Module: COMPLETED, AUDITED & HARDENED
 

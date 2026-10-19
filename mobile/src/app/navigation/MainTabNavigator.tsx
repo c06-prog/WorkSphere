@@ -5,6 +5,11 @@ import { ProjectsScreen } from '../../features/projects/screens';
 import { TasksScreen } from '../../features/tasks/screens';
 import { ServiceRequestsScreen } from '../../features/serviceRequests/screens';
 import { MoreScreen } from '../../features/more/screens';
+import {
+  ProfileScreen,
+  EditProfileScreen,
+  ChangePasswordScreen,
+} from '../../features/profile/screens';
 import { useAppTheme } from '../providers/ThemeProvider';
 import type { MainTabParamList } from './types';
 
@@ -83,6 +88,33 @@ export function MainTabNavigator() {
           tabBarLabel: 'Thêm',
           tabBarAccessibilityLabel: 'Tab 5: Thêm',
           headerTitle: 'Thêm',
+        }}
+      />
+      <Tab.Screen
+        name="Profile"
+        component={ProfileScreen}
+        options={{
+          tabBarButton: () => null,
+          tabBarItemStyle: { display: 'none' },
+          headerTitle: 'Hồ sơ cá nhân',
+        }}
+      />
+      <Tab.Screen
+        name="EditProfile"
+        component={EditProfileScreen}
+        options={{
+          tabBarButton: () => null,
+          tabBarItemStyle: { display: 'none' },
+          headerTitle: 'Chỉnh sửa hồ sơ',
+        }}
+      />
+      <Tab.Screen
+        name="ChangePassword"
+        component={ChangePasswordScreen}
+        options={{
+          tabBarButton: () => null,
+          tabBarItemStyle: { display: 'none' },
+          headerTitle: 'Đổi mật khẩu',
         }}
       />
     </Tab.Navigator>
