@@ -4,11 +4,9 @@
 
 - Branch: main
 - Phase 12 Completion Checkpoint: `bdd56778c9e64104b47d85a16e61431ccf1ac899` (`docs(agent): checkpoint phase 12 completion`)
-- Pre-Phase 13 Readiness Base: `a9c59259904f2dd6e9bd38e4ca63c1a88c89c474` (`feat(mobile): finalize pre-auth runtime readiness`)
-- Phase 13B Checkpoint: `d81717ecda52fd6883746f1ad4234979a6eceaed` (`feat(mobile): implement auth provider and login flow`)
-- Phase 13B Hardening: `93ae7a33c4ee87870416fe9ccf0ac798c3daeabc` (`fix(mobile): harden auth provider concurrency`)
-- Phase 13C Strict Eligibility Checkpoint: `d59457278c2c43f02e0187bf6a3e5c7c0415cd6c` (`fix(mobile): tighten refresh eligibility and cleanup`)
-- Current Status: Phase 13 Subphase 13F Settings, Security Hardening and Finalization COMPLETED & VALIDATED
+- Phase 13 Completion & Audited Checkpoint: `29c68ab9e00fbc3faea52106e182ff9f9905ff01` (`feat(mobile): implement settings and finalize phase 13`)
+- Phase 13 Audit Conclusion: `PHASE_13_FINAL_AUDIT_PASS_WITH_E2E_DEFERRALS`
+- Current Status: Phase 13 Mobile Authentication COMPLETED, AUDITED & VALIDATED
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening
@@ -322,11 +320,9 @@
 
 ## Next Permitted Phase
 
-- **Giai đoạn 13: Mobile Authentication** (theo đúng `docs/08_DEVELOPMENT_ROADMAP.md` Mục 17, P0).
-  - Scope: Splash, Login, Forgot Password, Reset Password, Profile, Change Password, Settings; Form validation, gọi API login, Secure Storage lưu token, tự thêm access token vào request, refresh token, xử lý logout, xử lý tài khoản bị khóa, xử lý token hết hạn, điều hướng Auth và Main.
-  - DoD: Đăng nhập end-to-end hoạt động, token được lưu an toàn, refresh không tạo vòng lặp, logout xóa phiên, mobile không hiện màn hình được bảo vệ khi chưa đăng nhập.
-  - Subphase 13A (DTOs, API Adapter, Pure Validators, Error Mapper): HOÀN TẤT VÀ KIỂM THỬ ĐỘC LẬP (24 suites, 193 tests PASS).
-  - Bước kế tiếp: **Subphase 13B: AuthProvider, State Machine, Login Flow, Local Logout & Navigation Guard**.
+- **Giai đoạn 14: Mobile Dashboard và Projects** (theo đúng `docs/08_DEVELOPMENT_ROADMAP.md` Mục 18, P0).
+  - Scope: Dashboard cá nhân (tích hợp `GET /api/v1/dashboard/me`), Danh sách dự án, Chi tiết dự án, Thành viên dự án.
+  - Phụ thuộc: Phase 13 Mobile Authentication đã hoàn tất và kiểm toán độc lập PASS (`PHASE_13_FINAL_AUDIT_PASS_WITH_E2E_DEFERRALS`).
 
 ## Trust Rules
 
@@ -337,8 +333,8 @@
 
 ## Recent Git Log
 
-- 28d238d docs(audit): reconcile phase 12 final evidence
-- 53f91ff fix(mobile): harden local storage key policy
-- 681153d feat(mobile): add network and storage foundation
-- bcc881b fix(mobile): align shared component contracts
-- 587ee1b feat(mobile): add shared component foundation
+- 29c68ab feat(mobile): implement settings and finalize phase 13
+- 1ec24b1 feat(mobile): implement forgot and reset password
+- db9fc94 feat(mobile): implement profile and change password
+- d594572 fix(mobile): tighten refresh eligibility and cleanup
+- 9be1190 fix(mobile): centralize bootstrap credential cleanup
