@@ -4,14 +4,15 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: PHASE 14B - PERSONAL DASHBOARD (SCR-MAIN-01) TASK ENUM CONTRACT PATCH
-- Status: Phase 14B IMPLEMENTED, HARDENED, ENUM CONTRACT VERIFIED (closed TaskPriority & TaskStatus transport contracts, runtime fail-closed guards, direct PriorityBadge assignment, single-flight request deduplication). SẴN SÀNG CHO FINAL NARROW VERIFY.
-- Baseline Checkpoint: `55cc13e6372ba4374d3533fe3f82f7afcd84dcff`
-- Phase 14B Report: `reports/PHASE_14B_DASHBOARD_REPORT.md`
-- Next Action: `FINAL NARROW VERIFY 14B ENUM PATCH`
+- Current Task: PHASE 14C - PROJECT LIST (SCR-PRJ-01)
+- Status: Phase 14C IMPLEMENTED, AUDITED, TESTED (useProjects hook with 300ms debounce and latest-query-wins concurrency, ProjectCard component, ProjectsScreen container, 48/48 test suites, 425/425 tests pass, clean Android build). READY FOR 14D PROJECT DETAIL.
+- Baseline Checkpoint: `232e63dd4d99e5ae3f85a6870665daf7a1740698`
+- Phase 14C Report: `reports/PHASE_14C_PROJECT_LIST_REPORT.md`
+- Next Action: `PHASE 14D - PROJECT DETAIL (SCR-PRJ-02)`
 - Scope Boundary:
-  - Phase 14C NOT STARTED.
-  - NO Project List UI or Detail UI implementation (`ProjectsScreen.tsx` remains placeholder until 14C).
+  - Phase 14D NOT STARTED.
+  - NO Project Detail UI (`ProjectDetailScreen.tsx` deferred to 14D).
+  - NO Create Project form (`CreateProjectScreen.tsx` deferred to 14E).
   - NO backend or Flyway migration edits.
   - NO third-party packages installed (zero new dependencies).
 - Phase 13 Final Scope & Delivered Invariants:

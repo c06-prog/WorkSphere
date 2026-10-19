@@ -9,22 +9,20 @@
 - Phase 13 Audit Conclusion: `PHASE_13_FINAL_AUDIT_PASS_WITH_E2E_DEFERRALS`
 - Phase 14 Baseline Checkpoint: `785c155b69309284066252701ec1554d35d4e795` (`docs(phase14): record architecture decision D-061 phase 14 contract freeze`)
 - Phase 14A Implementation Checkpoint: `55cc13e6372ba4374d3533fe3f82f7afcd84dcff` (`feat(mobile): add phase 14 dashboard project contracts`)
-- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects: Subphase 14B (Personal Dashboard `SCR-MAIN-01`, `useDashboard`, `MetricCard`, canonical metrics, pull-to-refresh) IMPLEMENTED, HARDENED, ENUM CONTRACT VERIFIED (closed TaskPriority & TaskStatus transport contracts, runtime fail-closed guards, direct PriorityBadge assignment, single-flight request deduplication). Subphase 14C NOT STARTED.
+- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects: Subphase 14C (Project List `SCR-PRJ-01`, `useProjects`, `ProjectCard`, 300ms debounce, status filter chips, FlatList pagination, pull-to-refresh, latest-query-wins concurrency) IMPLEMENTED & TESTED. Subphase 14D NOT STARTED.
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening
 
-- Latest Validated Implementation: `fix(mobile): enforce dashboard task enum contracts`
-- Subphase 14B Scope:
-  - `mobile/src/features/dashboard/api/dashboardTypes.ts`: Closed transport unions `DashboardTaskPriority` (`DASHBOARD_TASK_PRIORITIES`) and `DashboardTaskStatus` (`DASHBOARD_TASK_STATUSES`) reflecting backend enums; strict runtime guards `isDashboardTaskPriority` and `isDashboardTaskStatus`; fail-closed `isUpcomingTaskItem` and `isPersonalDashboardResponse`.
-  - `mobile/src/features/dashboard/screens/DashboardScreen.tsx`: Personal Dashboard screen (`SCR-MAIN-01`) backed by `GET /dashboard/me`, rendering task summary metrics, project summary metrics, service request summary metrics, upcoming tasks (max 5), recent notifications (max 5), compact section empty states, full-screen loading/error states with retry, pull-to-refresh with inline error banner, canonical navigation to Projects tab. Direct `<PriorityBadge priority={task.priority} />` without any semantic fallback or cast.
-  - `mobile/src/features/dashboard/hooks/useDashboard.ts`: Data-loading hook with single-flight request deduplication lock (`inFlightPromiseRef`), generation counter (`generationRef`), unmounted guard (`mountedRef`), and pull-to-refresh data preservation.
-  - `mobile/src/features/dashboard/components/MetricCard.tsx`: MetricCard presentational component with accessible labels and highlight variants.
-  - `mobile/src/features/dashboard/utils/dateFormat.ts`: Safe ISO-8601 Vietnamese date formatter (`formatDateTime`, `formatDate`).
-  - Mobile Tests: 45/45 test suites, 403/403 tests PASS (0 failures, 0 skipped).
+- Latest Validated Implementation: `feat(mobile): implement project list screen`
+- Subphase 14C Scope:
+  - `mobile/src/features/projects/hooks/useProjects.ts`: Data-loading hook with 300ms search debouncing, status filter handling, FlatList pagination (`page=0, size=20, sort=createdAt,desc`), pull-to-refresh, retryPagination, and `queryGenerationRef` latest-query-wins concurrency.
+  - `mobile/src/features/projects/components/ProjectCard.tsx`: ProjectCard component rendering canonical code, name, description, status badge, priority badge, manager, progress bar (clamped 0..100), member count, task summary metrics, formatted date, >=48dp touch target, and security protection (no raw UUIDs rendered).
+  - `mobile/src/features/projects/screens/ProjectsScreen.tsx`: Complete screen container with search bar, status filter chips, FlatList, pull-to-refresh, initial/refresh/pagination error states, permission check (`PROJECT_CREATE`), and differentiated empty states.
+  - Mobile Tests: 48/48 test suites, 425/425 tests PASS (0 failures, 0 skipped).
   - TypeScript & Lint: `tsc --noEmit` PASS (0 errors), `eslint .` PASS (0 errors, 0 warnings).
   - Android Build: `.\gradlew.bat assembleDebug --no-daemon` BUILD SUCCESSFUL (203 actionable tasks, exit code 0).
-  - Dedicated Report: `reports/PHASE_14B_DASHBOARD_REPORT.md`.
+  - Dedicated Report: `reports/PHASE_14C_PROJECT_LIST_REPORT.md`.
 
 
 
