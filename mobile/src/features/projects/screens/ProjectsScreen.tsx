@@ -24,7 +24,9 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { useAppTheme } from '../../../app/providers/ThemeProvider';
+import { MainTabNavProp } from '../../../app/navigation/types';
 import { EmptyState, ErrorState, LoadingIndicator } from '../../../shared/components';
 import { SearchBar } from '../../../shared/components/SearchBar';
 import { ProjectStatus, ProjectSummary } from '../api/projectTypes';
@@ -51,6 +53,7 @@ const STATUS_FILTERS: StatusFilterOption[] = [
 
 export function ProjectsScreen() {
   const theme = useAppTheme();
+  const navigation = useNavigation<MainTabNavProp<'Projects'>>();
 
   const {
     projects,
@@ -70,6 +73,10 @@ export function ProjectsScreen() {
     retryPagination,
     clearFilters,
   } = useProjects();
+
+  const handleCardPress = (projectId: string) => {
+    navigation.navigate('ProjectDetail', { projectId });
+  };
 
   const isQueryActive = search.trim().length > 0 || statusFilter !== undefined;
 
@@ -276,7 +283,7 @@ export function ProjectsScreen() {
       <FlatList<ProjectSummary>
         data={projects}
         keyExtractor={item => item.id}
-        renderItem={({ item }) => <ProjectCard project={item} />}
+        renderItem={({ item }) => <ProjectCard project={item} onPress={handleCardPress} />}
         ListHeaderComponent={renderHeader}
         ListFooterComponent={renderFooter}
         ListEmptyComponent={renderEmpty}

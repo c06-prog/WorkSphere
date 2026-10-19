@@ -148,7 +148,7 @@ describe('ProjectsScreen (SCR-PRJ-01)', () => {
     expect(getByText('WorkSphere Platform')).toBeTruthy();
   });
 
-  it('4. renders non-interactive Project cards in 14C without attempting ProjectDetail navigation', async () => {
+  it('4. navigates to ProjectDetail with exact projectId param when project card is pressed in 14D', async () => {
     (useProjects as jest.Mock).mockReturnValue(defaultMockHookReturn);
 
     const { getByTestId } = await renderScreenWithAuth();
@@ -156,9 +156,11 @@ describe('ProjectsScreen (SCR-PRJ-01)', () => {
     const card = getByTestId('project-card-prj-2026-001');
     expect(card).toBeTruthy();
 
-    // In Phase 14C, cards are non-interactive summary containers; pressing does not trigger navigation
     fireEvent.press(card);
-    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(mockNavigate).toHaveBeenCalledTimes(1);
+    expect(mockNavigate).toHaveBeenCalledWith('ProjectDetail', {
+      projectId: 'f81d4fae-7dec-11d0-a765-00a0c91e6bf6',
+    });
   });
 
   it('5. does not render Create Project button while CreateProject capability is deferred to 14E', async () => {

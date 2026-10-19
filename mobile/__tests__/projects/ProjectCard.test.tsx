@@ -1,5 +1,5 @@
 import React from 'react';
-import { render } from '@testing-library/react-native';
+import { render, fireEvent } from '@testing-library/react-native';
 import { ProjectCard } from '../../src/features/projects/components/ProjectCard';
 import { ProjectSummary } from '../../src/features/projects/api/projectTypes';
 import { AppProviders } from '../../src/app/providers';
@@ -64,16 +64,20 @@ describe('ProjectCard Component', () => {
     expect(queryByText('e92d4fae-7dec-11d0-a765-00a0c91e6bf7')).toBeNull();
   });
 
-  it('remains a non-interactive summary container in Phase 14C (no button role)', async () => {
+  it('is an interactive pressable with button role in Phase 14D and fires onPress with project.id', async () => {
+    const handlePress = jest.fn();
     const { getByTestId } = await render(
       <AppProviders>
-        <ProjectCard project={mockProject} />
+        <ProjectCard project={mockProject} onPress={handlePress} />
       </AppProviders>
     );
 
     const card = getByTestId('project-card-prj-2026-001');
-    // In Phase 14C, ProjectCard does NOT expose accessibilityRole="button"
-    expect(card.props.accessibilityRole).toBeUndefined();
+    expect(card.props.accessibilityRole).toBe('button');
+
+    fireEvent.press(card);
+    expect(handlePress).toHaveBeenCalledTimes(1);
+    expect(handlePress).toHaveBeenCalledWith('f81d4fae-7dec-11d0-a765-00a0c91e6bf6');
   });
 
   it('defensively clamps progress percentage to 0..100', async () => {

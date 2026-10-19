@@ -4,15 +4,18 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: PHASE 14C - PROJECT LIST (SCR-PRJ-01) HARDENING
-- Status: Phase 14C IMPLEMENTED, AUDITED, HARDENED, TESTED (useProjects hook with 300ms debounce and latest-query-wins concurrency, non-interactive ProjectCard staged for 14D, canonical 4-chip filter, capability-gated CreateProject staged for 14E, 48/48 test suites, 425/425 tests pass, clean Android build). READY FOR 14D PROJECT DETAIL.
-- Baseline Checkpoint: `3ca43fd70e071fe4d302ef134b935231b6aae37a`
-- Phase 14C Report: `reports/PHASE_14C_PROJECT_LIST_REPORT.md`
-- Next Action: `PHASE 14D - PROJECT DETAIL (SCR-PRJ-02)`
+- Current Task: PHASE 14D - PROJECT DETAIL (SCR-PRJ-02)
+- Status: Phase 14D IMPLEMENTED, TESTED, AUDITED (useProjectDetail hook with generation supersession and deduplication, ProjectDetailScreen container, registered hidden auxiliary route, re-enabled ProjectCard interactive navigation, 50/50 test suites, 437/437 tests pass, clean Android build). READY FOR 14E.
+- Baseline Checkpoint: `f0eca143763e80a43d8230bcf9f28eea778428e1`
+- Phase 14D Report: `reports/PHASE_14D_PROJECT_DETAIL_REPORT.md`
+- Next Action: `INDEPENDENT AUDIT PHASE 14D`
 - Scope Boundary:
-  - Phase 14D NOT STARTED.
-  - NO Project Detail UI (`ProjectDetailScreen.tsx` deferred to 14D).
+  - Phase 14E NOT STARTED.
   - NO Create Project form (`CreateProjectScreen.tsx` deferred to 14E).
+  - NO Edit Project form (`EditProjectScreen.tsx` deferred to 14E).
+  - NO Change Status modal (`ChangeStatusModal.tsx` deferred to 14E).
+  - NO Member Management screen (`ProjectMembersScreen.tsx` deferred to 14E).
+  - NO Milestone Management full screen (`ProjectMilestonesScreen.tsx` deferred to 14E).
   - NO backend or Flyway migration edits.
   - NO third-party packages installed (zero new dependencies).
 - Phase 13 Final Scope & Delivered Invariants:

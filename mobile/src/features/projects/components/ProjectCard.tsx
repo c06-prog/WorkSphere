@@ -19,7 +19,7 @@
  */
 
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useAppTheme } from '../../../app/providers/ThemeProvider';
 import { PriorityBadge, StatusBadge } from '../../../shared/components';
 import { ProjectSummary } from '../api/projectTypes';
@@ -30,22 +30,29 @@ export interface ProjectCardProps {
   testID?: string;
 }
 
-export function ProjectCard({ project, onPress: _onPress, testID }: ProjectCardProps) {
+export function ProjectCard({ project, onPress, testID }: ProjectCardProps) {
   const theme = useAppTheme();
 
   // Defensive progress clamping: 0..100
   const clampedProgress = Math.max(0, Math.min(100, Math.round(project.progressPercent ?? 0)));
+
+  const handlePress = () => {
+    if (onPress) {
+      onPress(project.id);
+    }
+  };
 
   const formattedDate = project.plannedEndDate
     ? project.plannedEndDate.split('-').reverse().join('/')
     : 'Chưa xác định';
 
   return (
-    <View
+    <Pressable
+      onPress={handlePress}
       testID={testID ?? `project-card-${project.code.toLowerCase()}`}
-      accessible={true}
+      accessibilityRole="button"
       accessibilityLabel={`Dự án ${project.code}: ${project.name}, Trạng thái: ${project.status}, Tiến độ: ${clampedProgress} phần trăm, Quản lý: ${project.manager.fullName}`}
-      style={[
+      style={({ pressed }) => [
         styles.card,
         {
           backgroundColor: theme.colors.surface,
@@ -53,6 +60,7 @@ export function ProjectCard({ project, onPress: _onPress, testID }: ProjectCardP
           borderRadius: theme.radii.medium,
           padding: theme.spacing.md,
           marginBottom: theme.spacing.sm,
+          opacity: pressed ? 0.85 : 1,
         },
       ]}
     >
@@ -144,7 +152,7 @@ export function ProjectCard({ project, onPress: _onPress, testID }: ProjectCardP
           </Text>
         </Text>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
