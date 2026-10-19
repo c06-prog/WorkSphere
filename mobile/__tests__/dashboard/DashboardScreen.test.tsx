@@ -62,6 +62,24 @@ describe('DashboardScreen (SCR-MAIN-01)', () => {
         priority: 'MEDIUM',
         dueDate: '2026-10-26T10:00:00Z',
       },
+      {
+        id: 'task-uuid-3',
+        projectId: 'project-uuid-3',
+        projectName: 'Documentation',
+        title: 'Update Readme',
+        status: 'CANCELLED',
+        priority: 'LOW',
+        dueDate: '2026-10-27T12:00:00Z',
+      },
+      {
+        id: 'task-uuid-4',
+        projectId: 'project-uuid-4',
+        projectName: 'Security Patch',
+        title: 'Hotfix CVE',
+        status: 'IN_REVIEW',
+        priority: 'CRITICAL',
+        dueDate: '2026-10-28T09:00:00Z',
+      },
     ],
     recentNotifications: [
       {
@@ -194,17 +212,30 @@ describe('DashboardScreen (SCR-MAIN-01)', () => {
       refresh: jest.fn(),
     });
 
-    const { getByTestId, getByText, getAllByText } = await renderScreen();
+    const { getByTestId, getByText, getAllByText, getByLabelText } = await renderScreen();
 
     expect(getByTestId('upcoming-task-item-0')).toBeTruthy();
     expect(getByText('Review Security Specifications')).toBeTruthy();
     expect(getByText('Alpha Portal Revamp')).toBeTruthy();
     expect(getAllByText('Đang xử lý').length).toBeGreaterThanOrEqual(1); // TaskStatus.IN_PROGRESS badge
     expect(getByText('Cao')).toBeTruthy(); // Priority.HIGH badge
+    expect(getByLabelText('Độ ưu tiên: Cao')).toBeTruthy();
 
     expect(getByTestId('upcoming-task-item-1')).toBeTruthy();
     expect(getByText('Draft API Contracts')).toBeTruthy();
     expect(getByText('Mobile App')).toBeTruthy();
+    expect(getByText('Trung bình')).toBeTruthy(); // Priority.MEDIUM badge
+    expect(getByLabelText('Độ ưu tiên: Trung bình')).toBeTruthy();
+
+    expect(getByTestId('upcoming-task-item-2')).toBeTruthy();
+    expect(getByText('Update Readme')).toBeTruthy();
+    expect(getByText('Thấp')).toBeTruthy(); // Priority.LOW badge
+    expect(getByLabelText('Độ ưu tiên: Thấp')).toBeTruthy();
+
+    expect(getByTestId('upcoming-task-item-3')).toBeTruthy();
+    expect(getByText('Hotfix CVE')).toBeTruthy();
+    expect(getByText('Khẩn cấp')).toBeTruthy(); // Priority.CRITICAL badge
+    expect(getByLabelText('Độ ưu tiên: Khẩn cấp')).toBeTruthy();
   });
 
   it('5. renders recent notification cards with read/unread states', async () => {

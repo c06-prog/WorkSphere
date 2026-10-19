@@ -24,23 +24,11 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { useAppTheme } from '../../../app/providers/ThemeProvider';
 import { MainTabNavProp } from '../../../app/navigation/types';
-import { EmptyState, ErrorState, LoadingIndicator, PriorityBadge, PriorityLevel, StatusBadge } from '../../../shared/components';
+import { EmptyState, ErrorState, LoadingIndicator, PriorityBadge, StatusBadge } from '../../../shared/components';
 import { MetricCard } from '../components/MetricCard';
 import { useDashboard } from '../hooks/useDashboard';
 import { formatDateTime } from '../utils/dateFormat';
 import { RecentNotificationItem, UpcomingTaskItem } from '../api';
-
-function toPriorityLevel(priority: string): PriorityLevel {
-  switch (priority) {
-    case 'LOW':
-    case 'MEDIUM':
-    case 'HIGH':
-    case 'CRITICAL':
-      return priority;
-    default:
-      return 'MEDIUM';
-  }
-}
 
 export function DashboardScreen() {
   const theme = useAppTheme();
@@ -255,7 +243,7 @@ export function DashboardScreen() {
               <View style={[styles.badgeRow, { marginTop: theme.spacing.sm }]}>
                 <StatusBadge status={task.status} />
                 <View style={{ width: theme.spacing.xs }} />
-                <PriorityBadge priority={toPriorityLevel(task.priority)} />
+                <PriorityBadge priority={task.priority} />
                 <View style={styles.flexSpacer} />
                 <Text style={[theme.typography.caption, { color: theme.colors.textSecondary }]}>
                   {formatDateTime(task.dueDate)}

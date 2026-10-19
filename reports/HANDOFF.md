@@ -4,12 +4,13 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: PHASE 14B - PERSONAL DASHBOARD (SCR-MAIN-01) HARDENING & RECONCILIATION
-- Status: Phase 14B HARDENED (Type-safety reconciled, single-flight request deduplication frozen, generation & mounted guards verified). SẴN SÀNG CHO INDEPENDENT AUDIT.
+- Current Task: PHASE 14B - PERSONAL DASHBOARD (SCR-MAIN-01) TASK ENUM CONTRACT PATCH
+- Status: Phase 14B IMPLEMENTED, HARDENED, ENUM CONTRACT VERIFIED (closed TaskPriority & TaskStatus transport contracts, runtime fail-closed guards, direct PriorityBadge assignment, single-flight request deduplication). SẴN SÀNG CHO FINAL NARROW VERIFY.
 - Baseline Checkpoint: `55cc13e6372ba4374d3533fe3f82f7afcd84dcff`
 - Phase 14B Report: `reports/PHASE_14B_DASHBOARD_REPORT.md`
-- Next Action: `INDEPENDENT AUDIT SUBPHASE 14B`
+- Next Action: `FINAL NARROW VERIFY 14B ENUM PATCH`
 - Scope Boundary:
+  - Phase 14C NOT STARTED.
   - NO Project List UI or Detail UI implementation (`ProjectsScreen.tsx` remains placeholder until 14C).
   - NO backend or Flyway migration edits.
   - NO third-party packages installed (zero new dependencies).

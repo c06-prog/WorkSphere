@@ -41,7 +41,11 @@ Subphase 14B hoàn thành triển khai màn hình Personal Dashboard (`SCR-MAIN-
      - Phân vùng 2: Dự án tham gia (`Project Summary`) gồm 2 chỉ số: Đang thực hiện, Tạm dừng; kèm nút "Xem tất cả" điều hướng sang tab Dự án (`Projects`).
      - Phân vùng 3: Yêu cầu dịch vụ (`Service Request Summary`) gồm 4 chỉ số: Mở, Đang xử lý, Chờ phản hồi, Đã xử lý.
      - Phân vùng 4: Công việc sắp đến hạn (`Upcoming Tasks`, tối đa 5 việc) kèm tiêu đề, tên dự án, `StatusBadge`, `PriorityBadge`, hạn chót đã định dạng.
-     - **Type-Safety Reconciled**: Triển khai mapper runtime `toPriorityLevel(priority: string): PriorityLevel` an toàn, loại bỏ hoàn toàn `task.priority as any`.
+     - Phân vùng 4: Công việc sắp đến hạn (`Upcoming Tasks`, tối đa 5 việc) kèm tiêu đề, tên dự án, `StatusBadge`, `PriorityBadge`, hạn chót đã định dạng.
+     - **Closed Enum Transport Contracts (DASHBOARD_PRIORITY_MISREPRESENTATION_RISK RESOLVED)**:
+       - `TaskPriority` và `TaskStatus` đóng băng kiểu transport chính xác theo backend enums (`DASHBOARD_TASK_PRIORITIES`, `DASHBOARD_TASK_STATUSES`).
+       - Runtime guards `isDashboardTaskPriority` và `isDashboardTaskStatus` xác thực giá trị đóng; các giá trị không hợp lệ (như `URGENT`, `FUTURE_STATUS`) bị từ chối ngay tại biên nhận DTO (`isUpcomingTaskItem -> false`), bảo vệ ứng dụng fail-closed an toàn tuyệt đối.
+       - Loại bỏ hoàn toàn hàm ánh xạ dự phòng ngữ nghĩa `toPriorityLevel` và default `'MEDIUM'`. Giá trị `task.priority` hợp lệ được truyền trực tiếp vào `<PriorityBadge priority={task.priority} />` mà không cần bất kỳ ép kiểu nào.
      - Phân vùng 5: Thông báo gần đây (`Recent Notifications`, tối đa 5 thông báo) kèm tiêu đề, nội dung tóm tắt, ngày gửi và chỉ báo trạng thái đã đọc/chưa đọc.
      - Hỗ trợ đầy đủ trạng thái rỗng cấp phân vùng (`EmptyState` dạng compact).
      - Full-screen `LoadingIndicator` khi tải lần đầu.
@@ -66,12 +70,20 @@ Subphase 14B hoàn thành triển khai màn hình Personal Dashboard (`SCR-MAIN-
   8. Ngăn chặn cập nhật state sau khi hook đã unmount (`mountedRef` guard).
   9. Giải phóng in-flight lock sau khi gặp lỗi để các lần gọi tiếp theo được phép thực thi.
 
-### 3.2. Screen Tests (`mobile/__tests__/dashboard/DashboardScreen.test.tsx`):
+### 3.2. Types & Runtime Guards Tests (`mobile/__tests__/dashboard/dashboardTypes.test.ts`):
+- `19/19 tests PASS`:
+  - Chấp nhận toàn bộ 4 giá trị TaskPriority canonical (`LOW`, `MEDIUM`, `HIGH`, `CRITICAL`).
+  - Chấp nhận toàn bộ 5 giá trị TaskStatus canonical (`TODO`, `IN_PROGRESS`, `IN_REVIEW`, `COMPLETED`, `CANCELLED`).
+  - Từ chối dứt khoát giá trị TaskPriority bất hợp lệ (`URGENT`, `low`, null, v.v.).
+  - Từ chối dứt khoát giá trị TaskStatus bất hợp lệ (`FUTURE_STATUS`, null, v.v.).
+  - Từ chối toàn bộ payload `isPersonalDashboardResponse` khi danh sách công việc chứa priority hoặc status không hợp lệ.
+
+### 3.3. Screen Tests (`mobile/__tests__/dashboard/DashboardScreen.test.tsx`):
 - `9/9 tests PASS`:
   1. Hiển thị `LoadingIndicator` trong suốt quá trình tải khởi tạo.
   2. Hiển thị `ErrorState` toàn màn hình khi tải thất bại kèm khả năng retry.
   3. Hiển thị đầy đủ các phân vùng chỉ số canonical và giá trị số liệu chính xác.
-  4. Hiển thị danh sách công việc sắp đến hạn với badge trạng thái và độ ưu tiên.
+  4. Hiển thị danh sách công việc sắp đến hạn với badge trạng thái và badge độ ưu tiên cho cả 4 mức canonical (`LOW`, `MEDIUM`, `HIGH`, `CRITICAL`), nhãn accessibility trực quan và chính xác.
   5. Hiển thị danh sách thông báo gần đây với phân biệt trực quan đã đọc/chưa đọc.
   6. Hiển thị empty states riêng lẻ ở cấp phân vùng khi danh sách trống.
   7. Điều hướng chuẩn xác sang tab `Projects` khi nhấn nút "Xem tất cả".
@@ -84,7 +96,7 @@ Subphase 14B hoàn thành triển khai màn hình Personal Dashboard (`SCR-MAIN-
 
 1. **Mobile Unit Tests Suite**:
    - Chạy lệnh: `npm test -- --runInBand`
-   - Kết quả: **45/45 test suites PASS**, **397/397 tests PASS**, 0 failed, 0 skipped.
+   - Kết quả: **45/45 test suites PASS**, **403/403 tests PASS**, 0 failed, 0 skipped.
 2. **TypeScript Strict Type Check**:
    - Chạy lệnh: `npm run typecheck` (`tsc --noEmit`)
    - Kết quả: **EXIT CODE 0**, 0 type errors.
@@ -93,7 +105,7 @@ Subphase 14B hoàn thành triển khai màn hình Personal Dashboard (`SCR-MAIN-
    - Kết quả: **EXIT CODE 0**, 0 errors, 0 warnings.
 4. **Native Android Debug Build**:
    - Chạy lệnh: `.\gradlew.bat assembleDebug --no-daemon`
-   - Kết quả: **BUILD SUCCESSFUL in 28s**, 203 actionable tasks (16 executed, 187 up-to-date), exit code 0.
+   - Kết quả: **BUILD SUCCESSFUL in 30s**, 203 actionable tasks (16 executed, 187 up-to-date), exit code 0.
 5. **E2E Credential Check**:
    - Kiểm tra biến môi trường: `WORKSPHERE_DEV_E2E_USER_ENABLED`, `WORKSPHERE_E2E_LOGIN`, `WORKSPHERE_E2E_PASSWORD`.
    - Kết quả: Các biến chưa thiết lập trong phiên hiện tại $\rightarrow$ Ghi nhận mã:
@@ -107,4 +119,4 @@ Subphase 14B hoàn thành triển khai màn hình Personal Dashboard (`SCR-MAIN-
 
 ## 5. Kết Luận & Chuyển Giao (Handoff)
 
-Subphase 14B (Personal Dashboard `SCR-MAIN-01`) đã hoàn thành 100% mục tiêu kỹ thuật, tuân thủ nghiêm ngặt quyết định kiến trúc D-061, vượt qua toàn bộ các cổng kiểm định chất lượng và sẵn sàng cho Independent Audit.
+Subphase 14B (Personal Dashboard `SCR-MAIN-01`) đã được vá dứt điểm nguy cơ sai lệch ngữ nghĩa enum (`DASHBOARD_PRIORITY_MISREPRESENTATION_RISK: RESOLVED`), tuân thủ nghiêm ngặt hợp đồng closed enum của backend, vượt qua toàn bộ 403 unit tests và native Android build, sẵn sàng cho Final Narrow Verification trước khi mở Phase 14C.

@@ -24,13 +24,40 @@ export interface ProjectDashboardSummary {
   onHold: number;
 }
 
+export const DASHBOARD_TASK_PRIORITIES = [
+  'LOW',
+  'MEDIUM',
+  'HIGH',
+  'CRITICAL',
+] as const;
+
+export type DashboardTaskPriority = (typeof DASHBOARD_TASK_PRIORITIES)[number];
+
+export function isDashboardTaskPriority(value: unknown): value is DashboardTaskPriority {
+  return typeof value === 'string' && (DASHBOARD_TASK_PRIORITIES as readonly string[]).includes(value);
+}
+
+export const DASHBOARD_TASK_STATUSES = [
+  'TODO',
+  'IN_PROGRESS',
+  'IN_REVIEW',
+  'COMPLETED',
+  'CANCELLED',
+] as const;
+
+export type DashboardTaskStatus = (typeof DASHBOARD_TASK_STATUSES)[number];
+
+export function isDashboardTaskStatus(value: unknown): value is DashboardTaskStatus {
+  return typeof value === 'string' && (DASHBOARD_TASK_STATUSES as readonly string[]).includes(value);
+}
+
 export interface UpcomingTaskItem {
   id: string; // UUID
   projectId: string; // UUID
   projectName: string;
   title: string;
-  status: string; // TaskStatus
-  priority: string; // TaskPriority
+  status: DashboardTaskStatus; // TaskStatus
+  priority: DashboardTaskPriority; // TaskPriority
   dueDate: string; // ISO-8601 Instant string
 }
 
@@ -111,8 +138,8 @@ export function isUpcomingTaskItem(data: unknown): data is UpcomingTaskItem {
     typeof obj.projectId === 'string' &&
     typeof obj.projectName === 'string' &&
     typeof obj.title === 'string' &&
-    typeof obj.status === 'string' &&
-    typeof obj.priority === 'string' &&
+    isDashboardTaskStatus(obj.status) &&
+    isDashboardTaskPriority(obj.priority) &&
     typeof obj.dueDate === 'string'
   );
 }
