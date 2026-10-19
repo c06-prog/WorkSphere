@@ -1174,3 +1174,53 @@ Current operating mode:
       - Tuyệt đối không chia sẻ credential, token, Authorization header cho worker; cấm tác nhân ngoài truy cập `.env`, Keystore/Keychain, SSH keys, browser profile, CSDL production, hay thư mục ngoài `D:\WorkSphere`; tuân thủ tuyệt đối chính sách kiểm thẩm tài nguyên bên ngoài D-057.
   11. **Chế Độ Dự Phòng Tuần Tự (Fallback Mode)**:
       - Khi không áp dụng true multi-agent: Áp dụng `SEQUENTIAL_MULTI_ROLE_MODE` qua trình tự `Contract` $\rightarrow$ `Implementation` $\rightarrow$ `Test` $\rightarrow$ `Security` $\rightarrow$ `Reviewer` $\rightarrow$ `Git Integrator`. Xuất đầy đủ khối kết quả độc lập cho từng vai trò; trung thực về bản chất thực thi, không giả mạo đánh giá chéo độc lập.
+
+
+## D-061: Khóa Quyết Định Kiến Trúc Và Đối Soát Hợp Đồng Phase 14 Mobile Dashboard & Projects (Phase 14 Dashboard & Projects Contract Freeze)
+
+- **Ngày quyết định**: 2026-10-19.
+- **Phạm vi**: Toàn bộ kiến trúc, DTOs, hợp đồng API, phân trang, tìm kiếm, lọc, phân quyền và lộ trình triển khai của Phase 14 Mobile Dashboard & Projects.
+- **Tình trạng**: APPROVED / FROZEN.
+- **Tài liệu tham chiếu**: `reports/PRE_PHASE_14_DASHBOARD_PROJECTS_AUDIT.md`, `reports/PHASE_14_CONTRACT_RECONCILIATION.md`.
+- **Nội dung quyết định**:
+  1. **Khóa Phạm Vi Màn Hình (Screen Scope & Ownership)**:
+     - `SCR-MAIN-01` (Dashboard Screen) $\rightarrow$ Subphase 14B.
+     - `SCR-PRJ-01` (Project List Screen) $\rightarrow$ Subphase 14C.
+     - `SCR-PRJ-02` (Project Detail Screen) $\rightarrow$ Subphase 14D.
+     - `SCR-PRJ-03` (Create Project), `SCR-PRJ-04` (Edit Project), `SCR-PRJ-05` (Change Status Modal), `SCR-PRJ-06` (Project Member List), `SCR-PRJ-07` (Add/Edit Member Sheet), `SCR-PRJ-08` (Milestone List), `SCR-PRJ-09` (Create Milestone) $\rightarrow$ Subphase 14E.
+     - `PROJECT_DASHBOARD_PROJECTION_DEFERRED` (`GET /projects/{id}/dashboard`) hoãn theo canonical Phase 11; không chặn Personal Dashboard hay Project Detail.
+     - Phân hệ Task (`SCR-TSK-01` .. `06`) tách biệt khỏi Phase 14 Dashboard + Projects.
+  2. **Khóa Hợp Đồng Dữ Liệu Dashboard & Projects**:
+     - `GET /dashboard/me`: Bảng điều khiển cá nhân pre-aggregated tại backend, tuyệt đối không tổng hợp số liệu client-side.
+     - `GET /projects`: Danh sách phân trang 0-based qua `PagedData<ProjectSummaryResponse>`.
+     - `GET /projects/{projectId}`: Chi tiết dự án kèm `allowedActions`, `milestones`, và `@Version`.
+     - Tuyệt đối không thêm trường ngoài backend DTOs đã đối soát.
+  3. **Khóa Quy Chuẩn Phân Trang, Tìm Kiếm & Lọc**:
+     - Phân trang: 0-based (`page = 0`), kích thước mặc định 20, khớp hoàn toàn với `PagedData<T>` của mobile foundation.
+     - Tìm kiếm: Server-side search (`search` param), debounce 300ms bằng `useRef` + `setTimeout` nội bộ (không thêm thư viện debounce).
+     - Bộ lọc: Chỉ hỗ trợ các bộ lọc backend thực tế (`status`, `priority`, `departmentId`, `managerId`).
+     - Sắp xếp: Whitelist trường backend (`createdAt`, `name`, `code`, `startDate`, `plannedEndDate`, `priority`, `status`).
+     - Thay đổi tìm kiếm/bộ lọc bắt buộc reset `page = 0` và hủy generation cũ.
+  4. **Khóa Cơ Chế Điều Phối Bất Đồng Bộ & Concurrency**:
+     - Áp dụng **Generation Counter Pattern (Latest-Request-Wins)** kết hợp cờ `isMounted` để chống stale response và race condition.
+     - Nối trang (`append`) bắt buộc deduplicate theo `item.id`.
+     - `AbortController` là cơ chế tối ưu hóa tùy chọn, không phải điều kiện tiên quyết cho tính đúng đắn.
+  5. **Khóa Khóa Lạc Quan & Luồng Trạng Thái (Optimistic Lock & Status Transitions)**:
+     - Mọi request PUT sửa dự án hoặc đổi trạng thái bắt buộc gửi kèm `version: number`.
+     - Xung đột HTTP 409 `OPTIMISTIC_LOCK_CONFLICT` không tự động retry, hiển thị cảnh báo và cung cấp nút tải lại dữ liệu mới nhất.
+     - Ma trận trạng thái: Khóa chặt theo `Project.changeStatus` (`DRAFT -> ACTIVE, CANCELLED`; `ACTIVE -> ON_HOLD, COMPLETED, CANCELLED`; `ON_HOLD -> ACTIVE, CANCELLED`; `COMPLETED` và `CANCELLED` là terminal).
+  6. **Khóa Phân Quyền & Bất Biến Thành Viên (D-013 Guard)**:
+     - Thao tác điều hành trên Detail hiển thị có điều kiện dựa trên `allowedActions` từ backend.
+     - Nút "Tạo dự án" yêu cầu quyền `PROJECT_CREATE`.
+     - Backend là nơi thực thi kiểm soát truy cập tối cao (`403 Forbidden`).
+     - Tuân thủ nghiêm ngặt D-013: Cấm xóa hoặc giáng cấp Project Manager duy nhất của dự án (`PROJECT_MANAGER_REQUIRED`).
+  7. **Khóa Kiến Trúc Dữ Liệu & Ranh Giới Thư Viện**:
+     - Tuyệt đối không cài thêm thư viện quản lý state hay data-fetching (không React Query, không SWR, không Redux, không Lodash).
+     - Sử dụng API adapters thuần túy kết hợp React custom hooks và component state.
+  8. **Khóa Lộ Trình Triển Khai Subphases (14A - 14F)**:
+     - `14A`: Contracts, DTOs, API Adapters & Navigation Types.
+     - `14B`: Personal Dashboard Screen (`SCR-MAIN-01`).
+     - `14C`: Project List Screen (`SCR-PRJ-01`) & Search/Filter.
+     - `14D`: Project Detail Screen (`SCR-PRJ-02`) & Milestones.
+     - `14E`: Project Management Flows (`SCR-PRJ-03`..`09`).
+     - `14F`: Integration, Regression, Android E2E (conditional), Security & Final Audit.
