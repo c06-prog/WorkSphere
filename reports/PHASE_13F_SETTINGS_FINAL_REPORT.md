@@ -6,8 +6,7 @@ Phase 13F completes the final subphase of Phase 13 Mobile Authentication:
 1. **Settings Screen (`SCR-ACC-03`)**:
    - Implemented canonical Settings screen at `mobile/src/features/more/screens/SettingsScreen.tsx`.
    - Integrated safe user account summary card displaying full name, email, and roles from `useAuth()`.
-   - Strict Security Invariant: Zero leakage of sensitive tokens, session IDs, permissions JSON, or debug expiration data.
-   - Authoritative Application Version display (`APP_INFO.version = "0.0.1"`) sourced from package metadata (`MOBILE_APP_VERSION_NATIVE_WIRING_DEFERRED` documented).
+   - Application Version display (`APP_INFO.version = "0.0.1"`) sourced from package metadata (`package.json`). Exact truth across targets: package metadata version is `0.0.1`, Android native `versionName` in `build.gradle` is `1.0`, and iOS utilizes the native `MARKETING_VERSION` build setting. SettingsScreen currently displays the package metadata version. Recorded `APP_VERSION_SOURCE_DRIFT_RECONCILED_AS_DEFERRED` and `MOBILE_APP_VERSION_NATIVE_WIRING_DEFERRED`; package.json value is strictly package metadata and not authoritative native application version.
    - Informational preferences cards for theme (default light mode), in-app notification center, and corporate privacy policy (`SETTINGS_POLICY_URL_DEFERRED` documented; no broken/fake URLs).
    - Direct navigation to Personal Profile (`SCR-ACC-01`) via `btn-navigate-profile-from-settings`.
    - Logout Action (`SCR-ACC-04`): Triggered via `btn-logout-settings` opening `ConfirmationDialog` (`dialog-logout-settings`), guarded with synchronous `logoutLockRef` preventing duplicate invocation, invoking `logout()` from `useAuth()`. Per Phase 13C semantics, local session is cleared and user is transitioned to Login even if remote server revocation encounters network failure.
@@ -61,6 +60,7 @@ Phase 13F completes the final subphase of Phase 13 Mobile Authentication:
 ## Deferred Items Summary
 
 1. `MOBILE_APP_VERSION_NATIVE_WIRING_DEFERRED`: Version sourced from package metadata (`package.json`). Native version bridge deferred to avoid adding third-party native dependencies solely for version string display.
-2. `SETTINGS_POLICY_URL_DEFERRED`: No public policy URL configured in canonical docs; internal static information rendered.
-3. `RESET_PASSWORD_DEEP_LINK_DEFERRED`: Deep linking intent filters deferred to post-Phase 13.
-4. `AUTH_E2E_CREDENTIALS_NOT_AVAILABLE_SAFE_SKIP`: Dev E2E variables not set in current host environment.
+2. `APP_VERSION_SOURCE_DRIFT_RECONCILED_AS_DEFERRED`: Reconciled divergence between package.json (`0.0.1`), Android build.gradle (`1.0`), and iOS MARKETING_VERSION; unified native versioning deferred to CI/CD release phase.
+3. `SETTINGS_POLICY_URL_DEFERRED`: No public policy URL configured in canonical docs; internal static information rendered.
+4. `RESET_PASSWORD_DEEP_LINK_DEFERRED`: Deep linking intent filters deferred to post-Phase 13.
+5. `AUTH_E2E_CREDENTIALS_NOT_AVAILABLE_SAFE_SKIP`: Dev E2E variables not set in current host environment.

@@ -4,9 +4,10 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: Phase 13 Mobile Authentication Final Independent Audit
-- Status: PHASE 13 COMPLETED, VALIDATED, INDEPENDENTLY AUDITED & HARDENED
-- Checkpoint: `29c68ab9e00fbc3faea52106e182ff9f9905ff01`
+- Current Task: PHASE 13 MEMORY CHECKPOINT CLOSURE
+- Status: PHASE 13 CLOSED, AUDITED, HARDENED, RECONCILED, MEMORY_CHECKPOINT_CLOSED
+- Final Implementation Checkpoint: `29c68ab9e00fbc3faea52106e182ff9f9905ff01`
+- Reconciliation Checkpoint: `0f17f6be5ea267518fc66a97631f1b351a430b1a`
 - Audit Conclusion: `PHASE_13_FINAL_AUDIT_PASS_WITH_E2E_DEFERRALS`
 - Phase 13 Final Scope & Delivered Invariants:
   - Mobile Auth state machine, in-memory access token, hardware Keychain refresh token.
@@ -14,7 +15,7 @@
   - Single-flight token refresh, serialized FIFO credential coordinator, network error recoverable bootstrap, deduplicated terminal cleanup.
   - Quality Metrics: 38/38 test suites, 325/325 tests PASS. Clean Android Gradle build success. Android emulator smoke verified on `emulator-5554`.
   - Zero console.log, zero token/password leaks.
-  - Dedicated Audit Report: `reports/PHASE_13_FINAL_INDEPENDENT_AUDIT.md`.
+  - Dedicated Audit Report: `reports/PHASE_13_FINAL_AUDIT.md`.
 
 ## Phase 11 Notification and Personal Dashboard Module: COMPLETED, AUDITED & HARDENED
 
@@ -113,6 +114,19 @@
 
 ## Deferred Items & Known Gaps
 
+- `RESET_PASSWORD_DEEP_LINK_DEFERRED`: Deep link routing cho token reset mật khẩu hoãn lại; token truyền qua typed route param hoặc nhập thủ công.
+- `SETTINGS_POLICY_URL_DEFERRED`: URL chính sách công khai hoãn đến khi có tài liệu web hosting; hiển thị thông tin nội bộ.
+- `MOBILE_APP_VERSION_NATIVE_WIRING_DEFERRED`: Native runtime bridge cho app version hoãn để tránh phụ thuộc native bên thứ ba; dùng metadata từ package.json.
+- `APP_VERSION_SOURCE_DRIFT_RECONCILED_AS_DEFERRED`: Reconciled divergence between package.json (0.0.1), Android build.gradle (1.0), and iOS MARKETING_VERSION; unified native versioning deferred to CI/CD release phase.
+- `IOS_BUILD_ON_MACOS_DEFERRED`: Biên dịch native iOS hoãn đến khi có môi trường macOS.
+- `ANDROID_NATIVE_CI_BUILD_DEFERRED`: Biên dịch Android native trên GitHub Actions runner hoãn lại.
+- `AUTH_E2E_CREDENTIALS_NOT_AVAILABLE_SAFE_SKIP`: Kiểm thử E2E live device tự động bỏ qua an toàn khi không có biến môi trường credentials.
+- `AUTH_REFRESH_ROTATION_E2E_DEFERRED`: Kiểm thử live token rotation trên thiết bị thật hoãn đến môi trường E2E có tài khoản hoạt động.
+- `CHANGE_PASSWORD_REAL_E2E_DEFERRED`: Kiểm thử đổi mật khẩu trên thiết bị thật hoãn đến môi trường E2E có tài khoản hoạt động.
+- `OFFLINE_BOOTSTRAP_E2E_DEFERRED`: Kiểm thử bật tắt airplane mode thủ công trên thiết bị hoãn; kiểm thử đơn vị tự động đã bao phủ đầy đủ.
+- `AXIOS_MULTIPART_CONTENT_TYPE_OVERRIDE_REQUIRED`: Ghi đè thủ công header Content-Type khi upload tệp nhị phân hoãn đến Phase 15+.
+- `FONT_INTER_ASSET_BUNDLING_DEFERRED`: Phông chữ Inter asset chưa bundle; mobile sử dụng system font mặc định.
+- `MOBILE_ICON_PACKAGE_DEFERRED`: Thư viện vector icon bên thứ ba hoãn đến Phase 14+ UI refinement.
 - `NOTIFICATION_RETENTION_CLEANUP_DEFERRED`: Dọn dẹp thông báo cũ theo thời gian hoãn đến vận hành production.
 - `PROJECT_DASHBOARD_PROJECTION_DEFERRED`: Endpoint GET /projects/{projectId}/dashboard hoãn lại.
 - `SERVICE_REQUEST_INTERNAL_NOTE_NOTIFICATION_DEFERRED`: Thông báo nội bộ cho Service Request hoãn lại.
@@ -144,7 +158,8 @@
 - **Giai đoạn 14: Mobile Dashboard và Projects** (theo đúng `docs/08_DEVELOPMENT_ROADMAP.md` Mục 18, P0).
   - Scope: Dashboard cá nhân (tích hợp `GET /api/v1/dashboard/me`), Danh sách dự án, Chi tiết dự án, Thành viên dự án.
   - Phụ thuộc: Phase 13 Mobile Authentication đã hoàn tất và kiểm toán độc lập PASS (`PHASE_13_FINAL_AUDIT_PASS_WITH_E2E_DEFERRALS`).
-  - Trạng thái hiện tại: Sẵn sàng triển khai khi có chỉ thị nhiệm vụ cho Phase 14.
+  - Trạng thái hiện tại: **NOT STARTED**.
+  - Next permitted work: Phase 14 audit/planning theo lộ trình khi có task chỉ định. Không tự ý bắt đầu Phase 14 trước khi có yêu cầu.
 
 ## New Session Procedure
 

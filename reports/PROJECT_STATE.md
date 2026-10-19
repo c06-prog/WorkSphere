@@ -4,9 +4,10 @@
 
 - Branch: main
 - Phase 12 Completion Checkpoint: `bdd56778c9e64104b47d85a16e61431ccf1ac899` (`docs(agent): checkpoint phase 12 completion`)
-- Phase 13 Completion & Audited Checkpoint: `29c68ab9e00fbc3faea52106e182ff9f9905ff01` (`feat(mobile): implement settings and finalize phase 13`)
+- Phase 13 Final Implementation Checkpoint: `29c68ab9e00fbc3faea52106e182ff9f9905ff01` (`feat(mobile): implement settings and finalize phase 13`)
+- Phase 13 Final Reconciliation Checkpoint: `0f17f6be5ea267518fc66a97631f1b351a430b1a` (`docs(audit): reconcile project state and handoff for phase 13 final audit`)
 - Phase 13 Audit Conclusion: `PHASE_13_FINAL_AUDIT_PASS_WITH_E2E_DEFERRALS`
-- Current Status: Phase 13 Mobile Authentication COMPLETED, AUDITED & VALIDATED
+- Current Status: Phase 13 Mobile Authentication IMPLEMENTED, AUDITED, HARDENED, RECONCILED, MEMORY_CHECKPOINT_CLOSED
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening
@@ -253,9 +254,14 @@
 - Maven: 3.9.16
 - Spring Boot: 4.1.1 (verified directly from backend/pom.xml)
 - PostgreSQL: postgres:15-alpine via Testcontainers
-- Full backend suite: 298/298 PASS
+- Full backend suite: 307/307 PASS (including E2eUserProvisionerTest)
   - 0 failures, 0 errors, 0 skipped
   - Maven execution: BUILD SUCCESS (exit code 0)
+- Mobile Runtime: React Native 0.88.0, React 19.3.0
+- Mobile Test Suites: 38/38 PASS, 325/325 tests PASS (0 failures, 0 errors, 0 skipped, 0 snapshots)
+- Mobile Lint & Typecheck: 0 errors, 0 warnings
+- Android Build: BUILD SUCCESSFUL (203 actionable tasks, exit code 0)
+- Android Emulator Smoke: verified on emulator-5554 (Android 15, API 35)
 - Targeted Phase 11 test suites (38 tests):
   - `V017MigrationTest`: 4/4 PASS
   - `NotificationMockMvcTest`: 8/8 PASS
@@ -278,6 +284,19 @@
 
 ## Deferred Items & Known Gaps
 
+- RESET_PASSWORD_DEEP_LINK_DEFERRED: Deep link routing cho token reset mật khẩu hoãn lại; token truyền qua typed route param hoặc nhập thủ công.
+- SETTINGS_POLICY_URL_DEFERRED: URL chính sách công khai hoãn đến khi có tài liệu web hosting; hiển thị thông tin nội bộ.
+- MOBILE_APP_VERSION_NATIVE_WIRING_DEFERRED: Native runtime bridge cho app version hoãn để tránh phụ thuộc native bên thứ ba; dùng metadata từ package.json.
+- APP_VERSION_SOURCE_DRIFT_RECONCILED_AS_DEFERRED: Reconciled divergence between package.json (0.0.1), Android build.gradle (1.0), and iOS MARKETING_VERSION; unified native versioning deferred to CI/CD release phase.
+- IOS_BUILD_ON_MACOS_DEFERRED: Biên dịch native iOS hoãn đến khi có môi trường macOS.
+- ANDROID_NATIVE_CI_BUILD_DEFERRED: Biên dịch Android native trên GitHub Actions runner hoãn lại.
+- AUTH_E2E_CREDENTIALS_NOT_AVAILABLE_SAFE_SKIP: Kiểm thử E2E live device tự động bỏ qua an toàn khi không có biến môi trường credentials.
+- AUTH_REFRESH_ROTATION_E2E_DEFERRED: Kiểm thử live token rotation trên thiết bị thật hoãn đến môi trường E2E có tài khoản hoạt động.
+- CHANGE_PASSWORD_REAL_E2E_DEFERRED: Kiểm thử đổi mật khẩu trên thiết bị thật hoãn đến môi trường E2E có tài khoản hoạt động.
+- OFFLINE_BOOTSTRAP_E2E_DEFERRED: Kiểm thử bật tắt airplane mode thủ công trên thiết bị hoãn; kiểm thử đơn vị tự động đã bao phủ đầy đủ.
+- AXIOS_MULTIPART_CONTENT_TYPE_OVERRIDE_REQUIRED: Ghi đè thủ công header Content-Type khi upload tệp nhị phân hoãn đến Phase 15+.
+- FONT_INTER_ASSET_BUNDLING_DEFERRED: Phông chữ Inter asset chưa bundle; mobile sử dụng system font mặc định.
+- MOBILE_ICON_PACKAGE_DEFERRED: Thư viện vector icon bên thứ ba hoãn đến Phase 14+ UI refinement.
 - NOTIFICATION_RETENTION_CLEANUP_DEFERRED: Dọn dẹp thông báo cũ theo thời gian hoãn đến vận hành production.
 - PROJECT_DASHBOARD_PROJECTION_DEFERRED: Endpoint GET /projects/{projectId}/dashboard hoãn lại.
 - SERVICE_REQUEST_INTERNAL_NOTE_NOTIFICATION_DEFERRED: Thông báo nội bộ cho Service Request hoãn lại.
@@ -299,16 +318,9 @@
 - TASK_DELETE_RULE_AMBIGUITY_DEFERRED: Định nghĩa “Business history quan trọng” chưa đầy đủ trong canonical docs; giữ logic xét status history.
 - TASK_FLYWAY_CONFIGURATION_MODULE_LOCATION_LOW: TaskFlywayConfiguration hiện ở task.infrastructure. Có thể chuyển sang shared.infrastructure trong đợt refactor riêng.
 - DATA_INTEGRITY_ERROR_MAPPING_FALLBACK_LOW: Exception mapping cho task_assignments có thể nâng cấp sang trích xuất constraint PostgreSQL driver tương tự Asset module.
-- TEMPORARY_PASSWORD_FLOW_GAP: Luồng kích hoạt và endpoint thiết lập mật khẩu lần đầu tiếp tục hoãn.
+- TEMPORARY_PASSWORD_FLOW_GAP: Luồng kích hoạt và endpoint thiết lập mật khẩu lần đầu tiếp tục hoãn; mobile ánh xạ ACCOUNT_PENDING sang thông báo liên hệ admin.
 - TEAM_API_CONTRACT_GAP: Team REST controllers hoãn vì `06_API_CONTRACT.md` chưa định nghĩa endpoints.
-- PUT_ME_PASSWORD_TEST_GAP: Test coverage cho luồng đổi mật khẩu người dùng hiện tại tiếp tục hoãn.
-- AXIOS_MULTIPART_CONTENT_TYPE_OVERRIDE_REQUIRED: Ghi đè thủ công header Content-Type khi upload tệp nhị phân hoãn đến Phase 14+.
-- FONT_INTER_ASSET_BUNDLING_DEFERRED: Phông chữ Inter asset chưa bundle; mobile sử dụng system font mặc định (thuộc tính fontFamily được omit trong typography tokens).
-- MOBILE_ICON_PACKAGE_DEFERRED: Thư viện vector icon bên thứ ba hoãn đến Phase 13/14 UI refinement.
-- FORM_AND_VALIDATION_LIBRARIES_DEFERRED: React Hook Form và Zod hoãn đến biểu mẫu thật Phase 13.
-- IOS_BUILD_ON_MACOS_DEFERRED: Biên dịch iOS hoãn đến khi có máy chủ macOS.
-- ANDROID_NATIVE_CI_BUILD_DEFERRED: Biên dịch Android native trên GitHub Actions runner hoãn lại.
-- PHASE_13_AUTH_FLOWS_DEFERRED: Toàn bộ luồng đăng nhập, refresh token, phục hồi phiên và đăng xuất thuộc quyền sở hữu của Phase 13.
+- PUT_ME_PASSWORD_TEST_GAP: Test coverage cho luồng đổi mật khẩu người dùng hiện tại ở backend tiếp tục hoãn.
 
 ## Resolved Prerequisites & Readiness Items
 
@@ -317,6 +329,7 @@
 - PRODUCTION_ENVIRONMENT_WIRING_RESOLVED: Cấu hình API Base URL native & JS hoàn tất qua EnvironmentConfigModule, BuildConfig và Info.plist với kiểm soát nghiêm ngặt HTTPS và fail-fast cho Release build.
 - KEYCHAIN_NATIVE_OPERATION_SMOKE_RESOLVED: Kiểm thử CRUD phần cứng Keystore/Keychain hoàn tất trên emulator-5554 (Android 15, API 35) với dọn dẹp sạch sẽ 100%.
 - ASYNC_STORAGE_NATIVE_OPERATION_SMOKE_RESOLVED: Kiểm thử CRUD ghi đĩa AsyncStorage hoàn tất trên emulator-5554 trên khóa allowlisted @worksphere/theme_preference với dọn dẹp sạch sẽ 100%.
+- PHASE_13_MOBILE_AUTHENTICATION_RESOLVED: Toàn bộ module xác thực di động, điều hướng, quản lý phiên và hồ sơ cá nhân đã hoàn tất và kiểm toán độc lập PASS (`PHASE_13_FINAL_AUDIT_PASS_WITH_E2E_DEFERRALS`).
 
 ## Next Permitted Phase
 
