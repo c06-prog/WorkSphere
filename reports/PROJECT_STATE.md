@@ -7,7 +7,8 @@
 - Phase 13 Final Implementation Checkpoint: `29c68ab9e00fbc3faea52106e182ff9f9905ff01` (`feat(mobile): implement settings and finalize phase 13`)
 - Phase 13 Final Reconciliation Checkpoint: `0f17f6be5ea267518fc66a97631f1b351a430b1a` (`docs(audit): reconcile project state and handoff for phase 13 final audit`)
 - Phase 13 Audit Conclusion: `PHASE_13_FINAL_AUDIT_PASS_WITH_E2E_DEFERRALS`
-- Current Status: Phase 13 Mobile Authentication IMPLEMENTED, AUDITED, HARDENED, RECONCILED, MEMORY_CHECKPOINT_CLOSED. Phase 14 Mobile Dashboard and Projects: AUDITED, CONTRACT_RECONCILED, DECISION_FROZEN, IMPLEMENTATION_NOT_STARTED.
+- Phase 14 Baseline Checkpoint: `785c155b69309284066252701ec1554d35d4e795` (`docs(phase14): record architecture decision D-061 phase 14 contract freeze`)
+- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects: Subphase 14A (Contracts, DTOs, Type Guards, API Adapters, Error Mapping, Navigation Types) IMPLEMENTED, VALIDATED, READY_FOR_INDEPENDENT_AUDIT.
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening

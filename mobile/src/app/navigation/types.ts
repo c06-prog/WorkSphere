@@ -25,6 +25,12 @@ export type MainTabParamList = {
   EditProfile: undefined;
   ChangePassword: undefined;
   Settings: undefined;
+  // Phase 14 Project Stack Screens
+  ProjectDetail: { projectId: string };
+  CreateProject: undefined;
+  EditProject: { projectId: string };
+  ProjectMembers: { projectId: string };
+  ProjectMilestones: { projectId: string };
 };
 
 export type RootStackParamList = {

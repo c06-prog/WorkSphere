@@ -4,15 +4,15 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: PHASE 14 DECISION FREEZE & CONTRACT RECONCILIATION (MOBILE DASHBOARD + PROJECTS)
-- Status: Phase 13 CLOSED. Phase 14 AUDITED, CONTRACT_RECONCILED, DECISION_FROZEN, IMPLEMENTATION_NOT_STARTED
-- Final Implementation Checkpoint: `29c68ab9e00fbc3faea52106e182ff9f9905ff01`
-- Reconciliation Checkpoint: `0f17f6be5ea267518fc66a97631f1b351a430b1a`
-- Audit Conclusion: `PHASE_13_FINAL_AUDIT_PASS_WITH_E2E_DEFERRALS`
-- Phase 14 Pre-audit Report: `reports/PRE_PHASE_14_DASHBOARD_PROJECTS_AUDIT.md`
-- Phase 14 Contract Reconciliation: `reports/PHASE_14_CONTRACT_RECONCILIATION.md`
-- Phase 14 Decision: `D-061` in `reports/DECISIONS.md`
-- Next Action: `PHASE 14A IMPLEMENTATION`
+- Current Task: PHASE 14A - DASHBOARD & PROJECT CONTRACT FOUNDATION (DTOs, Runtime Guards, API Adapters, Errors, Navigation Types)
+- Status: Phase 14A IMPLEMENTED, VALIDATED (43 suites, 379 tests PASS, assembleDebug SUCCESS). SẴN SÀNG CHO INDEPENDENT AUDIT.
+- Baseline Checkpoint: `785c155b69309284066252701ec1554d35d4e795`
+- Phase 14A Report: `reports/PHASE_14A_CONTRACT_FOUNDATION_REPORT.md`
+- Next Action: `INDEPENDENT AUDIT SUBPHASE 14A`
+- Scope Boundary:
+  - NO UI components or hook implementations in 14A.
+  - NO backend or Flyway migration edits.
+  - NO third-party packages installed (zero new dependencies).
 - Phase 13 Final Scope & Delivered Invariants:
   - Mobile Auth state machine, in-memory access token, hardware Keychain refresh token.
   - All screens implemented: `Login` (`SCR-AUTH-02`), `ForgotPassword` (`SCR-AUTH-03`), `ResetPassword` (`SCR-AUTH-04`), `Profile` (`SCR-ACC-01`), `EditProfile`, `ChangePassword` (`SCR-ACC-02`), `Settings` (`SCR-ACC-03`), `Logout Confirmation` (`SCR-ACC-04`).
