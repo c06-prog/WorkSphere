@@ -8,21 +8,22 @@
 - Phase 13 Final Reconciliation Checkpoint: `0f17f6be5ea267518fc66a97631f1b351a430b1a` (`docs(audit): reconcile project state and handoff for phase 13 final audit`)
 - Phase 13 Audit Conclusion: `PHASE_13_FINAL_AUDIT_PASS_WITH_E2E_DEFERRALS`
 - Phase 14 Baseline Checkpoint: `785c155b69309284066252701ec1554d35d4e795` (`docs(phase14): record architecture decision D-061 phase 14 contract freeze`)
-- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects: Subphase 14A (Contracts, DTOs, Type Guards, API Adapters, Error Mapping, Navigation Types) IMPLEMENTED, VALIDATED, READY_FOR_INDEPENDENT_AUDIT.
+- Phase 14A Implementation Checkpoint: `55cc13e6372ba4374d3533fe3f82f7afcd84dcff` (`feat(mobile): add phase 14 dashboard project contracts`)
+- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects: Subphase 14B (Personal Dashboard `SCR-MAIN-01`, `useDashboard`, `MetricCard`, canonical metrics, pull-to-refresh) IMPLEMENTED, VALIDATED, READY_FOR_INDEPENDENT_AUDIT. Subphase 14C NOT STARTED.
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening
 
-- Latest Validated Implementation: `feat(mobile): implement settings and finalize phase 13`
-- Subphase 13F Scope:
-  - `mobile/src/features/more/screens/SettingsScreen.tsx`: Settings screen (`SCR-ACC-03`, `SCR-ACC-04`) rendering safe account summary, authoritative app version (`0.0.1`), informational preferences (theme, notification, policy `SETTINGS_POLICY_URL_DEFERRED`), navigation to Profile, and duplicate-protected logout confirmation dialog.
-  - `mobile/src/features/more/screens/MoreScreen.tsx`: Added navigation button to Settings (`btn-navigate-settings`).
-  - `mobile/src/app/navigation/MainTabNavigator.tsx`: Registered `Settings` protected route.
-  - `mobile/src/shared/config/appInfo.ts`: Authoritative app version source from package metadata (`MOBILE_APP_VERSION_NATIVE_WIRING_DEFERRED`).
-  - Mobile Tests: 38/38 test suites, 325/325 tests PASS (0 failures, 0 skipped).
+- Latest Validated Implementation: `feat(mobile): implement personal dashboard`
+- Subphase 14B Scope:
+  - `mobile/src/features/dashboard/screens/DashboardScreen.tsx`: Personal Dashboard screen (`SCR-MAIN-01`) backed by `GET /dashboard/me`, rendering task summary metrics, project summary metrics, service request summary metrics, upcoming tasks (max 5), recent notifications (max 5), compact section empty states, full-screen loading/error states with retry, pull-to-refresh with inline error banner, and canonical navigation to Projects tab.
+  - `mobile/src/features/dashboard/hooks/useDashboard.ts`: Data-loading hook with generation counter (`generationRef`), unmounted guard (`mountedRef`), in-flight deduplication lock (`inFlightPromiseRef`), and pull-to-refresh data preservation.
+  - `mobile/src/features/dashboard/components/MetricCard.tsx`: MetricCard presentational component with accessible labels and highlight variants.
+  - `mobile/src/features/dashboard/utils/dateFormat.ts`: Safe ISO-8601 Vietnamese date formatter (`formatDateTime`, `formatDate`).
+  - Mobile Tests: 45/45 test suites, 397/397 tests PASS (0 failures, 0 skipped).
   - TypeScript & Lint: `tsc --noEmit` PASS (0 errors), `eslint .` PASS (0 errors, 0 warnings).
-  - Android Build: `.\gradlew.bat clean && .\gradlew.bat assembleDebug --no-daemon` BUILD SUCCESSFUL (203 actionable tasks, exit code 0).
-  - Dedicated Report: `reports/PHASE_13F_SETTINGS_FINAL_REPORT.md`.
+  - Android Build: `.\gradlew.bat assembleDebug --no-daemon` BUILD SUCCESSFUL (203 actionable tasks, exit code 0).
+  - Dedicated Report: `reports/PHASE_14B_DASHBOARD_REPORT.md`.
 
 
 

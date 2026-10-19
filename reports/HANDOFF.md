@@ -4,13 +4,13 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: PHASE 14A - DASHBOARD & PROJECT CONTRACT FOUNDATION (DTOs, Runtime Guards, API Adapters, Errors, Navigation Types)
-- Status: Phase 14A IMPLEMENTED, VALIDATED (43 suites, 379 tests PASS, assembleDebug SUCCESS). SẴN SÀNG CHO INDEPENDENT AUDIT.
-- Baseline Checkpoint: `785c155b69309284066252701ec1554d35d4e795`
-- Phase 14A Report: `reports/PHASE_14A_CONTRACT_FOUNDATION_REPORT.md`
-- Next Action: `INDEPENDENT AUDIT SUBPHASE 14A`
+- Current Task: PHASE 14B - PERSONAL DASHBOARD (SCR-MAIN-01)
+- Status: Phase 14B IMPLEMENTED, VALIDATED (45 suites, 397 tests PASS, assembleDebug SUCCESS). SẴN SÀNG CHO INDEPENDENT AUDIT.
+- Baseline Checkpoint: `55cc13e6372ba4374d3533fe3f82f7afcd84dcff`
+- Phase 14B Report: `reports/PHASE_14B_DASHBOARD_REPORT.md`
+- Next Action: `INDEPENDENT AUDIT SUBPHASE 14B`
 - Scope Boundary:
-  - NO UI components or hook implementations in 14A.
+  - NO Project List UI or Detail UI implementation (`ProjectsScreen.tsx` remains placeholder until 14C).
   - NO backend or Flyway migration edits.
   - NO third-party packages installed (zero new dependencies).
 - Phase 13 Final Scope & Delivered Invariants:
