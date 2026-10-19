@@ -7,20 +7,20 @@
 - Pre-Phase 13 Readiness Base: `a9c59259904f2dd6e9bd38e4ca63c1a88c89c474` (`feat(mobile): finalize pre-auth runtime readiness`)
 - Phase 13B Checkpoint: `d81717ecda52fd6883746f1ad4234979a6eceaed` (`feat(mobile): implement auth provider and login flow`)
 - Phase 13B Hardening: `93ae7a33c4ee87870416fe9ccf0ac798c3daeabc` (`fix(mobile): harden auth provider concurrency`)
-- Current Status: Phase 13 Subphase 13C Bootstrap Credential Mutation COMPLETED & VALIDATED
+- Current Status: Phase 13 Subphase 13C Strict Eligibility and Single Cleanup Owner COMPLETED & VALIDATED
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening
 
-- Latest Validated Implementation: `fix(mobile): centralize bootstrap credential cleanup`
-- Subphase 13C Bootstrap Credential Mutation Patch:
-  - `mobile/src/app/auth/sessionCredentialCoordinator.ts`: Added `clearAccessTokenForBootstrap(expectedGeneration?)` and `hasActiveAccessToken()`. All production credential mutations and access token inspections are fully centralized in the coordinator.
-  - `mobile/src/app/auth/AuthProvider.tsx`: Eliminated direct calls to `accessTokenStore.clearAccessToken()` and `accessTokenStore.getAccessToken()`. Bootstrap memory token cleanup is routed through the serialized FIFO queue without touching Keychain refresh tokens.
-  - Mobile Tests: 32/32 test suites, 262/262 tests PASS (0 failures, 0 skipped).
+- Latest Validated Implementation: `fix(mobile): tighten refresh eligibility and cleanup`
+- Subphase 13C Strict Eligibility and Single Cleanup Owner Patch:
+  - `mobile/src/shared/api/apiClient.ts`: `isEligibleForRefresh` strictly requires valid `ApiResponse` error envelope with `success === false` and `code === 'UNAUTHORIZED'`. Non-envelope 401s or non-UNAUTHORIZED codes never trigger refresh. Added comprehensive matrix tests for payloads A through F.
+  - `mobile/src/app/auth/refreshCoordinator.ts`: Removed redundant `clearSessionCredentials` on server refresh rejection. `AuthProvider`'s unauthorized handler is established as the sole terminal cleanup owner for server rejections. `refreshCoordinator` retains cleanup ownership strictly for local atomic commit failures (Keychain hardware write error).
+  - Mobile Tests: 32/32 test suites, 269/269 tests PASS (0 failures, 0 skipped).
   - TypeScript & Lint: `tsc --noEmit` PASS (0 errors), `eslint .` PASS (0 errors, 0 warnings).
   - Android Build: `.\gradlew.bat assembleDebug --no-daemon` BUILD SUCCESSFUL (203 actionable tasks, exit code 0).
   - Dedicated Report: `reports/PHASE_13C_REFRESH_SESSION_REPORT.md`.
-  - Next Action: Ready for Phase 13D entry review.
+  - Next Action: Narrow post-patch audit.
 
 
 

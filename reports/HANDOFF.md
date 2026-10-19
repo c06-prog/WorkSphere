@@ -4,16 +4,16 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: Phase 13C Final Bootstrap Credential Mutation Patch
-- Status: SUBPHASE 13C FULLY CENTRALIZED, HARDENED & TESTED (Ready for Phase 13D review)
-- Phase 13C Bootstrap Credential Mutation Scope:
-  - `mobile/src/app/auth/sessionCredentialCoordinator.ts`: Added `clearAccessTokenForBootstrap(expectedGeneration?)` and `hasActiveAccessToken()`. Centralizes 100% of production credential mutations and access token inspections in the coordinator.
-  - `mobile/src/app/auth/AuthProvider.tsx`: Eliminated direct calls to `accessTokenStore.clearAccessToken()` and `accessTokenStore.getAccessToken()`. Bootstrap memory token cleanup is routed through the serialized FIFO queue without touching Keychain refresh tokens.
+- Current Task: Phase 13C Strict Refresh Eligibility and Single Cleanup Owner Patch
+- Status: SUBPHASE 13C FULLY CENTRALIZED, HARDENED & TESTED (Ready for narrow post-patch audit)
+- Phase 13C Strict Eligibility and Single Cleanup Owner Scope:
+  - `mobile/src/shared/api/apiClient.ts`: `isEligibleForRefresh` strictly requires valid `ApiResponse` error envelope with `success === false` and `code === 'UNAUTHORIZED'`. Non-envelope 401s or non-UNAUTHORIZED codes never trigger refresh. Added comprehensive matrix tests for payloads A through F.
+  - `mobile/src/app/auth/refreshCoordinator.ts`: Removed redundant `clearSessionCredentials` on server refresh rejection. `AuthProvider`'s unauthorized handler is established as the sole terminal cleanup owner for server rejections. `refreshCoordinator` retains cleanup ownership strictly for local atomic commit failures (Keychain hardware write error).
   - Dedicated Report: `reports/PHASE_13C_REFRESH_SESSION_REPORT.md`.
-  - Mobile Tests: 32/32 test suites, 262/262 tests PASS (0 failures, 0 skipped).
+  - Mobile Tests: 32/32 test suites, 269/269 tests PASS (0 failures, 0 skipped).
   - TypeScript & Lint: `tsc --noEmit` PASS (0 errors), `eslint .` PASS (0 errors, 0 warnings).
   - Android Build: `.\gradlew.bat assembleDebug --no-daemon` BUILD SUCCESSFUL (203 actionable tasks, exit code 0).
-  - Next Action: Phase 13D entry review.
+  - Next Action: Narrow post-patch audit.
 - Working tree: clean (sau khi commit)
 
 ## Phase 11 Notification and Personal Dashboard Module: COMPLETED, AUDITED & HARDENED

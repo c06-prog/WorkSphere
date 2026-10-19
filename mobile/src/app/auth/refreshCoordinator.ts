@@ -61,7 +61,6 @@ export async function executeRefreshCall(refreshToken: string): Promise<RefreshR
 import {
   getSessionCredentialGeneration,
   commitRefreshedCredentials,
-  clearSessionCredentials,
   invalidateSessionCredentials,
 } from './sessionCredentialCoordinator';
 
@@ -99,9 +98,6 @@ export async function refreshAccessToken(expectedGeneration?: number): Promise<s
   const currentFlightPromise = (async () => {
     const currentRefreshToken = await secureStorage.getRefreshToken();
     if (!currentRefreshToken) {
-      if (getSessionCredentialGeneration() === flightGeneration) {
-        await clearSessionCredentials(flightGeneration);
-      }
       throw new Error('Không tìm thấy phiên đăng nhập trong bộ lưu trữ an toàn');
     }
 
@@ -110,17 +106,7 @@ export async function refreshAccessToken(expectedGeneration?: number): Promise<s
       throw new Error('Phiên làm mới đã bị hủy bởi tác vụ xác thực mới hơn');
     }
 
-    let response: RefreshResponse;
-    try {
-      response = await executeRefreshCall(currentRefreshToken);
-    } catch (apiError) {
-      // Backend rejected refresh token or network failed
-      // For terminal rejection, clear credentials only if still in this generation
-      if (getSessionCredentialGeneration() === flightGeneration) {
-        await clearSessionCredentials(flightGeneration);
-      }
-      throw apiError;
-    }
+    const response: RefreshResponse = await executeRefreshCall(currentRefreshToken);
 
     // Pre-queue generation check
     if (getSessionCredentialGeneration() !== flightGeneration) {

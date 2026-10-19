@@ -46,7 +46,7 @@ Phase 13C establishes robust, single-flight token refresh coordination, cold-sta
 
 ### 2.1 Mobile Unit & Integration Tests (Jest)
 - Total test suites: **32 passed, 32 total**
-- Total tests: **262 passed, 262 total** (0 failures, 0 skipped)
+- Total tests: **269 passed, 269 total** (0 failures, 0 skipped)
 - Hardened test suites:
   - `mobile/__tests__/auth/sessionCredentialCoordinator.test.ts` (4 tests: deterministic Login-wins, deterministic Logout-wins, queue failure recovery, bootstrap access token cleanup)
   - `mobile/__tests__/auth/refreshCoordinator.test.ts` (9 tests: single-flight deduplication, atomic rotation, failure handling, isolation, stale refresh race A, stale refresh race B, generation coexistence)
@@ -119,3 +119,18 @@ Phase 13C establishes robust, single-flight token refresh coordination, cold-sta
    - Introduced `clearAccessTokenForBootstrap(expectedGeneration?)` and `hasActiveAccessToken()` in `sessionCredentialCoordinator.ts`.
    - `runBootstrap()` now purges stale in-memory access tokens through the serialized queue without touching or clearing persistent Keychain refresh tokens.
    - 100% of production credential mutations across mobile source now reside exclusively within `sessionCredentialCoordinator.ts`.
+
+---
+
+## 7. Phase 13C Strict Eligibility and Single Cleanup Owner Patch
+
+### 7.1 Architecture & Findings Resolved
+1. **AUTH_REFRESH_ELIGIBILITY_DRIFT**:
+   - Gated automatic refresh in `isEligibleForRefresh` strictly to valid `ApiResponse` error envelopes containing `success === false` and `code === 'UNAUTHORIZED'`.
+   - Non-envelope payloads (HTML error bodies, plain text) and envelopes missing `code` or bearing non-UNAUTHORIZED codes (e.g. `ACCOUNT_LOCKED`) never trigger refresh attempts.
+   - Added exhaustive matrix test suite for payloads A through F in `apiClient.test.ts`.
+
+2. **AUTH_TERMINAL_CLEANUP_DUPLICATION_RISK**:
+   - Established `AuthProvider`'s registered unauthorized handler as the sole owner for terminal credential cleanup on server refresh rejections.
+   - Removed secondary `clearSessionCredentials` call from `refreshCoordinator` on refresh endpoint failure; `refreshCoordinator` retains cleanup ownership strictly for local atomic commit failures (Keychain write failure).
+   - Added deterministic test proving that when 3 concurrent protected requests fail refresh terminally, exactly 1 actual storage cleanup execution and exactly 1 transition to `UNAUTHENTICATED` occur.

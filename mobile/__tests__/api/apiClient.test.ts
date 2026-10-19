@@ -282,6 +282,144 @@ describe('ApiClient and Transport Interceptors', () => {
       setTokenRefreshHandler(null);
     });
 
+    describe('Strict Refresh Eligibility Payload Matrix (A-F)', () => {
+      const create401Error = (responseData: unknown) => {
+        const config = {
+          url: '/projects',
+          method: 'get',
+          headers: new axios.AxiosHeaders({ Authorization: 'Bearer test-token' }),
+        } as any;
+
+        return new AxiosError('Unauthorized', '401', config, {}, {
+          status: 401,
+          data: responseData,
+          statusText: 'Unauthorized',
+          headers: {},
+          config,
+        } as AxiosResponse);
+      };
+
+      test('Payload A: Valid envelope with code=UNAUTHORIZED triggers REFRESH', async () => {
+        const mockRefresh = jest.fn().mockResolvedValue('token-rotated');
+        const { setTokenRefreshHandler } = require('../../src/shared/api/apiClient');
+        setTokenRefreshHandler(mockRefresh);
+
+        const responseInterceptorErr = (apiClient.interceptors.response as any).handlers[0].rejected;
+        const reqSpy = jest.spyOn(apiClient, 'request').mockResolvedValueOnce({
+          data: { success: true },
+        } as AxiosResponse);
+
+        const payloadA = {
+          success: false,
+          code: 'UNAUTHORIZED',
+          timestamp: '2026-10-19T00:00:00Z',
+        };
+
+        await responseInterceptorErr(create401Error(payloadA));
+        expect(mockRefresh).toHaveBeenCalledTimes(1);
+        expect(reqSpy).toHaveBeenCalled();
+        reqSpy.mockRestore();
+
+        setTokenRefreshHandler(null);
+      });
+
+      test('Payload B: Envelope without code does NOT trigger refresh (NO_REFRESH)', async () => {
+        const mockRefresh = jest.fn();
+        const { setTokenRefreshHandler } = require('../../src/shared/api/apiClient');
+        setTokenRefreshHandler(mockRefresh);
+
+        const responseInterceptorErr = (apiClient.interceptors.response as any).handlers[0].rejected;
+
+        const payloadB = {
+          success: false,
+          timestamp: '2026-10-19T00:00:00Z',
+        };
+
+        await expect(responseInterceptorErr(create401Error(payloadB))).rejects.toMatchObject({
+          kind: 'UNAUTHORIZED',
+        });
+        expect(mockRefresh).not.toHaveBeenCalled();
+
+        setTokenRefreshHandler(null);
+      });
+
+      test('Payload C: Plain text unauthorized does NOT trigger refresh (NO_REFRESH)', async () => {
+        const mockRefresh = jest.fn();
+        const { setTokenRefreshHandler } = require('../../src/shared/api/apiClient');
+        setTokenRefreshHandler(mockRefresh);
+
+        const responseInterceptorErr = (apiClient.interceptors.response as any).handlers[0].rejected;
+
+        const payloadC = 'plain unauthorized text';
+
+        await expect(responseInterceptorErr(create401Error(payloadC))).rejects.toMatchObject({
+          kind: 'UNAUTHORIZED',
+        });
+        expect(mockRefresh).not.toHaveBeenCalled();
+
+        setTokenRefreshHandler(null);
+      });
+
+      test('Payload D: HTML 401 body does NOT trigger refresh (NO_REFRESH)', async () => {
+        const mockRefresh = jest.fn();
+        const { setTokenRefreshHandler } = require('../../src/shared/api/apiClient');
+        setTokenRefreshHandler(mockRefresh);
+
+        const responseInterceptorErr = (apiClient.interceptors.response as any).handlers[0].rejected;
+
+        const payloadD = '<html><body><h1>401 Unauthorized Gateway</h1></body></html>';
+
+        await expect(responseInterceptorErr(create401Error(payloadD))).rejects.toMatchObject({
+          kind: 'UNAUTHORIZED',
+        });
+        expect(mockRefresh).not.toHaveBeenCalled();
+
+        setTokenRefreshHandler(null);
+      });
+
+      test('Payload E: Code is ACCOUNT_LOCKED does NOT trigger refresh (NO_REFRESH)', async () => {
+        const mockRefresh = jest.fn();
+        const { setTokenRefreshHandler } = require('../../src/shared/api/apiClient');
+        setTokenRefreshHandler(mockRefresh);
+
+        const responseInterceptorErr = (apiClient.interceptors.response as any).handlers[0].rejected;
+
+        const payloadE = {
+          success: false,
+          code: 'ACCOUNT_LOCKED',
+          timestamp: '2026-10-19T00:00:00Z',
+        };
+
+        await expect(responseInterceptorErr(create401Error(payloadE))).rejects.toMatchObject({
+          kind: 'UNAUTHORIZED',
+        });
+        expect(mockRefresh).not.toHaveBeenCalled();
+
+        setTokenRefreshHandler(null);
+      });
+
+      test('Payload F: success=true does NOT trigger refresh (NO_REFRESH)', async () => {
+        const mockRefresh = jest.fn();
+        const { setTokenRefreshHandler } = require('../../src/shared/api/apiClient');
+        setTokenRefreshHandler(mockRefresh);
+
+        const responseInterceptorErr = (apiClient.interceptors.response as any).handlers[0].rejected;
+
+        const payloadF = {
+          success: true,
+          code: 'UNAUTHORIZED',
+          timestamp: '2026-10-19T00:00:00Z',
+        };
+
+        await expect(responseInterceptorErr(create401Error(payloadF))).rejects.toMatchObject({
+          kind: 'UNAUTHORIZED',
+        });
+        expect(mockRefresh).not.toHaveBeenCalled();
+
+        setTokenRefreshHandler(null);
+      });
+    });
+
     test('HANDLER OWNERSHIP: unregistering previous handler does not remove newer registered handler', async () => {
       const {
         registerUnauthorizedHandler,

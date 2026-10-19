@@ -28,7 +28,7 @@ describe('Single-Flight RefreshCoordinator', () => {
     resetRefreshCoordinatorForTests();
   });
 
-  test('A. No refresh token in Keychain: throws terminal error without HTTP call', async () => {
+  test('A. No refresh token in Keychain: throws terminal error without HTTP call and does not clear storage directly', async () => {
     (secureStorage.getRefreshToken as jest.Mock).mockResolvedValueOnce(null);
     const postSpy = jest.spyOn(refreshTransport, 'post');
 
@@ -37,7 +37,8 @@ describe('Single-Flight RefreshCoordinator', () => {
     );
 
     expect(secureStorage.getRefreshToken).toHaveBeenCalledTimes(1);
-    expect(accessTokenStore.clearAccessToken).toHaveBeenCalledTimes(1);
+    expect(accessTokenStore.clearAccessToken).not.toHaveBeenCalled();
+    expect(secureStorage.clearRefreshToken).not.toHaveBeenCalled();
     expect(postSpy).not.toHaveBeenCalled();
   });
 
@@ -97,7 +98,7 @@ describe('Single-Flight RefreshCoordinator', () => {
     expect(accessTokenStore.setAccessToken).toHaveBeenCalledTimes(1);
   });
 
-  test('D. Refresh endpoint failure: rejects all callers consistently and clears memory token', async () => {
+  test('D. Refresh endpoint failure: rejects all callers consistently without clearing storage directly', async () => {
     (secureStorage.getRefreshToken as jest.Mock).mockResolvedValue('old-refresh-token-123');
     jest.spyOn(refreshTransport, 'post').mockRejectedValue(new Error('Refresh token revoked'));
 
@@ -107,7 +108,8 @@ describe('Single-Flight RefreshCoordinator', () => {
     await expect(p1).rejects.toThrow('Refresh token revoked');
     await expect(p2).rejects.toThrow('Refresh token revoked');
 
-    expect(accessTokenStore.clearAccessToken).toHaveBeenCalled();
+    expect(accessTokenStore.clearAccessToken).not.toHaveBeenCalled();
+    expect(secureStorage.clearRefreshToken).not.toHaveBeenCalled();
     expect(secureStorage.setRefreshToken).not.toHaveBeenCalled();
   });
 

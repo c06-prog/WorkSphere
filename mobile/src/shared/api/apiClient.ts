@@ -106,9 +106,13 @@ function isEligibleForRefresh(error: any): boolean {
     return false;
   }
 
-  // If envelope provided a code, it must not be a non-refreshable code (like INVALID_CREDENTIALS)
+  // Response data must be a valid ApiResponse failure envelope with code 'UNAUTHORIZED'
   const responseData = error.response.data;
-  if (isApiResponse(responseData) && responseData.code && responseData.code !== 'UNAUTHORIZED') {
+  if (
+    !isApiResponse(responseData) ||
+    responseData.success !== false ||
+    responseData.code !== 'UNAUTHORIZED'
+  ) {
     return false;
   }
 
