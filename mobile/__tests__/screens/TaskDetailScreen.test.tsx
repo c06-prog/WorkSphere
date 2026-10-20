@@ -28,6 +28,8 @@ jest.mock('react-native-safe-area-context', () =>
 );
 
 const mockGoBack = jest.fn();
+const mockNavigate = jest.fn();
+const mockAddListener = jest.fn();
 
 jest.mock('@react-navigation/native', () => {
   const actual = jest.requireActual('@react-navigation/native');
@@ -35,6 +37,8 @@ jest.mock('@react-navigation/native', () => {
     ...actual,
     useNavigation: () => ({
       goBack: mockGoBack,
+      navigate: mockNavigate,
+      addListener: mockAddListener,
     }),
     useRoute: () => ({
       params: { taskId: 'task-123' },
@@ -369,5 +373,60 @@ describe('Phase 15C: TaskDetailScreen', () => {
     const backButton = getByTestId('btn-task-detail-back');
     fireEvent.press(backButton);
     expect(mockGoBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('9. renders Edit button when allowedActions includes UPDATE and navigates to EditTask', async () => {
+    (useTaskDetail as jest.Mock).mockReturnValue({
+      ...defaultHookReturn,
+      task: {
+        ...mockTask,
+        allowedActions: ['UPDATE', 'CHANGE_STATUS'],
+      },
+    });
+
+    const { getByTestId } = await render(
+      <AppProviders>
+        <TaskDetailScreen />
+      </AppProviders>
+    );
+
+    const editBtn = getByTestId('btn-edit-task');
+    expect(editBtn).toBeTruthy();
+
+    fireEvent.press(editBtn);
+    expect(mockNavigate).toHaveBeenCalledWith('EditTask', { taskId: 'task-uuid-123' });
+  });
+
+  it('10. focus listener refreshes authoritative detail on return focus without duplicate initial load', async () => {
+    let focusCallback!: () => void;
+    mockAddListener.mockImplementation((event: string, cb: () => void) => {
+      if (event === 'focus') {
+        focusCallback = cb;
+      }
+      return jest.fn();
+    });
+
+    const mockRefresh = jest.fn();
+    (useTaskDetail as jest.Mock).mockReturnValue({
+      ...defaultHookReturn,
+      task: mockTask,
+      refresh: mockRefresh,
+    });
+
+    await render(
+      <AppProviders>
+        <TaskDetailScreen />
+      </AppProviders>
+    );
+
+    expect(mockAddListener).toHaveBeenCalledWith('focus', expect.any(Function));
+
+    // First focus is initial mount: should NOT trigger duplicate refresh
+    focusCallback();
+    expect(mockRefresh).not.toHaveBeenCalled();
+
+    // Second focus (returning from EditTask): MUST trigger authoritative refresh
+    focusCallback();
+    expect(mockRefresh).toHaveBeenCalledTimes(1);
   });
 });

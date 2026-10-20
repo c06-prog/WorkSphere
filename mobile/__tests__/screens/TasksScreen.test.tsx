@@ -18,6 +18,7 @@ import React from 'react';
 import { render, fireEvent, cleanup } from '@testing-library/react-native';
 import { TasksScreen } from '../../src/features/tasks/screens/TasksScreen';
 import { useTasks } from '../../src/features/tasks/hooks/useTasks';
+import { AuthContext } from '../../src/app/auth/AuthProvider';
 import { AppProviders } from '../../src/app/providers';
 import { TaskSummary } from '../../src/features/tasks/api/taskTypes';
 
@@ -99,10 +100,23 @@ describe('TasksScreen (SCR-TSK-01)', () => {
     cleanup();
   });
 
-  const renderScreen = async () => {
+  const renderScreen = async (permissions: string[] = []) => {
+    const authContextValue: any = {
+      currentUser: {
+        id: 'user-task-tester',
+        fullName: 'Task Tester',
+        email: 'tester@worksphere.com',
+        username: 'tasktester',
+        roles: ['EMPLOYEE'],
+        permissions,
+      },
+    };
+
     return await render(
       <AppProviders>
-        <TasksScreen />
+        <AuthContext.Provider value={authContextValue}>
+          <TasksScreen />
+        </AuthContext.Provider>
       </AppProviders>
     );
   };
@@ -272,13 +286,13 @@ describe('TasksScreen (SCR-TSK-01)', () => {
     expect(mockRetryPagination).toHaveBeenCalledTimes(1);
   });
 
-  it('10. navigates to TaskDetail with exact taskId on card press, and does NOT have Create Task button', async () => {
+  it('10. navigates to TaskDetail with exact taskId on card press, and does NOT have Create Task button when lacking permission', async () => {
     (useTasks as jest.Mock).mockReturnValue(defaultMockHookReturn);
 
-    const { getByTestId, queryByText, queryByTestId } = await renderScreen();
+    const { getByTestId, queryByText, queryByTestId } = await renderScreen([]);
 
-    // Verify Create Task button does not exist in 15C (deferred to 15D)
-    expect(queryByText('Tạo công việc')).toBeNull();
+    // Verify Create Task button does not exist when TASK_CREATE permission is absent
+    expect(queryByText('+ Tạo mới')).toBeNull();
     expect(queryByTestId('tasks-create-button')).toBeNull();
 
     // Press first task card
@@ -289,5 +303,19 @@ describe('TasksScreen (SCR-TSK-01)', () => {
     expect(mockNavigate).toHaveBeenCalledWith('TaskDetail', {
       taskId: '11111111-2222-3333-4444-555555555555',
     });
+  });
+
+  it('11. renders Create Task button and navigates to CreateTask when user has TASK_CREATE permission', async () => {
+    (useTasks as jest.Mock).mockReturnValue(defaultMockHookReturn);
+
+    const { getByTestId, getByText } = await renderScreen(['TASK_CREATE']);
+
+    const createButton = getByTestId('tasks-create-button');
+    expect(createButton).toBeTruthy();
+    expect(getByText('+ Tạo mới')).toBeTruthy();
+
+    fireEvent.press(createButton);
+    expect(mockNavigate).toHaveBeenCalledTimes(1);
+    expect(mockNavigate).toHaveBeenCalledWith('CreateTask');
   });
 });

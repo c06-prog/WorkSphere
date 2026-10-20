@@ -31,6 +31,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { MainTabNavProp } from '../../../app/navigation/types';
 import { useAppTheme } from '../../../app/providers/ThemeProvider';
+import { useAuth } from '../../../app/auth/AuthProvider';
 import { EmptyState, ErrorState, LoadingIndicator } from '../../../shared/components';
 import { SearchBar } from '../../../shared/components/SearchBar';
 import { TaskPriority, TaskStatus, TaskSummary } from '../api/taskTypes';
@@ -66,6 +67,8 @@ const PRIORITY_FILTERS: PriorityFilterOption[] = [
 export function TasksScreen() {
   const theme = useAppTheme();
   const navigation = useNavigation<MainTabNavProp<'Tasks'>>();
+  const { currentUser } = useAuth();
+  const canCreateTask = currentUser?.permissions?.includes('TASK_CREATE') ?? false;
 
   const {
     tasks,
@@ -135,7 +138,7 @@ export function TasksScreen() {
 
       {/* Top Title Bar */}
       <View style={styles.topBar}>
-        <View>
+        <View style={styles.titleContainer}>
           <Text
             style={[theme.typography.heading1, styles.pageTitle, { color: theme.colors.textPrimary }]}
             accessibilityRole="header"
@@ -146,6 +149,27 @@ export function TasksScreen() {
             SCR-TSK-01: Quản lý và theo dõi tiến độ công việc
           </Text>
         </View>
+
+        {canCreateTask ? (
+          <Pressable
+            onPress={() => navigation.navigate('CreateTask')}
+            style={({ pressed }) => [
+              styles.createButton,
+              {
+                backgroundColor: theme.colors.primary,
+                borderRadius: theme.radii.small,
+                opacity: pressed ? 0.8 : 1,
+              },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Tạo công việc mới"
+            testID="tasks-create-button"
+          >
+            <Text style={[theme.typography.caption, styles.createButtonText, { color: theme.colors.onPrimary }]}>
+              + Tạo mới
+            </Text>
+          </Pressable>
+        ) : null}
       </View>
 
       {/* Search Bar */}
@@ -397,6 +421,20 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 4,
+  },
+  titleContainer: {
+    flex: 1,
+    marginRight: 8,
+  },
+  createButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    minHeight: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  createButtonText: {
+    fontWeight: '700',
   },
   pageTitle: {
     fontWeight: '700',

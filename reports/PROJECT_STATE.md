@@ -9,17 +9,27 @@
 - Phase 13 Audit Conclusion: `PHASE_13_FINAL_AUDIT_PASS_WITH_E2E_DEFERRALS`
 - Phase 14 Baseline Checkpoint: `785c155b69309284066252701ec1554d35d4e795` (`docs(phase14): record architecture decision D-061 phase 14 contract freeze`)
 - Phase 14A Implementation Checkpoint: `55cc13e6372ba4374d3533fe3f82f7afcd84dcff` (`feat(mobile): add phase 14 dashboard project contracts`)
-- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 15 Mobile Task Management: IN_PROGRESS (Subphases 15A, 15B, and 15C IMPLEMENTED, Subphase 15D NOT STARTED).
+- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 15 Mobile Task Management: IN_PROGRESS (Subphases 15A, 15B, 15C, and 15D IMPLEMENTED, Subphase 15E NOT STARTED).
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening
 
-- Latest Implementation: Subphase 15C Mobile Task Detail (`SCR-TSK-02`)
-- Implementation Report: `reports/PHASE_15C_TASK_DETAIL_REPORT.md`
+- Latest Implementation: Subphase 15D Mobile Create & Edit Task (`SCR-TSK-03` & `SCR-TSK-04`)
+- Implementation Report: `reports/PHASE_15D_CREATE_EDIT_TASK_REPORT.md`
 - Scope Implemented:
+  - Screen Containers: `CreateTaskScreen.tsx` (`SCR-TSK-03`) and `EditTaskScreen.tsx` (`SCR-TSK-04`).
+  - Selection Modals: `ProjectSelectModal.tsx` for human-readable project selection (`[CODE] Name`); `ProjectMemberAssigneePickerModal.tsx` querying exclusively `projectApi.listMembers(projectId, { active: true })` (strictly zero direct `directoryApi` calls).
+  - Concurrency & Race Protection: Generation guard on assignee fetching, synchronous assignee invalidation on project switch, and synchronous submit locks (`submittingRef`) preventing duplicate requests on double-tap across both screens.
+  - Optimistic Locking: `EditTaskScreen` tracks `version` internally without exposing to user; on HTTP 409 conflict, displays `ConfirmationDialog` with "Tải lại dữ liệu" reloading latest authoritative data.
+  - Route Registration & Capability Gating: Registered `CreateTask` and `EditTask` as auxiliary hidden routes in `MainTabNavigator` (`tabBarButton: () => null`), preserving exactly 5 bottom navigation tabs (`Dashboard`, `Projects`, `Tasks`, `ServiceRequests`, `More`). Gated `+ Tạo mới` on `TasksScreen` by `TASK_CREATE`; gated `Chỉnh sửa` on `TaskDetailScreen` by `UPDATE` in `allowedActions` with focus listener refresh.
+  - Validation: 74 test suites, 647 tests PASS; TypeScript 0 errors; ESLint 0 errors; Android assembleDebug BUILD SUCCESSFUL (203 actionable tasks in 58s).
+  - Next Action: `INDEPENDENT AUDIT PHASE 15D` or `PHASE 15E IMPLEMENTATION`.
+- Prior Implementation: Subphase 15C Mobile Task Detail (`SCR-TSK-02`)
+- Prior Report: `reports/PHASE_15C_TASK_DETAIL_REPORT.md`
+- Prior Scope Implemented:
   - Custom Hook: `useTaskDetail.ts` managing single task query lifecycle with in-flight same-ID deduplication (`inFlightPromiseRef`), monotonic generation supersession (`generationRef`), non-destructive pull-to-refresh data retention with separate `refreshError`, and unmount safety (`isMountedRef`).
   - Screen Container: `TaskDetailScreen.tsx` (`SCR-TSK-02`) implementing canonical Vietnamese UI: header with project breadcrumb and back button, title, priority badge, status badge, clamped progress bar, formatted dates (start date, due date with overdue warning, completed date), description, hierarchy parent task and milestone, reporter and assignees list, read-only subtask and comment summaries, chronological status history timeline, and friendly 404 Not Found, 403 Forbidden, and retryable network error states.
-  - Navigation Route: Registered auxiliary hidden route `TaskDetail: { taskId: string }` on `MainTabNavigator` using `tabBarButton: () => null`, preserving exactly 5 visible bottom tabs (`Dashboard`, `Projects`, `Tasks`, `Notifications`, `More`).
+  - Navigation Route: Registered auxiliary hidden route `TaskDetail: { taskId: string }` on `MainTabNavigator` using `tabBarButton: () => null`, preserving exactly 5 visible bottom tabs (`Dashboard`, `Projects`, `Tasks`, `ServiceRequests`, `More`).
   - Interactive Card: Re-enabled `onPress` on `TaskCard.tsx` with `accessibilityRole="button"` and minimum touch target size of 48dp, wired navigation from `TasksScreen.tsx`.
   - Staged Gating: Staged read-only in Phase 15C. No mutation controls, child screens, or modals active for `CreateTask` (15D), `EditTask` (15E), Status/Progress modals (15E), Assignment (15E), Subtasks (15F), or Comments (15F). Zero raw IDs or unhandled `allowedActions` strings exposed.
   - Validation: 69 test suites, 627 tests PASS; TypeScript 0 errors; ESLint 0 errors; Android assembleDebug BUILD SUCCESSFUL (203 actionable tasks).

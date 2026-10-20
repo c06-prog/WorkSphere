@@ -15,7 +15,7 @@
  * - Safe presentation error handling with reload/retry, and friendly 403 / 404 screens
  */
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   Pressable,
   RefreshControl,
@@ -76,6 +76,23 @@ export function TaskDetailScreen() {
   const { taskId } = route.params;
   const { task, initialLoading, refreshing, error, refreshError, load, refresh } =
     useTaskDetail(taskId);
+
+  // Focus-aware refresh for return-from-edit freshness without initial duplicate GET
+  const isFirstMountRef = useRef<boolean>(true);
+  useEffect(() => {
+    if (!navigation?.addListener) return;
+    const unsubscribe = navigation.addListener('focus', () => {
+      if (isFirstMountRef.current) {
+        isFirstMountRef.current = false;
+        return;
+      }
+      refresh();
+    });
+
+    return () => {
+      unsubscribe?.();
+    };
+  }, [navigation, refresh]);
 
   // 1. Initial Loading State
   if (initialLoading) {
@@ -182,21 +199,50 @@ export function TaskDetailScreen() {
           />
         }
       >
-        {/* Back Button */}
-        <Pressable
-          onPress={() => navigation.goBack()}
-          style={({ pressed }) => [
-            styles.backNavRow,
-            { opacity: pressed ? 0.7 : 1 },
-          ]}
-          accessibilityRole="button"
-          accessibilityLabel="Quay lại danh sách công việc"
-          testID="btn-task-detail-back"
-        >
-          <Text style={[theme.typography.body, styles.backNavText, { color: theme.colors.primary }]}>
-            ← Quay lại
-          </Text>
-        </Pressable>
+        {/* Top Navigation Row: Back Button & Edit Action */}
+        <View style={styles.topNavRow}>
+          <Pressable
+            onPress={() => navigation.goBack()}
+            style={({ pressed }) => [
+              styles.backNavRow,
+              { opacity: pressed ? 0.7 : 1 },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Quay lại danh sách công việc"
+            testID="btn-task-detail-back"
+          >
+            <Text style={[theme.typography.body, styles.backNavText, { color: theme.colors.primary }]}>
+              ← Quay lại
+            </Text>
+          </Pressable>
+
+          {task.allowedActions?.includes('UPDATE') ? (
+            <Pressable
+              onPress={() => navigation.navigate('EditTask', { taskId: task.id })}
+              style={({ pressed }) => [
+                styles.editButton,
+                {
+                  backgroundColor: theme.colors.primary,
+                  opacity: pressed ? 0.8 : 1,
+                  borderRadius: theme.radii.small,
+                },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Chỉnh sửa công việc"
+              testID="btn-edit-task"
+            >
+              <Text
+                style={[
+                  theme.typography.caption,
+                  styles.editButtonText,
+                  { color: theme.colors.onPrimary },
+                ]}
+              >
+                Chỉnh sửa
+              </Text>
+            </Pressable>
+          ) : null}
+        </View>
 
         {/* Header Section: Project Context & Title */}
         <View
@@ -668,14 +714,28 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontWeight: '500',
   },
+  topNavRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
   backNavRow: {
     paddingVertical: 8,
-    marginBottom: 8,
-    alignSelf: 'flex-start',
     minHeight: 48,
     justifyContent: 'center',
   },
   backNavText: {
+    fontWeight: '600',
+  },
+  editButton: {
+    minHeight: 48,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  editButtonText: {
     fontWeight: '600',
   },
   card: {

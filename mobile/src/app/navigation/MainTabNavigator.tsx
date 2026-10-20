@@ -9,7 +9,12 @@ import {
   ProjectMembersScreen,
   ProjectMilestonesScreen,
 } from '../../features/projects/screens';
-import { TasksScreen, TaskDetailScreen } from '../../features/tasks/screens';
+import {
+  TasksScreen,
+  TaskDetailScreen,
+  CreateTaskScreen,
+  EditTaskScreen,
+} from '../../features/tasks/screens';
 import { ServiceRequestsScreen } from '../../features/serviceRequests/screens';
 import { MoreScreen, SettingsScreen } from '../../features/more/screens';
 import {
@@ -185,6 +190,24 @@ export function MainTabNavigator() {
           tabBarButton: () => null,
           tabBarItemStyle: { display: 'none' },
           headerTitle: 'Chi tiết công việc',
+        }}
+      />
+      <Tab.Screen
+        name="CreateTask"
+        component={CreateTaskScreen}
+        options={{
+          tabBarButton: () => null,
+          tabBarItemStyle: { display: 'none' },
+          headerTitle: 'Tạo công việc mới',
+        }}
+      />
+      <Tab.Screen
+        name="EditTask"
+        component={EditTaskScreen}
+        options={{
+          tabBarButton: () => null,
+          tabBarItemStyle: { display: 'none' },
+          headerTitle: 'Chỉnh sửa công việc',
         }}
       />
     </Tab.Navigator>

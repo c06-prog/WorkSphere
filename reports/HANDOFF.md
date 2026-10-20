@@ -4,18 +4,18 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: PHASE 15C MOBILE TASK DETAIL (SCR-TSK-02)
-- Status: Phase 15 IN_PROGRESS (Subphases 15A, 15B, and 15C IMPLEMENTED, Subphase 15D NOT STARTED). Phase 14 CLOSED (MEMORY_CHECKPOINT_CLOSED).
+- Current Task: PHASE 15D MOBILE CREATE & EDIT TASK (SCR-TSK-03 & SCR-TSK-04)
+- Status: Phase 15 IN_PROGRESS (Subphases 15A, 15B, 15C, and 15D IMPLEMENTED, Subphase 15E NOT STARTED). Phase 14 CLOSED (MEMORY_CHECKPOINT_CLOSED).
   - Subphases 14A..14D: CLOSED / AUDITED / HARDENED
   - Subphases 14E-G1 & 14E-G2: CLOSED / AUDITED (User Directory Foundation & Picker)
   - Subphase 14E: CLOSED / HARDENED (Core Project Management SCR-PRJ-03..09)
   - Subphase 14F: CLOSED / VALIDATED (Full Integration & Regression)
-- Baseline Checkpoint: `44a7ac10c6b86775592ea8078a8544fbd95aad6e` (Phase 15B task list commit)
-- Reports: `reports/PHASE_15C_TASK_DETAIL_REPORT.md`, `reports/PHASE_15B_TASK_LIST_REPORT.md`, `reports/PHASE_15A_TASK_CONTRACT_FOUNDATION_REPORT.md`, `reports/PHASE_15_TASK_CONTRACT_FREEZE.md`, `reports/PRE_PHASE_15_TASK_MANAGEMENT_AUDIT.md`
-- Validation Baseline: Mobile 69/69 suites, 627/627 tests PASS; Backend 31/31 targeted integration tests PASS; Android assembleDebug BUILD SUCCESSFUL (203 actionable tasks); emulator-5554 smoke PASS.
-- Delivered Scope: Personal Dashboard (`SCR-MAIN-01`), Project Management (`SCR-PRJ-01` .. `SCR-PRJ-09`), Task List (`SCR-TSK-01`), and Task Detail (`SCR-TSK-02`).
-- Explicitly Deferred Outside Phase 15C:
-  - Task Screens SCR-TSK-03..SCR-TSK-08: CreateTask (15D), EditTask (15E), Status/Progress modals (15E), Assignment modal (15E), Subtasks & Comments (15F).
+- Baseline Checkpoint: `1719f23fb5af0259b83bf922a11bb19ed79b0109` (Phase 15C task detail commit)
+- Reports: `reports/PHASE_15D_CREATE_EDIT_TASK_REPORT.md`, `reports/PHASE_15C_TASK_DETAIL_REPORT.md`, `reports/PHASE_15B_TASK_LIST_REPORT.md`, `reports/PHASE_15A_TASK_CONTRACT_FOUNDATION_REPORT.md`, `reports/PHASE_15_TASK_CONTRACT_FREEZE.md`, `reports/PRE_PHASE_15_TASK_MANAGEMENT_AUDIT.md`
+- Validation Baseline: Mobile 74/74 suites, 647/647 tests PASS; Backend 31/31 targeted integration tests PASS; Android assembleDebug BUILD SUCCESSFUL (203 actionable tasks); emulator-5554 smoke PASS.
+- Delivered Scope: Personal Dashboard (`SCR-MAIN-01`), Project Management (`SCR-PRJ-01` .. `SCR-PRJ-09`), Task List (`SCR-TSK-01`), Task Detail (`SCR-TSK-02`), Create Task (`SCR-TSK-03`), and Edit Task (`SCR-TSK-04`).
+- Explicitly Deferred Outside Phase 15D:
+  - Task Screens SCR-TSK-05..SCR-TSK-08: Status/Progress modals (15E), Assignment modal (15E), Subtasks & Comments (15F).
   - Service Requests (`Phase 16` / Roadmap Section 19).
   - Asset Management (`Phase 16` / Roadmap Section 19).
 - Active Deferred Items:
@@ -24,11 +24,11 @@
   - `PHASE_14_OFFLINE_DEVICE_E2E_DEFERRED`: Device network manipulation deferred; offline covered by Jest tests.
 - Accepted Non-Blocking Debt:
   - `PHASE_14E_LINT_WARNING_DEBT`: 48 warnings for react-native/no-inline-styles (47 from 14E screens/modals, 1 pre-existing in 14C; exit code 0, 0 errors).
-  - `PROJECT_MUTATION_DUPLICATE_SUBMIT_RISK`: 7 mutation flows use React state-only submit guards rather than synchronous useRef locks.
+  - `PROJECT_MUTATION_DUPLICATE_SUBMIT_RISK`: 7 mutation flows use React state-only submit guards rather than synchronous useRef locks (Task mutation flows in 15D correctly use synchronous useRef locks).
 - Pre-Existing Toolchain Debt:
   - AGP deprecation notices, KSP 2.2.0-2.0.2 compiler warning, npm dev dependency advisories (55 vulnerabilities).
-- Phase 15 Status: IN_PROGRESS (15A, 15B, and 15C IMPLEMENTED, 15D NOT STARTED).
-- Next Action: `INDEPENDENT AUDIT PHASE 15C` or `PHASE 15D IMPLEMENTATION`.
+- Phase 15 Status: IN_PROGRESS (15A, 15B, 15C, and 15D IMPLEMENTED, 15E NOT STARTED).
+- Next Action: `INDEPENDENT AUDIT PHASE 15D` or `PHASE 15E IMPLEMENTATION`.
 - Phase 13 Final Scope & Delivered Invariants:
   - Mobile Auth state machine, in-memory access token, hardware Keychain refresh token.
   - All screens implemented: `Login` (`SCR-AUTH-02`), `ForgotPassword` (`SCR-AUTH-03`), `ResetPassword` (`SCR-AUTH-04`), `Profile` (`SCR-ACC-01`), `EditProfile`, `ChangePassword` (`SCR-ACC-02`), `Settings` (`SCR-ACC-03`), `Logout Confirmation` (`SCR-ACC-04`).
@@ -175,14 +175,11 @@
 
 ## Next Permitted Phase
 
-- **Giai đoạn 14: Mobile Dashboard và Projects** (theo đúng `docs/08_DEVELOPMENT_ROADMAP.md` Mục 18, P0).
-  - Scope: Dashboard cá nhân (tích hợp `GET /api/v1/dashboard/me`), Danh sách dự án, Chi tiết dự án, Thành viên dự án.
-  - Phụ thuộc: Phase 13 Mobile Authentication đã hoàn tất và kiểm toán độc lập PASS (`PHASE_13_FINAL_AUDIT_PASS_WITH_E2E_DEFERRALS`).
-  - Pre-audit Report: `reports/PRE_PHASE_14_DASHBOARD_PROJECTS_AUDIT.md`.
-  - Contract Reconciliation Report: `reports/PHASE_14_CONTRACT_RECONCILIATION.md`.
-  - Architectural Decision: `D-061` in `reports/DECISIONS.md`.
-  - Phase 14 Status: `AUDITED, CONTRACT_RECONCILED, DECISION_FROZEN, IMPLEMENTATION_NOT_STARTED`.
-  - Next Action: `PHASE 14A IMPLEMENTATION`.
+- **Giai đoạn 15: Mobile Task Management**
+  - Scope: `SCR-TSK-01` .. `SCR-TSK-08`
+  - Subphases 15A (Contracts), 15B (Task List), 15C (Task Detail), and 15D (Create & Edit Task): IMPLEMENTED
+  - Subphase 15E (Status Transitions, Progress, Assignees): NOT STARTED
+  - Next Action: `INDEPENDENT AUDIT PHASE 15D` or `PHASE 15E IMPLEMENTATION`.
 
 ## New Session Procedure
 

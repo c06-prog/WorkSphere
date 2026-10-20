@@ -21,7 +21,7 @@
      - Status transition history timeline showing old status, new status, actor name, change comment, and timestamp.
      - Comprehensive error handling: 404 Not Found presentation with back navigation, 403 Forbidden presentation with permission warning, and retryable network error state with retry button.
      - Non-blocking pull-to-refresh failure banner while preserving existing task data.
-  3. Auxiliary Hidden Navigation Route: Registered `TaskDetail: { taskId: string }` within `MainTabNavigator` using `tabBarButton: () => null`. Preserves exactly 5 visible bottom navigation tabs in canonical order (`Dashboard`, `Projects`, `Tasks`, `Notifications`, `More`).
+  3. Auxiliary Hidden Navigation Route: Registered `TaskDetail: { taskId: string }` within `MainTabNavigator` using `tabBarButton: () => null`. Preserves exactly 5 visible bottom navigation tabs in canonical order (`Dashboard`, `Projects`, `Tasks`, `ServiceRequests`, `More`).
   4. Interactive `TaskCard` Capability Re-enabled: Updated `TaskCard` to accept `onPress?: (taskId: string) => void`, wrapping card body in a `Pressable` with `accessibilityRole="button"`, touch target $\ge 48\,\text{dp}$, while maintaining full visual presentation. Wired navigation from `TasksScreen` to navigate to `TaskDetail` route with `{ taskId: task.id }`.
   5. Staged Gating Compliance: Staged read-only in Phase 15C. No active controls, modals, or screen navigations for `CreateTask` (15D), `EditTask` (15E), Status mutation (15E), Progress mutation (15E), Assignment mutation (15E), Subtasks (15F), or Comments (15F). Zero raw IDs or unhandled `allowedActions` strings exposed in rendered output.
   6. Deterministic Test Suites: Added 2 new test suites (`TaskDetailScreen.test.tsx` [8 tests], `useTaskDetail.test.tsx` [8 tests]), and updated existing suites (`TasksScreen.test.tsx` [10 tests] and `TaskCard.test.tsx` [6 tests]). Mobile test suite expanded from 67 suites / 611 tests to 69 suites / 627 tests, all passing with zero failures, zero skipped, and zero snapshots.
@@ -104,7 +104,7 @@ Following the primary principle of **Reuse Before Design**:
 
 ### C. Route Registration (`mobile/src/app/navigation/MainTabNavigator.tsx`)
 - `TaskDetail` registered as an auxiliary tab screen with `tabBarButton: () => null`.
-- Leaves the 5 bottom navigation tabs (`Dashboard`, `Projects`, `Tasks`, `Notifications`, `More`) completely intact.
+- Leaves the 5 bottom navigation tabs (`Dashboard`, `Projects`, `Tasks`, `ServiceRequests`, `More`) completely intact.
 
 ### D. `TaskCard` Update (`mobile/src/features/tasks/components/TaskCard.tsx`)
 - Wrapped card in `Pressable` with `accessibilityRole="button"`, `accessibilityLabel={task.title}`, and minimum touch target size of 48dp.
