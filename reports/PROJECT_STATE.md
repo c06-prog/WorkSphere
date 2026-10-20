@@ -9,7 +9,7 @@
 - Phase 13 Audit Conclusion: `PHASE_13_FINAL_AUDIT_PASS_WITH_E2E_DEFERRALS`
 - Phase 14 Baseline Checkpoint: `785c155b69309284066252701ec1554d35d4e795` (`docs(phase14): record architecture decision D-061 phase 14 contract freeze`)
 - Phase 14A Implementation Checkpoint: `55cc13e6372ba4374d3533fe3f82f7afcd84dcff` (`feat(mobile): add phase 14 dashboard project contracts`)
-- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 15 Mobile Task Management: IN_PROGRESS (Subphases 15A, 15B, 15C, and 15D IMPLEMENTED & HARDENED, Subphase 15E NOT STARTED).
+- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 15 Mobile Task Management: IN_PROGRESS (Subphases 15A, 15B, 15C IMPLEMENTED & AUDITED, Subphase 15D BLOCKED_BY_PRODUCT_DATE_POLICY, Subphase 15E NOT STARTED).
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening
@@ -20,7 +20,9 @@
   - Date Validation & ISO Instant Serialization: Implemented `mobile/src/features/tasks/utils/taskDate.ts` with pure calendar date validation (`isValidCalendarDate`) preventing invalid calendar rollovers (e.g. `2026-02-30`), input parsing (`parseTaskDueDateForInput`), and ISO-8601 Instant end-of-day UTC serialization (`serializeTaskDueDate` -> `${YYYY-MM-DD}T23:59:59Z`), resolving finding `TASK_DUE_DATE_SERIALIZATION_DRIFT`.
   - Direct Route Authorization: Implemented fail-closed permission check in `CreateTaskScreen.tsx` enforcing `currentUser.permissions.includes('TASK_CREATE') === true` with accessible unauthorized error state, resolving finding `TASK_CREATE_DIRECT_ROUTE_UI_AUTH_GAP`.
   - Validation: 75 test suites, 664 tests PASS (0 failures, 0 skipped); TypeScript 0 errors; ESLint 0 errors; Android assembleDebug BUILD SUCCESSFUL (203 actionable tasks in 38s).
-  - Next Action: `INDEPENDENT AUDIT PHASE 15D HARDENING` or `PHASE 15E IMPLEMENTATION`.
+  - Current Gate: `PHASE_15_DATE_POLICY_BLOCKED_BY_PRODUCT_DECISION` (Finding `TASK_DUE_DATE_POLICY_UNGROUNDED` requires Product Owner timezone selection; `TASK_EDIT_DUE_DATE_ROUNDTRIP_DRIFT` requires `PRESERVE_EXACT_SERVER_INSTANT_WHEN_DATE_UNCHANGED` patch).
+  - Subphase 15D Status: `BLOCKED_BY_PRODUCT_DATE_POLICY`. Subphase 15E: `NOT STARTED / BLOCKED`.
+  - Next Action: `PRODUCT_OWNER_TASK_DUE_DATE_TIMEZONE_DECISION`.
 - Prior Implementation: Subphase 15D Mobile Create & Edit Task (`SCR-TSK-03` & `SCR-TSK-04`)
 - Implementation Report: `reports/PHASE_15D_CREATE_EDIT_TASK_REPORT.md`
 - Scope Implemented:

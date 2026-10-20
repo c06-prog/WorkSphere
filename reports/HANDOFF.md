@@ -4,14 +4,14 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: PHASE 15D MOBILE CREATE & EDIT TASK HARDENING (SCR-TSK-03 & SCR-TSK-04)
-- Status: Phase 15 IN_PROGRESS (Subphases 15A, 15B, 15C, and 15D IMPLEMENTED & HARDENED, Subphase 15E NOT STARTED). Phase 14 CLOSED (MEMORY_CHECKPOINT_CLOSED).
+- Current Task: PHASE 15 TASK DUE-DATE SEMANTICS DECISION FREEZE
+- Status: Phase 15 IN_PROGRESS (Subphases 15A, 15B, 15C IMPLEMENTED & AUDITED, Subphase 15D BLOCKED_BY_PRODUCT_DATE_POLICY, Subphase 15E NOT STARTED / BLOCKED). Phase 14 CLOSED (MEMORY_CHECKPOINT_CLOSED).
   - Subphases 14A..14D: CLOSED / AUDITED / HARDENED
   - Subphases 14E-G1 & 14E-G2: CLOSED / AUDITED (User Directory Foundation & Picker)
   - Subphase 14E: CLOSED / HARDENED (Core Project Management SCR-PRJ-03..09)
   - Subphase 14F: CLOSED / VALIDATED (Full Integration & Regression)
-- Baseline Checkpoint: `1719f23fb5af0259b83bf922a11bb19ed79b0109` (Phase 15C task detail commit)
-- Reports: `reports/PHASE_15D_CREATE_EDIT_TASK_REPORT.md`, `reports/PHASE_15C_TASK_DETAIL_REPORT.md`, `reports/PHASE_15B_TASK_LIST_REPORT.md`, `reports/PHASE_15A_TASK_CONTRACT_FOUNDATION_REPORT.md`, `reports/PHASE_15_TASK_CONTRACT_FREEZE.md`, `reports/PRE_PHASE_15_TASK_MANAGEMENT_AUDIT.md`
+- Baseline Checkpoint: `c5143160cff31c4e02c6e84a278abef2aebba16b` (Phase 15D hardening commit)
+- Reports: `reports/PHASE_15_TASK_DUE_DATE_POLICY.md`, `reports/PHASE_15D_CREATE_EDIT_TASK_REPORT.md`, `reports/PHASE_15C_TASK_DETAIL_REPORT.md`, `reports/PHASE_15B_TASK_LIST_REPORT.md`, `reports/PHASE_15A_TASK_CONTRACT_FOUNDATION_REPORT.md`, `reports/PHASE_15_TASK_CONTRACT_FREEZE.md`, `reports/PRE_PHASE_15_TASK_MANAGEMENT_AUDIT.md`
 - Validation Baseline: Mobile 75/75 suites, 664/664 tests PASS; Backend 31/31 targeted integration tests PASS; Android assembleDebug BUILD SUCCESSFUL (203 actionable tasks); emulator-5554 smoke PASS.
 - Delivered Scope: Personal Dashboard (`SCR-MAIN-01`), Project Management (`SCR-PRJ-01` .. `SCR-PRJ-09`), Task List (`SCR-TSK-01`), Task Detail (`SCR-TSK-02`), Create Task (`SCR-TSK-03`), and Edit Task (`SCR-TSK-04`).
 - Explicitly Deferred Outside Phase 15D:
@@ -27,8 +27,8 @@
   - `PROJECT_MUTATION_DUPLICATE_SUBMIT_RISK`: 7 mutation flows use React state-only submit guards rather than synchronous useRef locks (Task mutation flows in 15D correctly use synchronous useRef locks).
 - Pre-Existing Toolchain Debt:
   - AGP deprecation notices, KSP 2.2.0-2.0.2 compiler warning, npm dev dependency advisories (55 vulnerabilities).
-- Phase 15 Status: IN_PROGRESS (15A, 15B, 15C, and 15D IMPLEMENTED & HARDENED, 15E NOT STARTED).
-- Next Action: `INDEPENDENT AUDIT PHASE 15D HARDENING` or `PHASE 15E IMPLEMENTATION`.
+- Phase 15 Status: IN_PROGRESS (15A, 15B, 15C IMPLEMENTED & AUDITED, 15D BLOCKED_BY_PRODUCT_DATE_POLICY, 15E NOT STARTED / BLOCKED).
+- Next Action: `PRODUCT_OWNER_TASK_DUE_DATE_TIMEZONE_DECISION`.
 - Phase 13 Final Scope & Delivered Invariants:
   - Mobile Auth state machine, in-memory access token, hardware Keychain refresh token.
   - All screens implemented: `Login` (`SCR-AUTH-02`), `ForgotPassword` (`SCR-AUTH-03`), `ResetPassword` (`SCR-AUTH-04`), `Profile` (`SCR-ACC-01`), `EditProfile`, `ChangePassword` (`SCR-ACC-02`), `Settings` (`SCR-ACC-03`), `Logout Confirmation` (`SCR-ACC-04`).
