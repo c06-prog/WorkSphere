@@ -1251,3 +1251,29 @@ Current operating mode:
      - `14E-G1`: Triển khai và kiểm thử độc lập backend directory endpoint.
      - `14E-G2`: Triển khai và kiểm thử độc lập mobile directory adapter và modal component `UserPickerModal`.
      - Sau khi hoàn thành hai bước trên, Subphase 14E tiếp tục triển khai các màn hình quản lý dự án.
+
+
+## D-063: Phase 15 Task Management Mobile Contract Freeze
+
+- **Ngày quyết định**: 2026-10-20.
+- **Phạm vi**: Khóa kiến trúc và hợp đồng tích hợp Mobile Task Management (Phase 15, màn hình `SCR-TSK-01` .. `SCR-TSK-08`).
+- **Tình trạng**: APPROVED / FROZEN.
+- **Tài liệu tham chiếu**: `reports/PHASE_15_TASK_CONTRACT_FREEZE.md`, `reports/PRE_PHASE_15_TASK_MANAGEMENT_AUDIT.md`.
+- **Nội dung quyết định**:
+  1. **Nguồn Dữ Liệu Phân Công Nhiệm Vụ (Task Assignee Eligibility & Source)**:
+     - Người được phân công công việc bắt buộc phải là thành viên hoạt động của dự án (`projectMemberRepository.existsByProjectIdAndUserIdAndActiveTrue`).
+     - Mobile picker chọn người thực hiện cho Task bắt buộc truy vấn từ `GET /api/v1/projects/{projectId}/members?active=true`. Tuyệt đối không dùng danh bạ toàn công ty (`/directory/users`) làm nguồn ứng viên phân công task trực tiếp.
+  2. **Tách Biệt Định Danh Phân Công (Assignment Identity)**:
+     - Phân định rõ `userId` (ID của nhân viên) và `assignmentId` (`task_assignments.id`).
+     - Thao tác gỡ phân công `DELETE /api/v1/tasks/{taskId}/assignments/{assignmentId}` bắt buộc truyền `assignmentId` (từ `AssigneeDetail.assignmentId`), không truyền `userId`.
+  3. **Chuẩn Khóa Đột Biến Bằng Ref (Synchronous Mutation-Lock Standard)**:
+     - Tất cả các mutation handler (tạo task, sửa task, đổi trạng thái, cập nhật tiến độ, phân công, xóa task, bình luận) phải sử dụng synchronous ref lock (`isSubmittingRef.current = true`) ngay khi kích hoạt để triệt tiêu nguy cơ duplicate submit do double-tap. State `isSubmitting` chỉ phục vụ hiển thị UI.
+  4. **Tối Thiểu Hóa Dữ Liệu Điều Hướng (Route Data Minimization)**:
+     - Tham số điều hướng chỉ truyền ID duy nhất (`taskId`, `projectId`, `parentTaskId`).
+     - Tuyệt đối không truyền object Task, danh sách quyền, `allowedActions`, hay số `version` qua route params.
+  5. **Mô Hình Tái Sử Dụng Thành Phần Chọn Người (Picker Architecture)**:
+     - Triển khai `ProjectMemberAssigneePickerModal` độc lập trong `features/tasks/components/` tái sử dụng phong cách giao diện và cơ chế debounce của `UserPickerModal` nhưng gắn với dữ liệu thành viên dự án, tránh ghép lỏng lẻo hay gây rủi ro hồi quy cho `UserPickerModal`.
+  6. **Quy Tắc Chuyển Đổi Trạng Thái & Tiến Độ (State Machine & Progress Invariant)**:
+     - Chuyển sang `COMPLETED` tự động cập nhật tiến độ thành 100%. Tuy nhiên, việc cập nhật tiến độ đạt 100% qua `updateProgress` KHÔNG tự động chuyển trạng thái task sang `COMPLETED`.
+  7. **Ranh Giới Tệp Đính Kèm (Attachment Boundary Drift)**:
+     - Phân hệ Task trên mobile Phase 15 tập trung vào luồng thảo luận/bình luận văn bản. Quản lý tải lên tệp đính kèm được hoãn lại cho phân hệ Quản lý Tệp riêng biệt.
