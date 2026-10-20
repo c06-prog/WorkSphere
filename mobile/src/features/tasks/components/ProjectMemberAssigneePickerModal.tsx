@@ -35,6 +35,7 @@ export interface ProjectMemberAssigneePickerModalProps {
   visible: boolean;
   projectId: string | null;
   selectedUserIds: string[];
+  disabledUserIds?: string[];
   onConfirm: (selectedUserIds: string[], selectedMembers: ProjectMember[]) => void;
   onClose: () => void;
   title?: string;
@@ -45,6 +46,7 @@ export function ProjectMemberAssigneePickerModal({
   visible,
   projectId,
   selectedUserIds,
+  disabledUserIds = [],
   onConfirm,
   onClose,
   title = 'Chọn người thực hiện',
@@ -105,8 +107,14 @@ export function ProjectMemberAssigneePickerModal({
         return;
       }
 
-      setMembers(data.items);
-      setHasNext(data.hasNext);
+      const items = Array.isArray(data?.items)
+        ? data.items
+        : Array.isArray((data as any)?.content)
+        ? ((data as any).content as ProjectMember[])
+        : [];
+
+      setMembers(items);
+      setHasNext(Boolean(data?.hasNext));
       setPage(0);
     } catch (err: unknown) {
       if (!mountedRef.current || generation !== requestGenerationRef.current) {
@@ -148,12 +156,18 @@ export function ProjectMemberAssigneePickerModal({
         return;
       }
 
+      const moreItems = Array.isArray(data?.items)
+        ? data.items
+        : Array.isArray((data as any)?.content)
+        ? ((data as any).content as ProjectMember[])
+        : [];
+
       setMembers(prev => {
         const existingIds = new Set(prev.map(m => m.id));
-        const newItems = data.items.filter(m => !existingIds.has(m.id));
+        const newItems = moreItems.filter(m => !existingIds.has(m.id));
         return [...prev, ...newItems];
       });
-      setHasNext(data.hasNext);
+      setHasNext(Boolean(data?.hasNext));
       setPage(nextPage);
     } catch {
       // Non-blocking pagination error
@@ -166,14 +180,18 @@ export function ProjectMemberAssigneePickerModal({
   }, [projectId, hasNext, loadingMore, initialLoading, page]);
 
   const filteredMembers = useMemo(() => {
+    const safeList = members || [];
     const q = search.trim().toLowerCase();
-    if (!q) return members;
-    return members.filter(
+    if (!q) return safeList;
+    return safeList.filter(
       m => m.fullName.toLowerCase().includes(q) || m.email?.toLowerCase().includes(q)
     );
   }, [members, search]);
 
   const toggleUserSelection = (userId: string) => {
+    if (disabledUserIds.includes(userId)) {
+      return;
+    }
     setDraftSelectedUserIds(prev => {
       if (prev.includes(userId)) {
         return prev.filter(id => id !== userId);
@@ -184,8 +202,10 @@ export function ProjectMemberAssigneePickerModal({
   };
 
   const handleConfirm = () => {
-    const selectedMembers = members.filter(m => draftSelectedUserIds.includes(m.userId));
-    onConfirm(draftSelectedUserIds, selectedMembers);
+    // Only return newly selected members that are not already disabled/assigned
+    const effectiveSelectedUserIds = draftSelectedUserIds.filter(id => !disabledUserIds.includes(id));
+    const selectedMembers = members.filter(m => effectiveSelectedUserIds.includes(m.userId));
+    onConfirm(effectiveSelectedUserIds, selectedMembers);
     onClose();
   };
 
@@ -290,38 +310,58 @@ export function ProjectMemberAssigneePickerModal({
                   ) : undefined
                 }
                 renderItem={({ item }) => {
-                  const isSelected = draftSelectedUserIds.includes(item.userId);
+                  const isDisabled = disabledUserIds.includes(item.userId);
+                  const isSelected = draftSelectedUserIds.includes(item.userId) || isDisabled;
                   return (
                     <Pressable
                       style={({ pressed }) => [
                         styles.itemRow,
                         {
                           borderBottomColor: theme.colors.border,
-                          backgroundColor: isSelected
+                          opacity: isDisabled ? 0.6 : 1,
+                          backgroundColor: isSelected && !isDisabled
                             ? theme.colors.surfaceVariant
-                            : pressed
+                            : pressed && !isDisabled
                             ? theme.colors.background
                             : 'transparent',
                         },
                       ]}
-                      onPress={() => toggleUserSelection(item.userId)}
+                      onPress={() => {
+                        if (!isDisabled) {
+                          toggleUserSelection(item.userId);
+                        }
+                      }}
+                      disabled={isDisabled}
                       accessibilityRole="checkbox"
-                      accessibilityState={{ checked: isSelected }}
-                      accessibilityLabel={`${item.fullName} (${item.projectRole})`}
+                      accessibilityState={{ checked: isSelected, disabled: isDisabled }}
+                      accessibilityLabel={`${item.fullName} (${item.projectRole})${isDisabled ? ' - Đã phân công' : ''}`}
                       testID={`assignee-option-${item.userId}`}
                     >
                       <View style={styles.itemTextContainer}>
-                        <Text
-                          style={[
-                            theme.typography.body,
-                            styles.memberName,
-                            { color: theme.colors.textPrimary },
-                            isSelected ? styles.fontBold : styles.fontMedium,
-                          ]}
-                          numberOfLines={1}
-                        >
-                          {item.fullName}
-                        </Text>
+                        <View style={styles.memberNameRow}>
+                          <Text
+                            style={[
+                              theme.typography.body,
+                              styles.memberName,
+                              { color: isDisabled ? theme.colors.textSecondary : theme.colors.textPrimary },
+                              isSelected && !isDisabled ? styles.fontBold : styles.fontMedium,
+                            ]}
+                            numberOfLines={1}
+                          >
+                            {item.fullName}
+                          </Text>
+                          {isDisabled ? (
+                            <Text
+                              style={[
+                                theme.typography.caption,
+                                styles.alreadyAssignedBadge,
+                                { color: theme.colors.textSecondary },
+                              ]}
+                            >
+                              (Đã phân công)
+                            </Text>
+                          ) : null}
+                        </View>
                         <Text
                           style={[
                             theme.typography.caption,
@@ -335,13 +375,20 @@ export function ProjectMemberAssigneePickerModal({
                       <View
                         style={[
                           styles.checkboxOuter,
-                          isSelected
+                          isDisabled
+                            ? { backgroundColor: theme.colors.surfaceVariant, borderColor: theme.colors.border }
+                            : isSelected
                             ? { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary }
                             : { borderColor: theme.colors.textSecondary },
                         ]}
                       >
                         {isSelected ? (
-                          <Text style={[styles.checkmark, { color: theme.colors.onPrimary }]}>
+                          <Text
+                            style={[
+                              styles.checkmark,
+                              { color: isDisabled ? theme.colors.textSecondary : theme.colors.onPrimary },
+                            ]}
+                          >
                             ✓
                           </Text>
                         ) : null}
@@ -442,6 +489,15 @@ const styles = StyleSheet.create({
   itemTextContainer: {
     flex: 1,
     marginRight: 12,
+  },
+  memberNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  alreadyAssignedBadge: {
+    fontSize: 12,
+    fontStyle: 'italic',
   },
   memberName: {
     marginBottom: 2,

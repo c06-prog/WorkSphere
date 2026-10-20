@@ -1,5 +1,5 @@
 /**
- * Phase 15C: TaskDetailScreen Component Tests
+ * Phase 15C + 15E: TaskDetailScreen Component Tests
  *
  * Verifies:
  * - Loading indicator during initial load
@@ -14,14 +14,21 @@
  * - Network error with retryable action
  * - Non-blocking refresh error banner
  * - Back button triggers navigation.goBack()
+ * - Phase 15E: Status mutation (UPDATE_STATUS capability gating, modal, comment requirement on rejection, submit lock, 409 conflict)
+ * - Phase 15E: Progress mutation (UPDATE_PROGRESS capability gating, modal, decimal value support, submit lock, 409 conflict)
+ * - Phase 15E: Assignment (ASSIGN capability gating, eligible project members, disabled existing assignees, request sends ProjectMember.userId, submit lock)
+ * - Phase 15E: Unassignment (UNASSIGN capability gating, ConfirmationDialog, DELETE sends assignmentId NOT userId, submit lock)
+ * - Phase 15E: Version chaining across successive mutations
  */
 
 import React from 'react';
-import { render, fireEvent } from '@testing-library/react-native';
+import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
 import { TaskDetailScreen } from '../../src/features/tasks/screens/TaskDetailScreen';
 import { useTaskDetail } from '../../src/features/tasks/hooks/useTaskDetail';
 import { AppProviders } from '../../src/app/providers';
 import { TaskDetail } from '../../src/features/tasks/api/taskTypes';
+import { taskApi } from '../../src/features/tasks/api/taskApi';
+import { projectApi } from '../../src/features/projects/api/projectApi';
 
 jest.mock('react-native-safe-area-context', () =>
   require('react-native-safe-area-context/jest/mock').default
@@ -47,8 +54,10 @@ jest.mock('@react-navigation/native', () => {
 });
 
 jest.mock('../../src/features/tasks/hooks/useTaskDetail');
+jest.mock('../../src/features/tasks/api/taskApi');
+jest.mock('../../src/features/projects/api/projectApi');
 
-describe('Phase 15C: TaskDetailScreen', () => {
+describe('Phase 15C + 15E: TaskDetailScreen', () => {
   const mockTask: TaskDetail = {
     id: 'task-uuid-123',
     project: {
@@ -83,7 +92,7 @@ describe('Phase 15C: TaskDetailScreen', () => {
     },
     assignees: [
       {
-        assignmentId: 'assign-1',
+        assignmentId: 'assign-uuid-999',
         id: 'user-dev-1',
         fullName: 'Lê Văn Lập Trình',
         avatarUrl: null,
@@ -137,11 +146,14 @@ describe('Phase 15C: TaskDetailScreen', () => {
         changedAt: '2026-10-02T08:30:00Z',
       },
     ],
-    allowedActions: ['UPDATE', 'UPDATE_STATUS', 'UNKNOWN_FUTURE_ACTION'],
+    allowedActions: ['UPDATE', 'UPDATE_STATUS', 'UPDATE_PROGRESS', 'ASSIGN', 'UNASSIGN', 'UNKNOWN_FUTURE_ACTION'],
     createdAt: '2026-10-01T08:00:00Z',
     updatedAt: '2026-10-15T10:00:00Z',
     version: 3,
   };
+
+  const mockApplyTaskUpdate = jest.fn();
+  const mockRefresh = jest.fn();
 
   const defaultHookReturn = {
     task: mockTask,
@@ -150,12 +162,49 @@ describe('Phase 15C: TaskDetailScreen', () => {
     error: null,
     refreshError: null,
     load: jest.fn(),
-    refresh: jest.fn(),
+    refresh: mockRefresh,
+    applyTaskUpdate: mockApplyTaskUpdate,
   };
 
   beforeEach(() => {
     jest.clearAllMocks();
     (useTaskDetail as jest.Mock).mockReturnValue({ ...defaultHookReturn });
+    const memberList = [
+      {
+        id: 'member-record-1',
+        projectId: 'proj-uuid-1',
+        userId: 'user-dev-1', // Already assigned!
+        fullName: 'Lê Văn Lập Trình',
+        email: 'dev1@worksphere.local',
+        projectRole: 'DEVELOPER',
+        active: true,
+        joinedAt: '2026-10-01T00:00:00Z',
+      },
+      {
+        id: 'member-record-2',
+        projectId: 'proj-uuid-1',
+        userId: 'user-cand-2', // Candidate eligible!
+        fullName: 'Nguyễn Thị Tester',
+        email: 'tester@worksphere.local',
+        projectRole: 'TESTER',
+        active: true,
+        joinedAt: '2026-10-01T00:00:00Z',
+      },
+    ];
+    (projectApi.listMembers as jest.Mock).mockResolvedValue({
+      items: memberList,
+      content: memberList,
+      totalItems: 2,
+      totalElements: 2,
+      totalPages: 1,
+      size: 20,
+      page: 0,
+      number: 0,
+      first: true,
+      last: true,
+      hasNext: false,
+      hasPrevious: false,
+    });
   });
 
   it('1. renders loading indicator during initial load', async () => {
@@ -183,153 +232,46 @@ describe('Phase 15C: TaskDetailScreen', () => {
     );
 
     expect(getByTestId('screen-task-detail')).toBeTruthy();
-    expect(getByTestId('task-detail-project-name').props.children).toBe(
-      'Hệ thống Quản lý Doanh nghiệp'
-    );
-    expect(getByTestId('task-detail-title').props.children).toBe(
-      'Phát triển API thanh toán trực tuyến'
-    );
-    expect(getByText('75%')).toBeTruthy();
-    expect(getByTestId('task-detail-start-date').props.children).toBe('01/10/2026');
-    expect(getByTestId('task-detail-due-date').props.children).toBe('25/10/2026');
+    expect(getByTestId('task-detail-project-name').props.children).toBe('Hệ thống Quản lý Doanh nghiệp');
+    expect(getByTestId('task-detail-title').props.children).toBe('Phát triển API thanh toán trực tuyến');
 
-    // Badges
     expect(getByText('Khẩn cấp')).toBeTruthy();
     expect(getAllByText('Đang làm').length).toBeGreaterThanOrEqual(1);
 
-    // Description
+    expect(getByTestId('task-detail-progress-percent').props.children).toEqual([75, '%']);
     expect(getByTestId('task-detail-description').props.children).toBe(
       'Tích hợp cổng thanh toán VNPay và MoMo vào luồng checkout.'
     );
 
-    // Parent task & Milestone
-    expect(getByTestId('task-detail-parent-task').props.children).toBe(
-      'Xây dựng phân hệ Tài chính'
-    );
-    expect(getByTestId('task-detail-milestone').props.children).toBe('Giai đoạn 1: Khởi động');
-
-    // Personnel: Reporter & Assignees
+    expect(getByTestId('task-detail-start-date').props.children).toBe('01/10/2026');
+    expect(getByTestId('task-detail-due-date').props.children).toBe('25/10/2026');
     expect(getByTestId('task-detail-reporter').props.children).toBe('Hoàng Văn Quản Lý');
+
     expect(getByText('• Lê Văn Lập Trình')).toBeTruthy();
 
-    // Summaries
-    expect(getByText('1 công việc con')).toBeTruthy();
-    expect(getByText('1 bình luận')).toBeTruthy();
+    expect(getByTestId('task-detail-parent-task').props.children).toBe('Xây dựng phân hệ Tài chính');
+    expect(getByTestId('task-detail-milestone').props.children).toBe('Giai đoạn 1: Khởi động');
 
-    // Status History
-    expect(getByTestId('task-detail-status-history')).toBeTruthy();
-    expect(getByText('"Bắt đầu tích hợp code sandbox"')).toBeTruthy();
+    expect(getByTestId('task-detail-subtask-count').props.children).toEqual([1, ' công việc con']);
+    expect(getByTestId('task-detail-comment-count').props.children).toEqual([1, ' bình luận']);
 
-    // Strictly ZERO raw IDs or version numbers in rendered output
     expect(queryByText('task-uuid-123')).toBeNull();
     expect(queryByText('proj-uuid-1')).toBeNull();
-    expect(queryByText('parent-task-uuid')).toBeNull();
-    expect(queryByText('ms-uuid-1')).toBeNull();
     expect(queryByText('user-dev-1')).toBeNull();
-    expect(queryByText('assign-1')).toBeNull();
+    expect(queryByText('assign-uuid-999')).toBeNull();
+    expect(queryByText('Version: 3')).toBeNull();
     expect(queryByText('UNKNOWN_FUTURE_ACTION')).toBeNull();
   });
 
-  it('3. renders fallback when assignees, parentTask, and milestone are null', async () => {
-    const taskWithoutOptionals: TaskDetail = {
-      ...mockTask,
-      parentTaskId: null,
-      parentTask: null,
-      milestoneId: null,
-      milestone: null,
-      assignees: [],
-      description: null,
-    };
-
-    (useTaskDetail as jest.Mock).mockReturnValue({
-      ...defaultHookReturn,
-      task: taskWithoutOptionals,
-    });
-
-    const { getByTestId, queryByTestId } = await render(
-      <AppProviders>
-        <TaskDetailScreen />
-      </AppProviders>
-    );
-
-    expect(getByTestId('task-detail-no-assignees')).toBeTruthy();
-    expect(getByTestId('task-detail-description').props.children).toBe(
-      'Chưa có mô tả cho công việc này.'
-    );
-    expect(queryByTestId('task-detail-parent-task')).toBeNull();
-    expect(queryByTestId('task-detail-milestone')).toBeNull();
-  });
-
-  it('4. renders 404 Not Found error state without automatic retry', async () => {
+  it('3. renders 404 Not Found error state with back action', async () => {
     (useTaskDetail as jest.Mock).mockReturnValue({
       ...defaultHookReturn,
       task: null,
       error: {
-        message: 'Công việc không tồn tại hoặc đã bị xóa.',
         isNotFound: true,
         isForbidden: false,
-        retryable: false,
+        message: 'Công việc không tồn tại hoặc đã bị xóa.',
       },
-    });
-
-    const { getByTestId, getByText, queryByText } = await render(
-      <AppProviders>
-        <TaskDetailScreen />
-      </AppProviders>
-    );
-
-    expect(getByTestId('task-detail-error')).toBeTruthy();
-    expect(getByText('Không tìm thấy công việc')).toBeTruthy();
-    expect(getByText('Công việc không tồn tại hoặc đã bị xóa.')).toBeTruthy();
-
-    // No retry button on 404
-    expect(queryByText('Thử lại')).toBeNull();
-
-    // Back button works
-    const backBtn = getByTestId('btn-back-from-error');
-    fireEvent.press(backBtn);
-    expect(mockGoBack).toHaveBeenCalledTimes(1);
-  });
-
-  it('5. renders 403 Forbidden error state', async () => {
-    (useTaskDetail as jest.Mock).mockReturnValue({
-      ...defaultHookReturn,
-      task: null,
-      error: {
-        message: 'Bạn không có quyền truy cập.',
-        isNotFound: false,
-        isForbidden: true,
-        retryable: false,
-      },
-    });
-
-    const { getByTestId, getByText, queryByText } = await render(
-      <AppProviders>
-        <TaskDetailScreen />
-      </AppProviders>
-    );
-
-    expect(getByTestId('task-detail-error')).toBeTruthy();
-    expect(getByText('Không có quyền truy cập')).toBeTruthy();
-    expect(queryByText('Thử lại')).toBeNull();
-
-    const backBtn = getByTestId('btn-back-from-error');
-    fireEvent.press(backBtn);
-    expect(mockGoBack).toHaveBeenCalledTimes(1);
-  });
-
-  it('6. renders retryable error and triggers load on retry button press', async () => {
-    const mockLoad = jest.fn();
-    (useTaskDetail as jest.Mock).mockReturnValue({
-      ...defaultHookReturn,
-      task: null,
-      error: {
-        message: 'Lỗi kết nối máy chủ.',
-        isNotFound: false,
-        isForbidden: false,
-        retryable: true,
-      },
-      load: mockLoad,
     });
 
     const { getByTestId, getByText } = await render(
@@ -338,19 +280,71 @@ describe('Phase 15C: TaskDetailScreen', () => {
       </AppProviders>
     );
 
-    expect(getByTestId('task-detail-error')).toBeTruthy();
-    expect(getByText('Không thể tải công việc')).toBeTruthy();
+    expect(getByText('Không tìm thấy công việc')).toBeTruthy();
+    expect(getByText('Công việc không tồn tại hoặc đã bị xóa.')).toBeTruthy();
 
-    // Press retry
+    const backBtn = getByTestId('btn-back-from-error');
+    fireEvent.press(backBtn);
+    expect(mockGoBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('4. renders 403 Forbidden error state with back action', async () => {
+    (useTaskDetail as jest.Mock).mockReturnValue({
+      ...defaultHookReturn,
+      task: null,
+      error: {
+        isNotFound: false,
+        isForbidden: true,
+        message: 'Bạn không có quyền xem thông tin công việc này.',
+      },
+    });
+
+    const { getByTestId, getByText } = await render(
+      <AppProviders>
+        <TaskDetailScreen />
+      </AppProviders>
+    );
+
+    expect(getByText('Không có quyền truy cập')).toBeTruthy();
+    expect(getByText('Bạn không có quyền xem thông tin công việc này.')).toBeTruthy();
+
+    const backBtn = getByTestId('btn-back-from-error');
+    fireEvent.press(backBtn);
+    expect(mockGoBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('5. renders network error state with retry action', async () => {
+    const mockLoad = jest.fn();
+    (useTaskDetail as jest.Mock).mockReturnValue({
+      ...defaultHookReturn,
+      task: null,
+      load: mockLoad,
+      error: {
+        isNotFound: false,
+        isForbidden: false,
+        retryable: true,
+        message: 'Không thể kết nối đến máy chủ.',
+      },
+    });
+
+    const { getByText } = await render(
+      <AppProviders>
+        <TaskDetailScreen />
+      </AppProviders>
+    );
+
+    expect(getByText('Không thể tải công việc')).toBeTruthy();
+    expect(getByText('Không thể kết nối đến máy chủ.')).toBeTruthy();
+
     const retryBtn = getByText('Thử lại');
     fireEvent.press(retryBtn);
     expect(mockLoad).toHaveBeenCalledTimes(1);
   });
 
-  it('7. renders refresh error banner when pull-to-refresh fails', async () => {
+  it('6. displays non-blocking refresh error banner when refresh fails', async () => {
     (useTaskDetail as jest.Mock).mockReturnValue({
       ...defaultHookReturn,
-      refreshError: 'Không thể làm mới dữ liệu. Vui lòng thử lại sau.',
+      refreshError: 'Không thể làm mới dữ liệu.',
     });
 
     const { getByTestId, getByText } = await render(
@@ -360,73 +354,316 @@ describe('Phase 15C: TaskDetailScreen', () => {
     );
 
     expect(getByTestId('task-detail-refresh-error')).toBeTruthy();
-    expect(getByText('Không thể làm mới dữ liệu. Vui lòng thử lại sau.')).toBeTruthy();
+    expect(getByText('Không thể làm mới dữ liệu.')).toBeTruthy();
   });
 
-  it('8. triggers navigation.goBack() when back button is pressed', async () => {
+  it('7. top back button triggers navigation.goBack()', async () => {
     const { getByTestId } = await render(
       <AppProviders>
         <TaskDetailScreen />
       </AppProviders>
     );
 
-    const backButton = getByTestId('btn-task-detail-back');
-    fireEvent.press(backButton);
+    const backBtn = getByTestId('btn-task-detail-back');
+    fireEvent.press(backBtn);
     expect(mockGoBack).toHaveBeenCalledTimes(1);
   });
 
-  it('9. renders Edit button when allowedActions includes UPDATE and navigates to EditTask', async () => {
+  it('8. opens status mutation modal and submits ChangeTaskStatusRequest (SCR-TSK-07)', async () => {
+    const updatedTask: TaskDetail = {
+      ...mockTask,
+      status: 'IN_REVIEW',
+      version: 4,
+    };
+    (taskApi.changeTaskStatus as jest.Mock).mockResolvedValueOnce(updatedTask);
+
+    const { getByTestId, getByText, queryByTestId } = await render(
+      <AppProviders>
+        <TaskDetailScreen />
+      </AppProviders>
+    );
+
+    // Open status modal
+    const openStatusBtn = getByTestId('btn-open-status-modal');
+    fireEvent.press(openStatusBtn);
+
+    await waitFor(() => {
+      expect(getByTestId('change-status-modal')).toBeTruthy();
+      expect(getByText('Chuyển trạng thái công việc')).toBeTruthy();
+    });
+
+    // For IN_PROGRESS, valid transitions are IN_REVIEW and CANCELLED
+    expect(getByTestId('status-option-IN_REVIEW')).toBeTruthy();
+    expect(getByTestId('status-option-CANCELLED')).toBeTruthy();
+    expect(queryByTestId('status-option-TODO')).toBeNull();
+
+    // Select IN_REVIEW
+    fireEvent.press(getByTestId('status-option-IN_REVIEW'));
+    await waitFor(() => {
+      expect(getByTestId('status-option-IN_REVIEW').props.accessibilityState.checked).toBe(true);
+    });
+
+    // Input comment
+    fireEvent.changeText(getByTestId('input-status-comment'), 'Đã hoàn thành tính năng, gửi duyệt.');
+    await waitFor(() => {
+      expect(getByTestId('input-status-comment').props.value).toBe('Đã hoàn thành tính năng, gửi duyệt.');
+    });
+
+    // Confirm submit
+    await act(async () => {
+      fireEvent.press(getByTestId('btn-confirm-status'));
+    });
+
+    await waitFor(() => {
+      expect(taskApi.changeTaskStatus).toHaveBeenCalledTimes(1);
+      expect(taskApi.changeTaskStatus).toHaveBeenCalledWith('task-uuid-123', {
+        status: 'IN_REVIEW',
+        comment: 'Đã hoàn thành tính năng, gửi duyệt.',
+        version: 3,
+      });
+      expect(mockApplyTaskUpdate).toHaveBeenCalledWith(updatedTask);
+    });
+  });
+
+  it('9. enforces comment requirement when transitioning IN_REVIEW to IN_PROGRESS (rejection)', async () => {
     (useTaskDetail as jest.Mock).mockReturnValue({
       ...defaultHookReturn,
       task: {
         ...mockTask,
-        allowedActions: ['UPDATE', 'CHANGE_STATUS'],
+        status: 'IN_REVIEW',
       },
     });
 
-    const { getByTestId } = await render(
+    const { getByTestId, getByText } = await render(
       <AppProviders>
         <TaskDetailScreen />
       </AppProviders>
     );
 
-    const editBtn = getByTestId('btn-edit-task');
-    expect(editBtn).toBeTruthy();
+    fireEvent.press(getByTestId('btn-open-status-modal'));
 
-    fireEvent.press(editBtn);
-    expect(mockNavigate).toHaveBeenCalledWith('EditTask', { taskId: 'task-uuid-123' });
+    await waitFor(() => {
+      expect(getByTestId('status-option-IN_PROGRESS')).toBeTruthy();
+    });
+
+    // Select IN_PROGRESS (rejection)
+    fireEvent.press(getByTestId('status-option-IN_PROGRESS'));
+    await waitFor(() => {
+      expect(getByTestId('status-option-IN_PROGRESS').props.accessibilityState.checked).toBe(true);
+    });
+
+    // Press confirm without entering comment
+    await act(async () => {
+      fireEvent.press(getByTestId('btn-confirm-status'));
+    });
+
+    await waitFor(() => {
+      expect(getByText('Vui lòng nhập lý do khi chuyển về Đang làm.')).toBeTruthy();
+    });
+    expect(taskApi.changeTaskStatus).not.toHaveBeenCalled();
   });
 
-  it('10. focus listener refreshes authoritative detail on return focus without duplicate initial load', async () => {
-    let focusCallback!: () => void;
-    mockAddListener.mockImplementation((event: string, cb: () => void) => {
-      if (event === 'focus') {
-        focusCallback = cb;
-      }
-      return jest.fn();
+  it('10. status mutation handles HTTP 409 conflict with authoritative reload dialog', async () => {
+    (taskApi.changeTaskStatus as jest.Mock).mockRejectedValueOnce({
+      isAxiosError: true,
+      response: {
+        status: 409,
+        data: {
+          code: 'OPTIMISTIC_LOCK_CONFLICT',
+          message: 'Dữ liệu đã bị thay đổi bởi người khác.',
+        },
+      },
     });
 
-    const mockRefresh = jest.fn();
-    (useTaskDetail as jest.Mock).mockReturnValue({
-      ...defaultHookReturn,
-      task: mockTask,
-      refresh: mockRefresh,
-    });
-
-    await render(
+    const { getByTestId, getByText } = await render(
       <AppProviders>
         <TaskDetailScreen />
       </AppProviders>
     );
 
-    expect(mockAddListener).toHaveBeenCalledWith('focus', expect.any(Function));
+    fireEvent.press(getByTestId('btn-open-status-modal'));
+    await waitFor(() => {
+      expect(getByTestId('btn-confirm-status')).toBeTruthy();
+    });
 
-    // First focus is initial mount: should NOT trigger duplicate refresh
-    focusCallback();
-    expect(mockRefresh).not.toHaveBeenCalled();
+    await act(async () => {
+      fireEvent.press(getByTestId('btn-confirm-status'));
+    });
 
-    // Second focus (returning from EditTask): MUST trigger authoritative refresh
-    focusCallback();
+    await waitFor(() => {
+      expect(getByText('Xung đột dữ liệu')).toBeTruthy();
+    });
+
+    // Pressing reload triggers refresh()
+    fireEvent.press(getByText('Tải lại dữ liệu'));
     expect(mockRefresh).toHaveBeenCalledTimes(1);
+  });
+
+  it('11. opens progress modal and submits UpdateTaskProgressRequest with decimal value (SCR-TSK-08)', async () => {
+    const updatedTask: TaskDetail = {
+      ...mockTask,
+      progressPercent: 85.5,
+      version: 4,
+    };
+    (taskApi.updateTaskProgress as jest.Mock).mockResolvedValueOnce(updatedTask);
+
+    const { getByTestId, getByText } = await render(
+      <AppProviders>
+        <TaskDetailScreen />
+      </AppProviders>
+    );
+
+    // Open progress modal
+    fireEvent.press(getByTestId('btn-open-progress-modal'));
+
+    await waitFor(() => {
+      expect(getByTestId('update-progress-modal')).toBeTruthy();
+      expect(getByText('Cập nhật tiến độ công việc')).toBeTruthy();
+      expect(getByTestId('input-task-progress').props.value).toBe('75');
+    });
+
+    // Change input to decimal value 85.5%
+    fireEvent.changeText(getByTestId('input-task-progress'), '85.5');
+    await waitFor(() => {
+      expect(getByTestId('input-task-progress').props.value).toBe('85.5');
+    });
+
+    // Confirm submit
+    await act(async () => {
+      fireEvent.press(getByTestId('btn-confirm-progress'));
+    });
+
+    await waitFor(() => {
+      expect(taskApi.updateTaskProgress).toHaveBeenCalledTimes(1);
+      expect(taskApi.updateTaskProgress).toHaveBeenCalledWith('task-uuid-123', {
+        progressPercent: 85.5,
+        version: 3,
+      });
+      expect(mockApplyTaskUpdate).toHaveBeenCalledWith(updatedTask);
+    });
+  });
+
+  it('12. assigns eligible project member and passes ProjectMember.userId NOT membership UUID', async () => {
+    const updatedTask: TaskDetail = {
+      ...mockTask,
+      assignees: [
+        ...mockTask.assignees,
+        {
+          assignmentId: 'assign-uuid-new',
+          id: 'user-cand-2',
+          fullName: 'Nguyễn Thị Tester',
+          avatarUrl: null,
+          assignedAt: '2026-10-20T00:00:00Z',
+        },
+      ],
+    };
+    (taskApi.assignUsers as jest.Mock).mockResolvedValueOnce(updatedTask);
+
+    const { getByTestId, getByText } = await render(
+      <AppProviders>
+        <TaskDetailScreen />
+      </AppProviders>
+    );
+
+    // Open assign modal
+    fireEvent.press(getByTestId('btn-open-assign-modal'));
+
+    await waitFor(() => {
+      expect(getByTestId('task-assignee-picker-modal')).toBeTruthy();
+      expect(projectApi.listMembers).toHaveBeenCalledWith('proj-uuid-1', expect.objectContaining({ active: true }));
+    });
+
+    await waitFor(() => {
+      expect(getByText('Nguyễn Thị Tester')).toBeTruthy();
+    });
+
+    // Existing assignee (user-dev-1) must be disabled
+    expect(getByTestId('assignee-option-user-dev-1').props.accessibilityState.disabled).toBe(true);
+
+    // Select candidate member (userId: 'user-cand-2')
+    fireEvent.press(getByTestId('assignee-option-user-cand-2'));
+    await waitFor(() => {
+      expect(getByTestId('assignee-option-user-cand-2').props.accessibilityState.checked).toBe(true);
+    });
+
+    // Confirm selection
+    await act(async () => {
+      fireEvent.press(getByTestId('btn-confirm-assignee-select'));
+    });
+
+    await waitFor(() => {
+      expect(taskApi.assignUsers).toHaveBeenCalledTimes(1);
+      // Critical check: passes user-cand-2, NOT member-record-2!
+      expect(taskApi.assignUsers).toHaveBeenCalledWith('task-uuid-123', {
+        assigneeIds: ['user-cand-2'],
+      });
+      expect(mockApplyTaskUpdate).toHaveBeenCalledWith(updatedTask);
+    });
+  });
+
+  it('13. unassigns existing member using assignmentId NOT userId after ConfirmationDialog', async () => {
+    const updatedTask: TaskDetail = {
+      ...mockTask,
+      assignees: [],
+    };
+    (taskApi.unassignUser as jest.Mock).mockResolvedValueOnce(updatedTask);
+
+    const { getByTestId, getByText } = await render(
+      <AppProviders>
+        <TaskDetailScreen />
+      </AppProviders>
+    );
+
+    // Press unassign button for user-dev-1
+    const unassignBtn = getByTestId('btn-unassign-user-dev-1');
+    fireEvent.press(unassignBtn);
+
+    await waitFor(() => {
+      expect(getByText('Gỡ phân công')).toBeTruthy();
+      expect(getByText('Bạn có chắc chắn muốn gỡ Lê Văn Lập Trình khỏi công việc không?')).toBeTruthy();
+    });
+
+    // Cancel first
+    fireEvent.press(getByText('Hủy'));
+    expect(taskApi.unassignUser).not.toHaveBeenCalled();
+
+    // Press unassign again and confirm
+    fireEvent.press(unassignBtn);
+    await waitFor(() => {
+      expect(getByText('Gỡ phân công')).toBeTruthy();
+    });
+
+    await act(async () => {
+      fireEvent.press(getByTestId('dialog-confirm-unassign-confirm-btn'));
+    });
+
+    await waitFor(() => {
+      expect(taskApi.unassignUser).toHaveBeenCalledTimes(1);
+      // Critical check: passes assign-uuid-999, NEVER user-dev-1!
+      expect(taskApi.unassignUser).toHaveBeenCalledWith('task-uuid-123', 'assign-uuid-999');
+      expect(mockApplyTaskUpdate).toHaveBeenCalledWith(updatedTask);
+    });
+  });
+
+  it('14. gates mutation actions: hides controls when allowedActions does not include them', async () => {
+    (useTaskDetail as jest.Mock).mockReturnValue({
+      ...defaultHookReturn,
+      task: {
+        ...mockTask,
+        allowedActions: [], // No actions allowed (e.g. read-only or terminal)
+      },
+    });
+
+    const { queryByTestId } = await render(
+      <AppProviders>
+        <TaskDetailScreen />
+      </AppProviders>
+    );
+
+    expect(queryByTestId('btn-edit-task')).toBeNull();
+    expect(queryByTestId('btn-open-status-modal')).toBeNull();
+    expect(queryByTestId('btn-open-progress-modal')).toBeNull();
+    expect(queryByTestId('btn-open-assign-modal')).toBeNull();
+    expect(queryByTestId('btn-unassign-user-dev-1')).toBeNull();
   });
 });

@@ -339,4 +339,43 @@ describe('Phase 15C: useTaskDetail Custom Hook', () => {
     expect(taskApi.getTaskDetail).toHaveBeenCalledTimes(1);
     expect(result.current.task).toBeNull();
   });
+
+  it('9. applyTaskUpdate immediately updates task state and supersedes pending in-flight GET requests', async () => {
+    let resolveGetA!: (val: TaskDetail) => void;
+    const pendingGetA = new Promise<TaskDetail>(res => {
+      resolveGetA = res;
+    });
+    (taskApi.getTaskDetail as jest.Mock).mockReturnValueOnce(pendingGetA);
+
+    const { result } = await renderHook(() => useTaskDetail('task-uuid-1'));
+
+    expect(result.current.initialLoading).toBe(true);
+
+    const mutationResult: TaskDetail = {
+      ...mockTaskA,
+      title: 'Tiêu đề sau mutation B',
+      status: 'IN_REVIEW',
+      version: 3,
+    };
+
+    // Apply mutation B before GET A resolves
+    await act(async () => {
+      result.current.applyTaskUpdate(mutationResult);
+    });
+
+    expect(result.current.task?.title).toBe('Tiêu đề sau mutation B');
+    expect(result.current.task?.status).toBe('IN_REVIEW');
+    expect(result.current.task?.version).toBe(3);
+
+    // Now GET A resolves with stale data
+    await act(async () => {
+      resolveGetA(mockTaskA);
+      await pendingGetA;
+    });
+
+    // Stale GET A must NOT overwrite mutation result
+    expect(result.current.task?.title).toBe('Tiêu đề sau mutation B');
+    expect(result.current.task?.status).toBe('IN_REVIEW');
+    expect(result.current.task?.version).toBe(3);
+  });
 });

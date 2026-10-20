@@ -9,12 +9,24 @@
 - Phase 13 Audit Conclusion: `PHASE_13_FINAL_AUDIT_PASS_WITH_E2E_DEFERRALS`
 - Phase 14 Baseline Checkpoint: `785c155b69309284066252701ec1554d35d4e795` (`docs(phase14): record architecture decision D-061 phase 14 contract freeze`)
 - Phase 14A Implementation Checkpoint: `55cc13e6372ba4374d3533fe3f82f7afcd84dcff` (`feat(mobile): add phase 14 dashboard project contracts`)
-- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 15 Mobile Task Management: IN_PROGRESS (Subphases 15A, 15B, 15C IMPLEMENTED & AUDITED, Subphase 15D IMPLEMENTED / HARDENED / D-064 IMPLEMENTED / PENDING FINAL NARROW VERIFICATION, Subphase 15E NOT STARTED).
+- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 15 Mobile Task Management: IN_PROGRESS (Subphases 15A, 15B, 15C IMPLEMENTED & AUDITED, Subphase 15D CLOSED / D-064 VERIFIED, Subphase 15E IMPLEMENTED / READY FOR AUDIT, Subphase 15F NOT STARTED).
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening
 
-- Latest Patch: Subphase 15D Mobile Date Policy Patch (D-064 Implementation) (`SCR-TSK-03` & `SCR-TSK-04`)
+- Latest Implementation: Subphase 15E Mobile Task Mutations (`SCR-TSK-07` + `SCR-TSK-08` + Existing-Task Assign/Unassign)
+- Implementation Report: `reports/PHASE_15E_TASK_MUTATIONS_REPORT.md`
+- Scope Implemented:
+  - Task Status Update Modal (`SCR-TSK-07`): Pure domain state machine (`taskStatusTransitions.ts`), valid transition radio options, terminal state banner, and mandatory rejection comment when transitioning `IN_REVIEW -> IN_PROGRESS`.
+  - Task Progress Update Modal (`SCR-TSK-08`): Decimal progress support (`0.0..100.0`), quick presets (`0%`, `25%`, `50%`, `75%`, `100%`), input validation.
+  - Existing-Task Assign: Queries eligible project members via `projectApi.listMembers(projectId, { active: true })` (strictly zero calls to `directoryApi`), disables existing assignees, and dispatches `assigneeIds: [userId]` (User UUID).
+  - Existing-Task Unassign: ConfirmationDialog confirmation, dispatches `DELETE /tasks/{taskId}/assignments/{assignmentId}` using `assignmentId` (TaskAssignment UUID, NOT User UUID).
+  - Concurrency & Race Protection: Synchronous `useRef` locks on all 4 mutations; `useTaskDetail.applyTaskUpdate` immediately commits returned `TaskDetail` and invalidates in-flight GETs to eliminate `TASK_DETAIL_MUTATION_STALE_OVERWRITE` race hazards.
+  - Optimistic Locking: Version-backed mutations; on HTTP 409 conflict, displays dialog to reload authoritative server state.
+  - Capabilities Gating: Gated strictly by `task.allowedActions` (`UPDATE_STATUS`, `UPDATE_PROGRESS`, `ASSIGN`, `UNASSIGN`).
+  - Validation: 78 test suites, 692 tests PASS (0 failures, 0 skipped); TypeScript 0 errors; ESLint 0 errors (48 preexisting warnings); Android assembleDebug BUILD SUCCESSFUL.
+  - Next Action: `INDEPENDENT AUDIT PHASE 15E`.
+- Prior Patch: Subphase 15D Mobile Date Policy Patch (D-064 Implementation) (`SCR-TSK-03` & `SCR-TSK-04`)
 - Patch Report: `reports/PHASE_15D_CREATE_EDIT_TASK_REPORT.md`
 - Scope Implemented:
   - D-064 End-of-Day Boundary Serialization: Updated `mobile/src/features/tasks/utils/taskDate.ts` `serializeTaskDueDate` to serialize calendar dates `YYYY-MM-DD` to `${YYYY-MM-DD}T17:00:00Z` (Vietnam UTC+7 midnight end-of-day boundary) as formally frozen in `D-064`. Resolves `TASK_DUE_DATE_POLICY_UNGROUNDED` and `TASK_DUE_DATE_SERIALIZATION_DRIFT`.

@@ -1,5 +1,5 @@
 /**
- * Phase 15C: Task Detail Screen (SCR-TSK-02)
+ * Phase 15C + 15E: Task Detail Screen (SCR-TSK-02)
  *
  * Canonical UI & Presentation Rules:
  * - Back button to return to Tasks list via navigation.goBack()
@@ -10,12 +10,20 @@
  * - Hierarchy & Milestone section: parent task title (if present), milestone name (if present)
  * - Status History section: timeline of transitions (fromStatus -> toStatus, changedBy, changedAt, comment)
  * - Summaries section: read-only subtask count and comment count
- * - Staged capability gating: server allowedActions are evaluated safely, but child mutation controls
- *   (Edit, ChangeStatus, UpdateProgress, Assign, Subtasks, Comments) are strictly deferred to 15D, 15E, 15F
+ * - Phase 15E Mutations:
+ *   - Status transition modal (SCR-TSK-07) gated by UPDATE_STATUS
+ *   - Progress update modal (SCR-TSK-08) gated by UPDATE_PROGRESS
+ *   - Assign modal (eligible active project members only, disabled existing assignees) gated by ASSIGN
+ *   - Unassign action with ConfirmationDialog using assignmentId (NOT userId) gated by UNASSIGN
+ *   - Synchronous submit locks on all mutations
+ *   - Immediate authoritative TaskDetail update via applyTaskUpdate without redundant GET
+ *   - Stale fetch overwrite protection
+ *   - Optimistic locking (HTTP 409) reload dialog
+ * - Subtasks & Comments client capabilities are strictly deferred to Phase 15F
  * - Safe presentation error handling with reload/retry, and friendly 403 / 404 screens
  */
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Pressable,
   RefreshControl,
@@ -28,13 +36,19 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAppTheme } from '../../../app/providers/ThemeProvider';
 import { MainTabNavProp, MainTabScreenRouteProp } from '../../../app/navigation/types';
 import {
+  ConfirmationDialog,
   ErrorState,
   LoadingIndicator,
   PriorityBadge,
   StatusBadge,
 } from '../../../shared/components';
+import { taskApi } from '../api/taskApi';
+import { AssigneeDetail, TaskStatus, TaskStatusHistoryItem } from '../api/taskTypes';
+import { ChangeStatusModal } from '../components/ChangeStatusModal';
+import { ProjectMemberAssigneePickerModal } from '../components/ProjectMemberAssigneePickerModal';
+import { UpdateProgressModal } from '../components/UpdateProgressModal';
+import { mapTaskError } from '../errors/taskErrorMapper';
 import { useTaskDetail } from '../hooks/useTaskDetail';
-import { TaskStatus, TaskStatusHistoryItem } from '../api/taskTypes';
 
 function formatDate(isoOrDate: string | null | undefined): string {
   if (!isoOrDate) {
@@ -74,8 +88,32 @@ export function TaskDetailScreen() {
   const route = useRoute<MainTabScreenRouteProp<'TaskDetail'>>();
 
   const { taskId } = route.params;
-  const { task, initialLoading, refreshing, error, refreshError, load, refresh } =
+  const { task, initialLoading, refreshing, error, refreshError, load, refresh, applyTaskUpdate } =
     useTaskDetail(taskId);
+
+  // Mutation modal visibility states
+  const [statusModalVisible, setStatusModalVisible] = useState<boolean>(false);
+  const [progressModalVisible, setProgressModalVisible] = useState<boolean>(false);
+  const [assignModalVisible, setAssignModalVisible] = useState<boolean>(false);
+  const [unassignConfirmVisible, setUnassignConfirmVisible] = useState<boolean>(false);
+  const [assigneeToUnassign, setAssigneeToUnassign] = useState<AssigneeDetail | null>(null);
+
+  // Optimistic lock conflict reload dialog
+  const [conflictVisible, setConflictVisible] = useState<boolean>(false);
+
+  // Mutation error banner
+  const [mutationError, setMutationError] = useState<string | null>(null);
+
+  // Loading states for buttons/modals
+  const [statusSubmitting, setStatusSubmitting] = useState<boolean>(false);
+  const [progressSubmitting, setProgressSubmitting] = useState<boolean>(false);
+  const [unassignSubmitting, setUnassignSubmitting] = useState<boolean>(false);
+
+  // Synchronous submit locks
+  const statusLockRef = useRef<boolean>(false);
+  const progressLockRef = useRef<boolean>(false);
+  const assignLockRef = useRef<boolean>(false);
+  const unassignLockRef = useRef<boolean>(false);
 
   // Focus-aware refresh for return-from-edit freshness without initial duplicate GET
   const isFirstMountRef = useRef<boolean>(true);
@@ -93,6 +131,110 @@ export function TaskDetailScreen() {
       unsubscribe?.();
     };
   }, [navigation, refresh]);
+
+  // Mutation Handlers
+  const handleStatusChange = async (targetStatus: TaskStatus, comment?: string) => {
+    if (statusLockRef.current || !task) return;
+    statusLockRef.current = true;
+    setStatusSubmitting(true);
+    setMutationError(null);
+
+    try {
+      const updated = await taskApi.changeTaskStatus(task.id, {
+        status: targetStatus,
+        comment,
+        version: task.version,
+      });
+      applyTaskUpdate(updated);
+      setStatusModalVisible(false);
+    } catch (err: unknown) {
+      const mapped = mapTaskError(err);
+      if (mapped.isConflict) {
+        setStatusModalVisible(false);
+        setConflictVisible(true);
+      } else {
+        setMutationError(mapped.message);
+      }
+    } finally {
+      statusLockRef.current = false;
+      setStatusSubmitting(false);
+    }
+  };
+
+  const handleProgressChange = async (newProgress: number) => {
+    if (progressLockRef.current || !task) return;
+    progressLockRef.current = true;
+    setProgressSubmitting(true);
+    setMutationError(null);
+
+    try {
+      const updated = await taskApi.updateTaskProgress(task.id, {
+        progressPercent: newProgress,
+        version: task.version,
+      });
+      applyTaskUpdate(updated);
+      setProgressModalVisible(false);
+    } catch (err: unknown) {
+      const mapped = mapTaskError(err);
+      if (mapped.isConflict) {
+        setProgressModalVisible(false);
+        setConflictVisible(true);
+      } else {
+        setMutationError(mapped.message);
+      }
+    } finally {
+      progressLockRef.current = false;
+      setProgressSubmitting(false);
+    }
+  };
+
+  const handleAssign = async (selectedUserIds: string[]) => {
+    if (assignLockRef.current || !task) return;
+    const existingUserIds = task.assignees.map(a => a.id);
+    const newUserIds = selectedUserIds.filter(uid => !existingUserIds.includes(uid));
+
+    if (newUserIds.length === 0) {
+      setAssignModalVisible(false);
+      return;
+    }
+
+    assignLockRef.current = true;
+    setMutationError(null);
+
+    try {
+      const updated = await taskApi.assignUsers(task.id, {
+        assigneeIds: newUserIds,
+      });
+      applyTaskUpdate(updated);
+      setAssignModalVisible(false);
+    } catch (err: unknown) {
+      const mapped = mapTaskError(err);
+      setMutationError(mapped.message);
+    } finally {
+      assignLockRef.current = false;
+    }
+  };
+
+  const handleUnassign = async () => {
+    if (unassignLockRef.current || !task || !assigneeToUnassign) return;
+    unassignLockRef.current = true;
+    setUnassignSubmitting(true);
+    setMutationError(null);
+
+    try {
+      // CRITICAL: Must use assignmentId, NOT userId!
+      const updated = await taskApi.unassignUser(task.id, assigneeToUnassign.assignmentId);
+      applyTaskUpdate(updated);
+      setUnassignConfirmVisible(false);
+      setAssigneeToUnassign(null);
+    } catch (err: unknown) {
+      const mapped = mapTaskError(err);
+      setMutationError(mapped.message);
+    } finally {
+      unassignLockRef.current = false;
+      setUnassignSubmitting(false);
+    }
+  };
 
   // 1. Initial Loading State
   if (initialLoading) {
@@ -187,15 +329,36 @@ export function TaskDetailScreen() {
         </View>
       ) : null}
 
+      {/* Mutation error banner */}
+      {mutationError ? (
+        <View
+          style={[styles.mutationErrorBanner, { backgroundColor: theme.colors.errorContainer }]}
+          testID="task-detail-mutation-error"
+        >
+          <Text
+            style={[theme.typography.caption, styles.bannerText, styles.flexOne, { color: theme.colors.error }]}
+          >
+            {mutationError}
+          </Text>
+          <Pressable
+            onPress={() => setMutationError(null)}
+            style={styles.closeBannerButton}
+            accessibilityRole="button"
+            accessibilityLabel="Đóng thông báo lỗi"
+          >
+            <Text style={[styles.closeBannerText, { color: theme.colors.error }]}>✕</Text>
+          </Pressable>
+        </View>
+      ) : null}
+
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={refresh}
-            colors={[theme.colors.primary]}
             tintColor={theme.colors.primary}
-            testID="task-detail-refresh-control"
+            colors={[theme.colors.primary]}
           />
         }
       >
@@ -244,7 +407,7 @@ export function TaskDetailScreen() {
           ) : null}
         </View>
 
-        {/* Header Section: Project Context & Title */}
+        {/* Header Section: Project Context, Status & Title */}
         <View
           style={[
             styles.card,
@@ -270,6 +433,26 @@ export function TaskDetailScreen() {
               <PriorityBadge priority={task.priority} />
               <View style={styles.badgeSpacer} />
               <StatusBadge type="task" status={task.status} />
+              {task.allowedActions?.includes('UPDATE_STATUS') ? (
+                <Pressable
+                  onPress={() => setStatusModalVisible(true)}
+                  style={({ pressed }) => [
+                    styles.actionChip,
+                    {
+                      borderColor: theme.colors.primary,
+                      backgroundColor: pressed ? theme.colors.surfaceVariant : 'transparent',
+                      marginLeft: 8,
+                    },
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Đổi trạng thái công việc"
+                  testID="btn-open-status-modal"
+                >
+                  <Text style={[theme.typography.caption, styles.chipText, { color: theme.colors.primary }]}>
+                    Đổi trạng thái
+                  </Text>
+                </Pressable>
+              ) : null}
             </View>
           </View>
 
@@ -292,16 +475,38 @@ export function TaskDetailScreen() {
               >
                 Tiến độ thực hiện
               </Text>
-              <Text
-                style={[
-                  theme.typography.caption,
-                  styles.progressPercentText,
-                  { color: theme.colors.textPrimary },
-                ]}
-                testID="task-detail-progress-percent"
-              >
-                {clampedProgress}%
-              </Text>
+              <View style={styles.progressActionsRow}>
+                <Text
+                  style={[
+                    theme.typography.caption,
+                    styles.progressPercentText,
+                    { color: theme.colors.textPrimary },
+                  ]}
+                  testID="task-detail-progress-percent"
+                >
+                  {task.progressPercent ?? 0}%
+                </Text>
+                {task.allowedActions?.includes('UPDATE_PROGRESS') ? (
+                  <Pressable
+                    onPress={() => setProgressModalVisible(true)}
+                    style={({ pressed }) => [
+                      styles.actionChipSmall,
+                      {
+                        borderColor: theme.colors.primary,
+                        backgroundColor: pressed ? theme.colors.surfaceVariant : 'transparent',
+                        marginLeft: 8,
+                      },
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel="Cập nhật tiến độ"
+                    testID="btn-open-progress-modal"
+                  >
+                    <Text style={[theme.typography.caption, styles.chipText, { color: theme.colors.primary }]}>
+                      Cập nhật
+                    </Text>
+                  </Pressable>
+                ) : null}
+              </View>
             </View>
             <View
               style={[
@@ -371,10 +576,10 @@ export function TaskDetailScreen() {
             </Text>
           </View>
 
-          {formattedCompletedAt ? (
+          {task.completedAt ? (
             <View style={styles.infoRow}>
               <Text style={[theme.typography.caption, styles.infoLabel, { color: theme.colors.textSecondary }]}>
-                Ngày hoàn thành:
+                Hoàn thành lúc:
               </Text>
               <Text
                 style={[theme.typography.body, styles.infoValue, { color: theme.colors.textPrimary }]}
@@ -528,22 +733,69 @@ export function TaskDetailScreen() {
             </Text>
           </View>
 
-          {/* Assignees */}
+          {/* Assignees Header with Assign Action */}
           <View style={styles.assigneeSection}>
-            <Text style={[theme.typography.caption, styles.infoLabel, { color: theme.colors.textSecondary }]}>
-              Người thực hiện:
-            </Text>
+            <View style={styles.assigneeHeaderRow}>
+              <Text style={[theme.typography.caption, styles.infoLabel, { color: theme.colors.textSecondary }]}>
+                Người thực hiện:
+              </Text>
+              {task.allowedActions?.includes('ASSIGN') ? (
+                <Pressable
+                  onPress={() => setAssignModalVisible(true)}
+                  style={({ pressed }) => [
+                    styles.actionChipSmall,
+                    {
+                      borderColor: theme.colors.primary,
+                      backgroundColor: pressed ? theme.colors.surfaceVariant : 'transparent',
+                    },
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Phân công người thực hiện"
+                  testID="btn-open-assign-modal"
+                >
+                  <Text style={[theme.typography.caption, styles.chipText, { color: theme.colors.primary }]}>
+                    + Phân công
+                  </Text>
+                </Pressable>
+              ) : null}
+            </View>
+
             {task.assignees && task.assignees.length > 0 ? (
               <View style={styles.assigneeList} testID="task-detail-assignees-list">
                 {task.assignees.map((assignee, index) => (
-                  <View key={`assignee-${index}`} style={styles.assigneeItem}>
-                    <Text style={[theme.typography.body, styles.assigneeName, { color: theme.colors.textPrimary }]}>
-                      • {assignee.fullName}
-                    </Text>
-                    {assignee.assignedAt ? (
-                      <Text style={[theme.typography.caption, { color: theme.colors.textSecondary }]}>
-                        (Giao ngày: {formatDate(assignee.assignedAt)})
+                  <View
+                    key={`assignee-${assignee.assignmentId || assignee.id || index}`}
+                    style={styles.assigneeItem}
+                  >
+                    <View style={styles.assigneeItemLeft}>
+                      <Text style={[theme.typography.body, styles.assigneeName, { color: theme.colors.textPrimary }]}>
+                        • {assignee.fullName}
                       </Text>
+                      {assignee.assignedAt ? (
+                        <Text style={[theme.typography.caption, styles.assignedAtText, { color: theme.colors.textSecondary }]}>
+                          (Giao ngày: {formatDate(assignee.assignedAt)})
+                        </Text>
+                      ) : null}
+                    </View>
+
+                    {task.allowedActions?.includes('UNASSIGN') ? (
+                      <Pressable
+                        onPress={() => {
+                          setAssigneeToUnassign(assignee);
+                          setUnassignConfirmVisible(true);
+                        }}
+                        style={({ pressed }) => [
+                          styles.unassignButton,
+                          { opacity: pressed ? 0.6 : 1 },
+                        ]}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Gỡ phân công ${assignee.fullName}`}
+                        testID={`btn-unassign-${assignee.id}`}
+                      >
+                        <Text style={[theme.typography.caption, styles.unassignText, { color: theme.colors.error }]}>
+                          Gỡ
+                        </Text>
+                      </Pressable>
                     ) : null}
                   </View>
                 ))}
@@ -653,8 +905,10 @@ export function TaskDetailScreen() {
                     </Text>
                   </View>
                   <View style={styles.historyTransitionRow}>
-                    <StatusBadge type="task" status={item.fromStatus} />
-                    <Text style={[theme.typography.body, styles.historyArrow, { color: theme.colors.textSecondary }]}>
+                    <StatusBadge type="task" status={item.fromStatus as TaskStatus} />
+                    <Text
+                      style={[styles.historyArrow, { color: theme.colors.textSecondary }]}
+                    >
                       →
                     </Text>
                     <StatusBadge type="task" status={item.toStatus as TaskStatus} />
@@ -686,6 +940,64 @@ export function TaskDetailScreen() {
           </Text>
         </View>
       </ScrollView>
+
+      {/* Mutation Modals & Dialogs */}
+      <ChangeStatusModal
+        visible={statusModalVisible}
+        currentStatus={task.status}
+        onConfirm={handleStatusChange}
+        onClose={() => setStatusModalVisible(false)}
+        submitting={statusSubmitting}
+      />
+
+      <UpdateProgressModal
+        visible={progressModalVisible}
+        currentProgress={task.progressPercent ?? 0}
+        onConfirm={handleProgressChange}
+        onClose={() => setProgressModalVisible(false)}
+        submitting={progressSubmitting}
+      />
+
+      <ProjectMemberAssigneePickerModal
+        visible={assignModalVisible}
+        projectId={task.project.id}
+        selectedUserIds={[]}
+        disabledUserIds={task.assignees.map(a => a.id)}
+        onConfirm={handleAssign}
+        onClose={() => setAssignModalVisible(false)}
+        title="Phân công người thực hiện"
+        testID="task-assignee-picker-modal"
+      />
+
+      <ConfirmationDialog
+        visible={unassignConfirmVisible}
+        title="Gỡ phân công"
+        message={`Bạn có chắc chắn muốn gỡ ${assigneeToUnassign?.fullName ?? 'người thực hiện này'} khỏi công việc không?`}
+        confirmText="Gỡ"
+        cancelText="Hủy"
+        isDanger
+        loading={unassignSubmitting}
+        onConfirm={handleUnassign}
+        onCancel={() => {
+          setUnassignConfirmVisible(false);
+          setAssigneeToUnassign(null);
+        }}
+        testID="dialog-confirm-unassign"
+      />
+
+      <ConfirmationDialog
+        visible={conflictVisible}
+        title="Xung đột dữ liệu"
+        message="Dữ liệu công việc đã được cập nhật bởi người khác trong khi bạn đang thao tác. Bạn có muốn tải lại dữ liệu mới nhất không?"
+        confirmText="Tải lại dữ liệu"
+        cancelText="Đóng"
+        onConfirm={() => {
+          setConflictVisible(false);
+          refresh();
+        }}
+        onCancel={() => setConflictVisible(false)}
+        testID="dialog-conflict-reload"
+      />
     </View>
   );
 }
@@ -710,9 +1022,31 @@ const styles = StyleSheet.create({
     marginTop: 8,
     borderRadius: 8,
   },
+  mutationErrorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 12,
+    marginHorizontal: 16,
+    marginTop: 8,
+    borderRadius: 8,
+  },
   bannerText: {
     textAlign: 'center',
     fontWeight: '500',
+  },
+  flexOne: {
+    flex: 1,
+  },
+  closeBannerButton: {
+    padding: 4,
+    minHeight: 48,
+    minWidth: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  closeBannerText: {
+    fontWeight: 'bold',
   },
   topNavRow: {
     flexDirection: 'row',
@@ -761,6 +1095,26 @@ const styles = StyleSheet.create({
   badgeSpacer: {
     width: 6,
   },
+  actionChip: {
+    minHeight: 48,
+    paddingHorizontal: 10,
+    borderWidth: 1,
+    borderRadius: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  actionChipSmall: {
+    minHeight: 48,
+    minWidth: 48,
+    paddingHorizontal: 8,
+    borderWidth: 1,
+    borderRadius: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  chipText: {
+    fontWeight: '600',
+  },
   taskTitleText: {
     marginBottom: 16,
   },
@@ -770,7 +1124,12 @@ const styles = StyleSheet.create({
   progressLabelRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 6,
+  },
+  progressActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   progressPercentText: {
     fontWeight: '600',
@@ -805,6 +1164,12 @@ const styles = StyleSheet.create({
   assigneeSection: {
     marginTop: 8,
   },
+  assigneeHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
   assigneeList: {
     marginTop: 4,
   },
@@ -813,9 +1178,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: 4,
+    minHeight: 48,
+  },
+  assigneeItemLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
   },
   assigneeName: {
     fontWeight: '500',
+  },
+  assignedAtText: {
+    marginLeft: 6,
+  },
+  unassignButton: {
+    minHeight: 48,
+    minWidth: 48,
+    paddingHorizontal: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  unassignText: {
+    fontWeight: '600',
   },
   emptyText: {
     fontStyle: 'italic',

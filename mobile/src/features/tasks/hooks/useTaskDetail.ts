@@ -29,6 +29,7 @@ export interface UseTaskDetailResult {
   refreshError: string | null;
   load: () => Promise<void>;
   refresh: () => Promise<void>;
+  applyTaskUpdate: (updated: TaskDetail) => void;
 }
 
 export function useTaskDetail(taskId: string): UseTaskDetailResult {
@@ -135,6 +136,17 @@ export function useTaskDetail(taskId: string): UseTaskDetailResult {
     return executeFetch(taskId, true);
   }, [taskId, executeFetch]);
 
+  const applyTaskUpdate = useCallback((updated: TaskDetail) => {
+    // Supersede any pending in-flight GET requests so stale responses cannot overwrite
+    requestGenerationRef.current++;
+    inFlightPromiseRef.current = null;
+    if (mountedRef.current) {
+      setTask(updated);
+      setError(null);
+      setRefreshError(null);
+    }
+  }, []);
+
   return {
     task,
     initialLoading,
@@ -143,5 +155,6 @@ export function useTaskDetail(taskId: string): UseTaskDetailResult {
     refreshError,
     load,
     refresh,
+    applyTaskUpdate,
   };
 }
