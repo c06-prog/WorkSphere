@@ -4,25 +4,31 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: PHASE 14 FINAL RECONCILIATION (REPORT & MEMORY ALIGNMENT)
-- Status: Phase 14 IMPLEMENTATION_COMPLETE, FINAL_AUDIT_PASS_WITH_E2E_DEFERRALS, RECONCILED, MEMORY_CHECKPOINT_PENDING. Subphase 14A CLOSED / AUDITED, Subphase 14B CLOSED / HARDENED, Subphase 14C CLOSED / HARDENED, Subphase 14D CLOSED / AUDITED, Subphase 14E CLOSED / HARDENED, Subphase 14F VALIDATED. Full Mobile regression (61 suites, 528 tests PASS), 31 backend integration tests PASS, Android assembleDebug BUILD SUCCESSFUL, emulator-5554 smoke PASS. Remaining LOW debt: PHASE_14E_LINT_WARNING_DEBT (48 inline styles), PROJECT_MUTATION_DUPLICATE_SUBMIT_RISK (state-only guards). Remaining active deferrals: PHASE_14_AUTH_E2E_CREDENTIALS_NOT_AVAILABLE_SAFE_SKIP, PHASE_14_MUTATION_E2E_DEFERRED, PHASE_14_OFFLINE_DEVICE_E2E_DEFERRED.
-- Baseline Checkpoint: `ce51d8fee85a69e375573cea63593580f66a8243`
-- Report: `reports/PHASE_14_FINAL_AUDIT_REPORT.md` and `reports/PHASE_14F_INTEGRATION_HARDENING_REPORT.md`
-- Next Action: `PHASE 14 MEMORY CHECKPOINT` (Phase 15: NOT STARTED).
-- Scope Boundary:
-  - Subphase 14E BLOCKED (`PHASE_14E_REFERENCE_DATA_BLOCKED`).
-  - Audited Reference Data Status:
-    1. `departmentId` available via `GET /api/v1/departments`.
-    2. `initialMemberIds` (`SCR-PRJ-03`) missing unprivileged user lookup source (`PROJECT_CREATE_REFERENCE_DATA_GAP`).
-    3. `userId` for `SCR-PRJ-07 Add Member` missing unprivileged user lookup source (`PROJECT_MEMBER_SELECTION_API_GAP`). Only `GET /api/v1/admin/users` exists, requiring `USER_READ` (Admin only). Non-admin Project Managers cannot query candidate users, and free-text UUID controls are strictly forbidden by UX and security standards.
-  - Phase 14E Implementation Deferred until reference data API is provisioned.
-  - NO Create Project form (`CreateProjectScreen.tsx` deferred to 14E).
-  - NO Edit Project form (`EditProjectScreen.tsx` deferred to 14E).
-  - NO Change Status modal (`ChangeStatusModal.tsx` deferred to 14E).
-  - NO Member Management screen (`ProjectMembersScreen.tsx` deferred to 14E).
-  - NO Milestone Management full screen (`ProjectMilestonesScreen.tsx` deferred to 14E).
-  - NO backend or Flyway migration edits.
-  - NO third-party packages installed (zero new dependencies).
+- Current Task: PHASE 14 MEMORY CHECKPOINT (DASHBOARD & PROJECTS CLOSURE)
+- Status: Phase 14 CLOSED (IMPLEMENTATION_COMPLETE, FINAL_AUDIT_PASS_WITH_E2E_DEFERRALS, RECONCILED, MEMORY_CHECKPOINT_CLOSED).
+  - Subphases 14A..14D: CLOSED / AUDITED / HARDENED
+  - Subphases 14E-G1 & 14E-G2: CLOSED / AUDITED (User Directory Foundation & Picker)
+  - Subphase 14E: CLOSED / HARDENED (Core Project Management SCR-PRJ-03..09)
+  - Subphase 14F: CLOSED / VALIDATED (Full Integration & Regression)
+- Baseline Checkpoint: `6ae51fd60a239107f820f7b46f37c9c3ed5141c0` (Pre-closure reconciled baseline)
+- Reports: `reports/PHASE_14_MEMORY_CHECKPOINT.md`, `reports/PHASE_14_FINAL_AUDIT_REPORT.md`, `reports/PHASE_14F_INTEGRATION_HARDENING_REPORT.md`
+- Validation Baseline: Mobile 61/61 suites, 528/528 tests PASS; Backend 31/31 targeted integration tests PASS; Android assembleDebug BUILD SUCCESSFUL (203 actionable tasks); emulator-5554 smoke PASS.
+- Delivered Scope: Personal Dashboard (`SCR-MAIN-01`) and Project Management (`SCR-PRJ-01` .. `SCR-PRJ-09`), backed by authenticated Directory & UserPickerModal (`D-062`).
+- Explicitly Deferred Outside Phase 14:
+  - Task Screens (`SCR-TSK-01` .. `SCR-TSK-08` belong to Phase 15 Mobile Task Management; Tasks tab is an unpopulated navigation placeholder only).
+  - Service Requests (`Phase 16` / Roadmap Section 19).
+  - Asset Management (`Phase 16` / Roadmap Section 19).
+- Active Deferred Items:
+  - `PHASE_14_AUTH_E2E_CREDENTIALS_NOT_AVAILABLE_SAFE_SKIP`: Missing local environment test credentials.
+  - `PHASE_14_MUTATION_E2E_DEFERRED`: Deferred until isolated disposable test fixture provisioning exists.
+  - `PHASE_14_OFFLINE_DEVICE_E2E_DEFERRED`: Device network manipulation deferred; offline covered by Jest tests.
+- Accepted Non-Blocking Debt:
+  - `PHASE_14E_LINT_WARNING_DEBT`: 48 warnings for react-native/no-inline-styles (47 from 14E screens/modals, 1 pre-existing in 14C; exit code 0, 0 errors).
+  - `PROJECT_MUTATION_DUPLICATE_SUBMIT_RISK`: 7 mutation flows use React state-only submit guards rather than synchronous useRef locks.
+- Pre-Existing Toolchain Debt:
+  - AGP deprecation notices, KSP 2.2.0-2.0.2 compiler warning, npm dev dependency advisories (55 vulnerabilities).
+- Phase 15 Status: NOT STARTED.
+- Next Action: `POST-PHASE-14 / PHASE-15 PRE-IMPLEMENTATION AUDIT`.
 - Phase 13 Final Scope & Delivered Invariants:
   - Mobile Auth state machine, in-memory access token, hardware Keychain refresh token.
   - All screens implemented: `Login` (`SCR-AUTH-02`), `ForgotPassword` (`SCR-AUTH-03`), `ResetPassword` (`SCR-AUTH-04`), `Profile` (`SCR-ACC-01`), `EditProfile`, `ChangePassword` (`SCR-ACC-02`), `Settings` (`SCR-ACC-03`), `Logout Confirmation` (`SCR-ACC-04`).
