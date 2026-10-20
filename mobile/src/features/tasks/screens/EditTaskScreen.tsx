@@ -5,7 +5,7 @@
  * Invariants & Correctness Guarantees:
  * - Authoritative task load on mount via taskApi.getTaskDetail(taskId).
  * - Exact UpdateTaskRequest DTO fields: title, description, priority, startDate, dueDate, estimatedMinutes, version.
- * - Due date serialization: Converts date-only input (YYYY-MM-DD) to ISO-8601 Instant UTC end-of-day (T23:59:59Z).
+ * - Due date serialization: Converts changed date-only input (YYYY-MM-DD) to ISO-8601 Instant Vietnam UTC+7 boundary (T17:00:00Z per Decision D-064) and strictly preserves exact server Instant when date is unchanged.
  * - Captures version internally; NEVER displays version in user-facing UI.
  * - Strictly zero status, progress, assignees, or projectId in generic Edit form (15E boundary).
  * - Synchronous submit lock (submittingRef) prevents duplicate same-tick submissions.
@@ -64,6 +64,7 @@ export function EditTaskScreen() {
   const [priority, setPriority] = useState<TaskPriority>('MEDIUM');
   const [startDate, setStartDate] = useState<string>('');
   const [dueDate, setDueDate] = useState<string>('');
+  const [originalDueDateInstant, setOriginalDueDateInstant] = useState<string | null>(null);
   const [estimatedMinutes, setEstimatedMinutes] = useState<string>('');
   const [version, setVersion] = useState<number>(0);
 
@@ -85,6 +86,7 @@ export function EditTaskScreen() {
     setPriority(data.priority);
     setStartDate(data.startDate ?? '');
     setDueDate(parseTaskDueDateForInput(data.dueDate));
+    setOriginalDueDateInstant(data.dueDate ?? null);
     setEstimatedMinutes(
       data.estimatedMinutes !== null && data.estimatedMinutes !== undefined
         ? String(data.estimatedMinutes)
@@ -193,8 +195,17 @@ export function EditTaskScreen() {
       payload.startDate = startDate.trim();
     }
 
-    if (dueDate.trim().length > 0) {
-      payload.dueDate = serializeTaskDueDate(dueDate);
+    const currentDueDateInput = dueDate.trim();
+    const originalDueDateInput = parseTaskDueDateForInput(originalDueDateInstant);
+
+    if (currentDueDateInput.length > 0) {
+      if (currentDueDateInput === originalDueDateInput && originalDueDateInstant) {
+        // Decision D-064: PRESERVE_EXACT_SERVER_INSTANT_WHEN_DATE_UNCHANGED
+        payload.dueDate = originalDueDateInstant;
+      } else {
+        // Decision D-064: serialize new date to Vietnam UTC+7 boundary (YYYY-MM-DDT17:00:00Z)
+        payload.dueDate = serializeTaskDueDate(currentDueDateInput);
+      }
     }
 
     if (estimatedMinutes.trim().length > 0) {

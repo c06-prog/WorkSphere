@@ -8,7 +8,7 @@
  * - Assignee selection via ProjectMemberAssigneePickerModal (eligible active project members ONLY).
  * - Cross-project invalidation: changing project synchronously clears selected assignees.
  * - Exact CreateTaskRequest DTO fields: projectId, parentTaskId, title, description, priority, assigneeIds, startDate, dueDate, estimatedMinutes.
- * - Due date serialization: Converts date-only input (YYYY-MM-DD) to ISO-8601 Instant UTC end-of-day (T23:59:59Z).
+ * - Due date serialization: Converts date-only input (YYYY-MM-DD) to ISO-8601 Instant Vietnam UTC+7 end-of-day boundary (T17:00:00Z per Decision D-064).
  * - Strictly zero status, progress, or version fields in create form.
  * - Synchronous submit lock (submittingRef) prevents duplicate same-tick submissions.
  * - On success, navigates directly to TaskDetail: { taskId: created.id }.

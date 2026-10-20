@@ -147,6 +147,33 @@ BUILD SUCCESSFUL in 58s
 
 ---
 
-## 7. Verdict
+## 7. D-064 Date Policy Patch
 
-**Verdict:** `PHASE_15D_HARDENING_PASS_READY_FOR_AUDIT`
+### Findings Addressed:
+1. **`TASK_DUE_DATE_POLICY_UNGROUNDED` (RESOLVED_BY_D064)**:
+   - Root Cause: Prior implementation used ad-hoc `${YYYY-MM-DD}T23:59:59Z` which did not reflect the canonical business boundary of Vietnam standard business days (UTC+7).
+   - Solution: Architecture Decision `D-064: Phase 15 Task Due-Date Semantics` formally approved Option A:
+     - End-of-day Vietnam time (UTC+7 midnight): `00:00:00 UTC+7` next day = `${YYYY-MM-DD}T17:00:00Z`.
+     - `serializeTaskDueDate` in `taskDate.ts` updated to output `${trimmed}T17:00:00Z`.
+2. **`TASK_DUE_DATE_SERIALIZATION_DRIFT` (RESOLVED)**:
+   - Fully aligned with D-064 and canonical contract `06_API_CONTRACT.md`.
+3. **`TASK_EDIT_DUE_DATE_ROUNDTRIP_DRIFT` (RESOLVED)**:
+   - Root Cause: In `EditTaskScreen`, parsing a server instant (which might have been created with non-standard time such as `14:23:45Z` or via API) to `YYYY-MM-DD` and then blindly re-serializing to a synthetic timestamp caused unwanted mutation of the server instant even when the user made no change to the due date.
+   - Solution: Implemented `PRESERVE_EXACT_SERVER_INSTANT_WHEN_DATE_UNCHANGED` in `EditTaskScreen.tsx`:
+     - Tracks `originalDueDateInstant` state, populated on authoritative mount and reset on HTTP 409 conflict reload.
+     - On submit: if `currentDueDateInput === originalDueDateInput && originalDueDateInstant`, retransmits `originalDueDateInstant` byte-for-byte.
+     - If the user modified the date, serializes to `${newDate}T17:00:00Z`.
+     - If the user cleared the date, sets `dueDate: undefined`.
+     - Preserves original raw instant even if user edits and then reverts back to the original calendar date before submitting.
+
+### Validation Results:
+- **TypeScript**: `npm --prefix mobile run typecheck` PASS (0 errors).
+- **ESLint**: `npm --prefix mobile run lint` PASS (0 errors, 48 preexisting warnings).
+- **Mobile Jest**: `npm --prefix mobile test -- --runInBand` PASS (75 test suites, 665 tests PASS, 0 failed, 0 skipped).
+- **Native Android Build**: `.\gradlew.bat assembleDebug --no-daemon` BUILD SUCCESSFUL.
+
+---
+
+## 8. Verdict
+
+**Verdict:** `PHASE_15D_DATE_PATCH_PASS_READY_FOR_VERIFY`

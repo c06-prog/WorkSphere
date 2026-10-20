@@ -214,7 +214,7 @@ describe('CreateTaskScreen (SCR-TSK-03)', () => {
         priority: 'HIGH',
         description: 'Mô tả chi tiết công việc mới.',
         startDate: '2026-10-01',
-        dueDate: '2026-10-31T23:59:59Z', // Exact normalized UTC end-of-day ISO Instant
+        dueDate: '2026-10-31T17:00:00Z', // Exact D-064 Vietnam UTC+7 boundary ISO Instant
       });
       expect(mockNavigate).toHaveBeenCalledWith('TaskDetail', { taskId: 'new-task-uuid' });
     });

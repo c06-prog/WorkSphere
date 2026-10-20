@@ -4,7 +4,7 @@
  * - Leap year calculations
  * - Strict calendar date validation without Date rollover
  * - Date parsing from ISO string for human input
- * - Date serialization to ISO-8601 Instant with UTC end-of-day deadline (YYYY-MM-DDT23:59:59Z)
+ * - Date serialization to ISO-8601 Instant with Vietnam UTC+7 end-of-day deadline (YYYY-MM-DDT17:00:00Z per Decision D-064)
  * - Round-trip idempotency
  * - Optional empty handling
  * - Date range validation parity with Task.java
@@ -91,14 +91,14 @@ describe('taskDate utilities (Phase 15D Hardening)', () => {
   });
 
   describe('serializeTaskDueDate', () => {
-    it('serializes valid YYYY-MM-DD to UTC end-of-day ISO Instant', () => {
-      expect(serializeTaskDueDate('2026-10-31')).toBe('2026-10-31T23:59:59Z');
-      expect(serializeTaskDueDate('2026-01-01')).toBe('2026-01-01T23:59:59Z');
+    it('serializes valid YYYY-MM-DD to Vietnam UTC+7 end-of-day ISO Instant (D-064)', () => {
+      expect(serializeTaskDueDate('2026-10-31')).toBe('2026-10-31T17:00:00Z');
+      expect(serializeTaskDueDate('2026-01-01')).toBe('2026-01-01T17:00:00Z');
     });
 
     it('preserves already valid ISO Instant strings', () => {
       expect(serializeTaskDueDate('2026-10-25T17:00:00Z')).toBe('2026-10-25T17:00:00Z');
-      expect(serializeTaskDueDate('2026-10-31T23:59:59Z')).toBe('2026-10-31T23:59:59Z');
+      expect(serializeTaskDueDate('2026-10-31T14:00:00Z')).toBe('2026-10-31T14:00:00Z');
     });
 
     it('returns undefined for empty/whitespace input', () => {
@@ -117,8 +117,8 @@ describe('taskDate utilities (Phase 15D Hardening)', () => {
       );
     });
 
-    it('preserves round-trip idempotency', () => {
-      const originalIso = '2026-10-25T23:59:59Z';
+    it('preserves round-trip idempotency under D-064', () => {
+      const originalIso = '2026-10-25T17:00:00Z';
       const inputVal = parseTaskDueDateForInput(originalIso);
       expect(inputVal).toBe('2026-10-25');
       const reSerialized = serializeTaskDueDate(inputVal);
@@ -144,7 +144,7 @@ describe('taskDate utilities (Phase 15D Hardening)', () => {
       expect(validateTaskDateRange('2026-10-20', '2026-10-10')).toBe(
         'Hạn hoàn thành không được trước ngày bắt đầu'
       );
-      expect(validateTaskDateRange('2026-10-20T00:00:00Z', '2026-10-10T23:59:59Z')).toBe(
+      expect(validateTaskDateRange('2026-10-20T00:00:00Z', '2026-10-10T17:00:00Z')).toBe(
         'Hạn hoàn thành không được trước ngày bắt đầu'
       );
     });

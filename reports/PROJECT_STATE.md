@@ -9,12 +9,20 @@
 - Phase 13 Audit Conclusion: `PHASE_13_FINAL_AUDIT_PASS_WITH_E2E_DEFERRALS`
 - Phase 14 Baseline Checkpoint: `785c155b69309284066252701ec1554d35d4e795` (`docs(phase14): record architecture decision D-061 phase 14 contract freeze`)
 - Phase 14A Implementation Checkpoint: `55cc13e6372ba4374d3533fe3f82f7afcd84dcff` (`feat(mobile): add phase 14 dashboard project contracts`)
-- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 15 Mobile Task Management: IN_PROGRESS (Subphases 15A, 15B, 15C IMPLEMENTED & AUDITED, Subphase 15D BLOCKED_PENDING_DATE_POLICY_PATCH, Subphase 15E NOT STARTED).
+- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 15 Mobile Task Management: IN_PROGRESS (Subphases 15A, 15B, 15C IMPLEMENTED & AUDITED, Subphase 15D IMPLEMENTED / HARDENED / D-064 IMPLEMENTED / PENDING FINAL NARROW VERIFICATION, Subphase 15E NOT STARTED).
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening
 
-- Latest Hardening: Subphase 15D Mobile Create & Edit Task Hardening (`SCR-TSK-03` & `SCR-TSK-04`)
+- Latest Patch: Subphase 15D Mobile Date Policy Patch (D-064 Implementation) (`SCR-TSK-03` & `SCR-TSK-04`)
+- Patch Report: `reports/PHASE_15D_CREATE_EDIT_TASK_REPORT.md`
+- Scope Implemented:
+  - D-064 End-of-Day Boundary Serialization: Updated `mobile/src/features/tasks/utils/taskDate.ts` `serializeTaskDueDate` to serialize calendar dates `YYYY-MM-DD` to `${YYYY-MM-DD}T17:00:00Z` (Vietnam UTC+7 midnight end-of-day boundary) as formally frozen in `D-064`. Resolves `TASK_DUE_DATE_POLICY_UNGROUNDED` and `TASK_DUE_DATE_SERIALIZATION_DRIFT`.
+  - D-064 Exact Server Instant Round-Trip Preservation: In `EditTaskScreen.tsx`, implemented `PRESERVE_EXACT_SERVER_INSTANT_WHEN_DATE_UNCHANGED`. Tracks `originalDueDateInstant` state across authoritative initial load and HTTP 409 conflict reload. If user does not change calendar date (or reverts back to original calendar date), the outgoing PUT preserves the raw server Instant byte-for-byte; if changed, serializes to `${newDate}T17:00:00Z`; if cleared, passes `undefined`. Resolves `TASK_EDIT_DUE_DATE_ROUNDTRIP_DRIFT`.
+  - Validation: 75 test suites, 665 tests PASS (0 failures, 0 skipped); TypeScript 0 errors; ESLint 0 errors; Android assembleDebug BUILD SUCCESSFUL (203 actionable tasks in 28s).
+  - Subphase 15D Status: `IMPLEMENTED / HARDENED / D-064 IMPLEMENTED / PENDING FINAL NARROW VERIFICATION`. Subphase 15E: `NOT STARTED`.
+  - Next Action: `FINAL NARROW VERIFY PHASE 15D DATE POLICY`.
+- Prior Hardening: Subphase 15D Mobile Create & Edit Task Hardening (`SCR-TSK-03` & `SCR-TSK-04`)
 - Hardening Report: `reports/PHASE_15D_CREATE_EDIT_TASK_REPORT.md`
 - Scope Hardened:
   - Date Validation & ISO Instant Serialization: Implemented `mobile/src/features/tasks/utils/taskDate.ts` with pure calendar date validation (`isValidCalendarDate`) preventing invalid calendar rollovers (e.g. `2026-02-30`), input parsing (`parseTaskDueDateForInput`), and ISO-8601 Instant end-of-day UTC serialization (`serializeTaskDueDate` -> `${YYYY-MM-DD}T23:59:59Z`), resolving finding `TASK_DUE_DATE_SERIALIZATION_DRIFT`.

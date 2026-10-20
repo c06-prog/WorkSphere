@@ -3,10 +3,11 @@
  *
  * Implements deterministic, timezone-independent calendar date parsing, validation,
  * and serialization between date-only mobile UI input (YYYY-MM-DD) and backend
- * ISO-8601 Instant format (UTC end-of-day: YYYY-MM-DDT23:59:59Z).
+ * ISO-8601 Instant format (Vietnam UTC+7 end-of-day: YYYY-MM-DDT17:00:00Z per Decision D-064).
  *
  * Grounded in:
- * - 06_API_CONTRACT.md section 12.2 and 12.4 (Instant dueDate serialization)
+ * - Decision D-064: Phase 15 Task Due-Date Semantics
+ * - 06_API_CONTRACT.md section 10.3, 12.2, 12.4, 17 (Instant dueDate serialization at 17:00:00Z)
  * - Task.java date range validation (startDate.isAfter(dueDate.atZone(ZoneOffset.UTC).toLocalDate()))
  * - Zero third-party date dependencies (dependency-free, pure algorithms)
  * - No Date object rollover bugs (e.g. 2026-02-30 -> March 2)
@@ -93,10 +94,10 @@ export function parseTaskDueDateForInput(dueDate?: string | null): string {
 /**
  * Serializes a user-input due date into a deterministic ISO-8601 Instant string.
  *
- * Policy:
+ * Grounded in Decision D-064: Phase 15 Task Due-Date Semantics
  * - Empty/whitespace -> undefined (omitted from DTO or undefined)
  * - Already valid ISO Instant -> preserved
- * - Valid YYYY-MM-DD date -> serialized to UTC end-of-day deadline: `${YYYY-MM-DD}T23:59:59Z`
+ * - Valid YYYY-MM-DD date -> serialized to Vietnam (UTC+7) end-of-day deadline: `${YYYY-MM-DD}T17:00:00Z`
  * - Invalid format / impossible calendar date -> throws Error
  */
 export function serializeTaskDueDate(dueDateInput?: string | null): string | undefined {
@@ -118,8 +119,8 @@ export function serializeTaskDueDate(dueDateInput?: string | null): string | und
     throw new Error(`Định dạng ngày hạn chót phải là YYYY-MM-DD hợp lệ: ${trimmed}`);
   }
 
-  // Frozen policy: End-of-day deadline in UTC
-  return `${trimmed}T23:59:59Z`;
+  // Decision D-064: End-of-day deadline in Vietnam business calendar (next calendar day 00:00:00 +07:00 -> 17:00:00Z)
+  return `${trimmed}T17:00:00Z`;
 }
 
 /**
