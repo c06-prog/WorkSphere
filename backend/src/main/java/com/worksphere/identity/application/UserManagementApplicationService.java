@@ -2,6 +2,7 @@ package com.worksphere.identity.application;
 
 import com.worksphere.identity.api.request.AdminUpdateUserRequest;
 import com.worksphere.identity.api.request.CreateUserRequest;
+import com.worksphere.identity.api.response.UserDirectoryItemResponse;
 import com.worksphere.identity.api.response.UserSummaryResponse;
 import com.worksphere.identity.domain.Role;
 import com.worksphere.identity.domain.User;
@@ -11,6 +12,7 @@ import com.worksphere.identity.infrastructure.persistence.RefreshTokenRepository
 import com.worksphere.identity.infrastructure.persistence.RoleRepository;
 import com.worksphere.identity.infrastructure.persistence.UserRepository;
 import com.worksphere.identity.infrastructure.persistence.UserRoleRepository;
+import com.worksphere.organization.domain.Department;
 import com.worksphere.organization.infrastructure.persistence.DepartmentRepository;
 import com.worksphere.shared.exception.BusinessRuleException;
 import com.worksphere.shared.exception.ResourceNotFoundException;
@@ -26,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class UserManagementApplicationService {
@@ -76,6 +79,40 @@ public class UserManagementApplicationService {
                     return u.getRoles().stream().anyMatch(r -> r.getCode().equalsIgnoreCase(roleCode));
                 })
                 .map(UserSummaryResponse::from)
+                .toList();
+
+        return PagedData.from(page, items);
+    }
+
+    @Transactional(readOnly = true)
+    public PagedData<UserDirectoryItemResponse> searchDirectory(
+            String search,
+            UUID departmentId,
+            Pageable pageable
+    ) {
+        String normalizedSearch = (search != null && !search.trim().isEmpty()) ? search.trim() : null;
+
+        Page<User> page = userRepository.searchUsers(normalizedSearch, departmentId, UserStatus.ACTIVE, pageable);
+
+        Set<UUID> departmentIds = page.getContent().stream()
+                .map(User::getDepartmentId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        Map<UUID, String> departmentNames = departmentIds.isEmpty()
+                ? Collections.emptyMap()
+                : departmentRepository.findAllById(departmentIds).stream()
+                        .collect(Collectors.toMap(Department::getId, Department::getName));
+
+        List<UserDirectoryItemResponse> items = page.getContent().stream()
+                .map(u -> new UserDirectoryItemResponse(
+                        u.getId(),
+                        u.getUsername(),
+                        u.getFullName(),
+                        u.getEmail(),
+                        u.getAvatarFileId() != null ? "/api/v1/files/" + u.getAvatarFileId() + "/download" : null,
+                        u.getDepartmentId() != null ? departmentNames.get(u.getDepartmentId()) : null
+                ))
                 .toList();
 
         return PagedData.from(page, items);

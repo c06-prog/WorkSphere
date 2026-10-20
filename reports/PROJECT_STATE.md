@@ -9,21 +9,19 @@
 - Phase 13 Audit Conclusion: `PHASE_13_FINAL_AUDIT_PASS_WITH_E2E_DEFERRALS`
 - Phase 14 Baseline Checkpoint: `785c155b69309284066252701ec1554d35d4e795` (`docs(phase14): record architecture decision D-061 phase 14 contract freeze`)
 - Phase 14A Implementation Checkpoint: `55cc13e6372ba4374d3533fe3f82f7afcd84dcff` (`feat(mobile): add phase 14 dashboard project contracts`)
-- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects (IN_PROGRESS): Subphase 14D IMPLEMENTED & AUDITED. Subphase 14E: BLOCKED_BY_REFERENCE_DATA_CONTRACT (Architectural resolution frozen in D-062 and PHASE_14E_REFERENCE_DATA_CONTRACT_RESOLUTION.md; next action: Phase 14E-G1 Backend Directory Contract gap patch).
+- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects (IN_PROGRESS): Subphase 14D IMPLEMENTED & AUDITED. Subphase 14E: BLOCKED_BY_REFERENCE_DATA (Subphase 14E-G1 Backend Directory Contract IMPLEMENTED; G2 NOT STARTED; next = INDEPENDENT AUDIT 14E-G1).
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening
 
-- Latest Validated Audit: Subphase 14E Reference Data Blocker Audit
-- Subphase 14E Status & Scope:
-  - Subphase 14E BLOCKED (`PHASE_14E_REFERENCE_DATA_BLOCKED`).
-  - Reference Data Audit Tokens: `PROJECT_MEMBER_SELECTION_API_GAP`, `PROJECT_CREATE_REFERENCE_DATA_GAP`.
-  - Audited Root Causes:
-    1. `departmentId` is available via `GET /api/v1/departments` (open to all authenticated users).
-    2. `initialMemberIds` (`SCR-PRJ-03`) lacks an unprivileged user search endpoint for non-admin creators (`PROJECT_CREATE_REFERENCE_DATA_GAP`).
-    3. `userId` for `SCR-PRJ-07 Add Member` requires `@NotNull UUID userId`, but the only user search endpoint (`GET /api/v1/admin/users`) is restricted to `ADMIN` (`USER_READ`). Non-admin Project Managers cannot query users, and free-text UUID controls are prohibited by UX and security standards (`PROJECT_MEMBER_SELECTION_API_GAP`).
-  - Preserved Baseline Metrics: 50 test suites, 437 tests PASS, `tsc --noEmit` 0 errors, ESLint 0 warnings.
-  - Dedicated Report: `reports/PHASE_14E_PROJECT_MANAGEMENT_REPORT.md`.
+- Latest Validated Implementation: Subphase 14E-G1 Backend Directory Contract (`GET /api/v1/directory/users`)
+- Subphase 14E-G1 Scope & Invariants:
+  - `UserDirectoryItemResponse`: Minimized public workplace contact card (`id`, `username`, `fullName`, `email`, `avatarUrl`, `departmentName`) with strict exclusion of sensitive PII, passwords, security metadata, and administrative fields.
+  - `UserManagementApplicationService.searchDirectory`: Reuses existing `UserRepository.searchUsers` query to enforce `deleted = false AND status = 'ACTIVE'`. Batch resolves department names via `departmentRepository.findAllById`.
+  - `UserDirectoryController`: Exposes `GET /api/v1/directory/users` authenticated via Bearer token (`AUTHENTICATED`). Input validation: `page >= 0`, `1 <= size <= 100`, sort whitelist (`fullName`, `username`, `email`).
+  - Backend Tests: `UserDirectoryMockMvcTest` with 11 comprehensive Testcontainers tests passing. Full suite: 318/318 tests PASS, 0 failures, 0 skipped, Checkstyle 0 violations.
+  - Dedicated Report: `reports/PHASE_14E_G1_BACKEND_DIRECTORY_REPORT.md`.
+- Prior Validated Implementation: Subphase 14D Project Detail Screen
 - Prior Validated Implementation: `feat(mobile): implement project detail screen`
 - Subphase 14D Scope:
   - `mobile/src/features/projects/hooks/useProjectDetail.ts`: Data hook managing project detail query (`GET /projects/{projectId}`), monotonic generation supersession ($A \rightarrow B$), same-resource in-flight deduplication, unmount safety, and non-blocking refresh error handling.
