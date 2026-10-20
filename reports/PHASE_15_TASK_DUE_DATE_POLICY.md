@@ -128,18 +128,22 @@ Comprehensive audit of all occurrences of `dueDate`, `17:00:00Z`, `23:59:59Z`, `
 
 ## Frozen semantics
 
-Because canonical documents 01–10 do not define a business timezone for Tasks, and `AGENTS.md` strictly prohibits AI agents from inventing business rules outside canonical documents, the business timezone cannot be autonomously assumed.
+Following Product Owner review and architecture decision **`D-064: Phase 15 Task Due-Date Semantics`**, the task due date policy is formally **FROZEN** under **Option A (Vietnam UTC+7 Midnight End-of-Day)**:
 
-However, the following **technical invariants and edit round-trip rules are FROZEN**:
+### 1. Business Timezone & Deadline Boundary (FROZEN)
+- WorkSphere operates under the Vietnam business calendar (`Asia/Ho_Chi_Minh`, UTC+7).
+- When a user inputs a calendar date `YYYY-MM-DD` on Mobile (where UI is calendar-only), the deadline represents the end of that calendar day in Vietnam time (`nextDay 00:00:00 +07:00`).
+- This maps to UTC Instant: **`${YYYY-MM-DD}T17:00:00Z`**.
+- This matches 100% of canonical contract examples in `06_API_CONTRACT.md` and `TaskTest.java`, and preserves `Task.java`'s `dueDate.atZone(ZoneOffset.UTC).toLocalDate() == YYYY-MM-DD`.
 
-### 1. Edit Round-Trip Preservation Rule (FROZEN)
+### 2. Edit Round-Trip Preservation Rule (FROZEN)
 - **Rule:** **`PRESERVE_EXACT_SERVER_INSTANT_WHEN_DATE_UNCHANGED`**.
 - **Behavior:** In `EditTaskScreen`, when authoritative `TaskDetail` is loaded from server, retain the raw `dueDate` Instant string in internal component state (`authoritativeDueDateRef` or initial state).
 - When the user submits `EditTaskScreen`:
   - If the user did NOT change the calendar date in the text input field, the outgoing `UpdateTaskRequest.dueDate` **MUST preserve the exact original server Instant string**.
   - Silent normalization of an unchanged due date to a different time component is strictly prohibited.
 
-### 2. Date Range Validation Rule (FROZEN)
+### 3. Date Range Validation Rule (FROZEN)
 - Client-side validation in `validateTaskDateRange(startDate, dueDate)` compares calendar dates only (`startDate` as `YYYY-MM-DD` vs `dueDate` parsed to `YYYY-MM-DD`).
 - Same calendar date (`startDate === dueDate`) is **VALID** (consistent with `Task.java`: `!startDate.isAfter(dueLocalDate)`).
 - `startDate > dueDate` is **INVALID** and surfaces `'Hạn hoàn thành không được trước ngày bắt đầu'`.
@@ -148,9 +152,8 @@ However, the following **technical invariants and edit round-trip rules are FROZ
 
 ## Create behavior
 
-- When creating a task with a date-only input (`YYYY-MM-DD`), the exact Instant serialization boundary depends on the unresolved Product Owner timezone decision:
-  - If Product Owner approves Option A (Vietnam UTC+7): `${YYYY-MM-DD}T17:00:00Z`.
-  - If Product Owner approves Option C (UTC end-of-day): `${YYYY-MM-DD}T23:59:59Z`.
+- When creating a task with a date-only input (`YYYY-MM-DD`):
+  - Serializes to canonical deadline Instant: **`${YYYY-MM-DD}T17:00:00Z`**.
 - When input is blank or whitespace: `dueDate` is omitted (`undefined`).
 - When input is an invalid calendar date (e.g. `2026-02-30`): Rejected client-side before submission.
 
@@ -171,8 +174,7 @@ However, the following **technical invariants and edit round-trip rules are FROZ
 ## Edit changed behavior
 
 - When user intentionally changes the date input (e.g. from `2026-10-05` to `2026-11-20`):
-  - Serializes using the canonical deadline Instant policy once decided by the Product Owner.
-  - Until the timezone decision is resolved, this remains blocked.
+  - Serializes to canonical deadline Instant: **`${YYYY-MM-DD}T17:00:00Z`** (e.g. `2026-11-20T17:00:00Z`).
 
 ---
 
@@ -187,15 +189,18 @@ However, the following **technical invariants and edit round-trip rules are FROZ
 
 - `TaskDeadlineScanner` executes every 15 minutes (`PT15M`).
 - Compares `dueDate.isBefore(now)`.
-- If deadline is set to `T17:00:00Z`, task becomes overdue at midnight Vietnam time.
-- If deadline is set to `T23:59:59Z`, task becomes overdue at 07:00 AM Vietnam time the next day.
+- With deadline set to `${YYYY-MM-DD}T17:00:00Z`, the task becomes overdue at midnight (`00:00:00 +07:00`) of the next calendar day in Vietnam time.
 
 ---
 
 ## Required mobile patch
 
-1. Update `EditTaskScreen.tsx` to store `initialDueDate` and preserve it if input date equals `parseTaskDueDateForInput(initialDueDate)`.
-2. Update `taskDate.ts` once the Product Owner decides between Option A (`17:00:00Z`) and Option C (`23:59:59Z`).
+1. Update `mobile/src/features/tasks/utils/taskDate.ts`:
+   - Set `serializeTaskDueDate` to serialize calendar dates to `${trimmed}T17:00:00Z`.
+2. Update `mobile/src/features/tasks/screens/EditTaskScreen.tsx`:
+   - Capture `initialDueDate` from `taskApi.getTaskDetail(taskId)`.
+   - On submit, if `parseTaskDueDateForInput(initialDueDate) === dueDate.trim()`, reuse `initialDueDate` directly; otherwise serialize new date.
+3. Update tests in `taskDate.test.ts`, `CreateTaskScreen.test.tsx`, `EditTaskScreen.test.tsx` to assert `${YYYY-MM-DD}T17:00:00Z` and unchanged Instant preservation.
 
 ---
 
@@ -208,15 +213,15 @@ However, the following **technical invariants and edit round-trip rules are FROZ
 ## 15D closure criteria
 
 Phase 15D hardening closure and Phase 15E unblocking require:
-1. Product Owner decision on the Task deadline timezone (Option A vs Option C).
+1. Approved Decision D-064 (COMPLETED).
 2. Mobile implementation of `PRESERVE_EXACT_SERVER_INSTANT_WHEN_DATE_UNCHANGED`.
-3. Mobile implementation of the decided Create deadline serialization.
-4. Passing targeted tests and clean regression.
+3. Mobile implementation of Create / Edit changed deadline serialization (`T17:00:00Z`).
+4. Passing targeted tests and full mobile regression.
 
 ---
 
 ## Conclusion
 
 ```
-PHASE_15_DATE_POLICY_BLOCKED_BY_PRODUCT_DECISION
+PHASE_15_DATE_POLICY_FROZEN_READY_FOR_PATCH
 ```

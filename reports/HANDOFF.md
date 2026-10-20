@@ -5,7 +5,7 @@
 - Repository: D:\WorkSphere
 - Branch: main
 - Current Task: PHASE 15 TASK DUE-DATE SEMANTICS DECISION FREEZE
-- Status: Phase 15 IN_PROGRESS (Subphases 15A, 15B, 15C IMPLEMENTED & AUDITED, Subphase 15D BLOCKED_BY_PRODUCT_DATE_POLICY, Subphase 15E NOT STARTED / BLOCKED). Phase 14 CLOSED (MEMORY_CHECKPOINT_CLOSED).
+- Status: Phase 15 IN_PROGRESS (Subphases 15A, 15B, 15C IMPLEMENTED & AUDITED, Subphase 15D BLOCKED_PENDING_DATE_POLICY_PATCH, Subphase 15E NOT STARTED). Phase 14 CLOSED (MEMORY_CHECKPOINT_CLOSED).
   - Subphases 14A..14D: CLOSED / AUDITED / HARDENED
   - Subphases 14E-G1 & 14E-G2: CLOSED / AUDITED (User Directory Foundation & Picker)
   - Subphase 14E: CLOSED / HARDENED (Core Project Management SCR-PRJ-03..09)
@@ -27,8 +27,8 @@
   - `PROJECT_MUTATION_DUPLICATE_SUBMIT_RISK`: 7 mutation flows use React state-only submit guards rather than synchronous useRef locks (Task mutation flows in 15D correctly use synchronous useRef locks).
 - Pre-Existing Toolchain Debt:
   - AGP deprecation notices, KSP 2.2.0-2.0.2 compiler warning, npm dev dependency advisories (55 vulnerabilities).
-- Phase 15 Status: IN_PROGRESS (15A, 15B, 15C IMPLEMENTED & AUDITED, 15D BLOCKED_BY_PRODUCT_DATE_POLICY, 15E NOT STARTED / BLOCKED).
-- Next Action: `PRODUCT_OWNER_TASK_DUE_DATE_TIMEZONE_DECISION`.
+- Phase 15 Status: IN_PROGRESS (15A, 15B, 15C IMPLEMENTED & AUDITED, 15D BLOCKED_PENDING_DATE_POLICY_PATCH, 15E NOT STARTED).
+- Next Action: `PHASE 15D DATE POLICY PATCH`.
 - Phase 13 Final Scope & Delivered Invariants:
   - Mobile Auth state machine, in-memory access token, hardware Keychain refresh token.
   - All screens implemented: `Login` (`SCR-AUTH-02`), `ForgotPassword` (`SCR-AUTH-03`), `ResetPassword` (`SCR-AUTH-04`), `Profile` (`SCR-ACC-01`), `EditProfile`, `ChangePassword` (`SCR-ACC-02`), `Settings` (`SCR-ACC-03`), `Logout Confirmation` (`SCR-ACC-04`).

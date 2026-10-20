@@ -1277,3 +1277,26 @@ Current operating mode:
      - Chuyển sang `COMPLETED` tự động cập nhật tiến độ thành 100%. Tuy nhiên, việc cập nhật tiến độ đạt 100% qua `updateProgress` KHÔNG tự động chuyển trạng thái task sang `COMPLETED`.
   7. **Ranh Giới Tệp Đính Kèm (Attachment Boundary Drift)**:
      - Phân hệ Task trên mobile Phase 15 tập trung vào luồng thảo luận/bình luận văn bản. Quản lý tải lên tệp đính kèm được hoãn lại cho phân hệ Quản lý Tệp riêng biệt.
+
+
+## D-064: Phase 15 Task Due-Date Semantics
+
+- **Ngày quyết định**: 2026-10-20.
+- **Phạm vi**: Chuẩn hóa ngữ nghĩa chuyển đổi ngày hạn chót (dueDate) giữa giao diện Mobile và backend Task API (`SCR-TSK-03` & `SCR-TSK-04`).
+- **Tình trạng**: APPROVED / FROZEN.
+- **Tài liệu tham chiếu**: `reports/PHASE_15_TASK_DUE_DATE_POLICY.md`.
+- **Nội dung quyết định**:
+  1. **Múi Giờ Nghiệp Vụ & Ranh Giới Hạn Chót (Business Timezone & Deadline Boundary)**:
+     - WorkSphere vận hành theo lịch làm việc Việt Nam (múi giờ `Asia/Ho_Chi_Minh`, UTC+7).
+     - Khi người dùng chọn ngày hạn chót `YYYY-MM-DD` trên giao diện Mobile (chỉ chọn ngày, không chọn giờ), hạn chót có hiệu lực đến hết ngày làm việc đó theo giờ địa phương: `00:00:00 UTC+7` của ngày tiếp theo, tương đương Instant UTC `${YYYY-MM-DD}T17:00:00Z`.
+     - Chuẩn này đồng nhất 100% với các ví dụ hợp đồng trong `06_API_CONTRACT.md` và `TaskTest.java`, đồng thời bảo đảm `dueDate.atZone(ZoneOffset.UTC).toLocalDate()` trong `Task.java` trả về chính xác ngày `YYYY-MM-DD` người dùng đã chọn.
+  2. **Bảo Toàn Timestamp Khi Sửa Không Đổi Ngày (PRESERVE_EXACT_SERVER_INSTANT_WHEN_DATE_UNCHANGED)**:
+     - Trong màn hình `EditTaskScreen`, khi tải dữ liệu công việc hiện hữu từ server, component lưu giữ chuỗi `Instant` nguyên bản của server.
+     - Khi người dùng lưu chỉnh sửa mà KHÔNG thay đổi ngày hạn chót trên ô nhập liệu, payload `UpdateTaskRequest.dueDate` bắt buộc gửi lại nguyên vẹn chuỗi `Instant` gốc của server. Tuyệt đối không tự động chuẩn hóa hay làm trôi giờ (drift) của công việc hiện hữu.
+  3. **Chỉnh Sửa Khi Thay Đổi Ngày (Edit Changed Date)**:
+     - Khi người dùng chủ động thay đổi ngày hạn chót sang ngày mới `YYYY-MM-DD`, mobile tạo `Instant` mới theo quy tắc hạn chót chính thức: `${YYYY-MM-DD}T17:00:00Z`.
+  4. **Tạo Mới Công Việc (Create Task)**:
+     - Ô hạn chót có giá trị `YYYY-MM-DD` hợp lệ được tuần tự hóa thành `${YYYY-MM-DD}T17:00:00Z`. Ô trống gửi `undefined`. Ngày không tồn tại trong lịch bị chặn ngay tại client.
+  5. **Đối Soát Khoảng Ngày (Date Range Comparison)**:
+     - Client-side validation đối soát trực tiếp ngày lịch `startDate` (`YYYY-MM-DD`) với ngày lịch được bóc tách từ `dueDate` (`YYYY-MM-DD`).
+     - Ngày bắt đầu trùng ngày hạn chót (`startDate === dueDate`) là HỢP LỆ. Chỉ chặn khi `startDate > dueDate`.
