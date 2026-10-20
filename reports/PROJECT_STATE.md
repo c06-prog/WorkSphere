@@ -9,7 +9,7 @@
 - Phase 13 Audit Conclusion: `PHASE_13_FINAL_AUDIT_PASS_WITH_E2E_DEFERRALS`
 - Phase 14 Baseline Checkpoint: `785c155b69309284066252701ec1554d35d4e795` (`docs(phase14): record architecture decision D-061 phase 14 contract freeze`)
 - Phase 14A Implementation Checkpoint: `55cc13e6372ba4374d3533fe3f82f7afcd84dcff` (`feat(mobile): add phase 14 dashboard project contracts`)
-- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects: Subphase 14D IMPLEMENTED & AUDITED. Subphase 14E BLOCKED by reference-data gaps (PROJECT_MEMBER_SELECTION_API_GAP, PROJECT_CREATE_REFERENCE_DATA_GAP).
+- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects (IN_PROGRESS): Subphase 14D IMPLEMENTED & AUDITED. Subphase 14E: BLOCKED_BY_REFERENCE_DATA_CONTRACT (Architectural resolution frozen in D-062 and PHASE_14E_REFERENCE_DATA_CONTRACT_RESOLUTION.md; next action: Phase 14E-G1 Backend Directory Contract gap patch).
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening

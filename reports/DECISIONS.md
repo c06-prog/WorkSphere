@@ -1224,3 +1224,30 @@ Current operating mode:
      - `14D`: Project Detail Screen (`SCR-PRJ-02`) & Milestones.
      - `14E`: Project Management Flows (`SCR-PRJ-03`..`09`).
      - `14F`: Integration, Regression, Android E2E (conditional), Security & Final Audit.
+
+---
+
+## D-062: Phase 14E Human-Readable User Selection Contract
+
+- **Ngày quyết định**: 2026-10-20.
+- **Phạm vi**: Hợp đồng tìm kiếm và lựa chọn người dùng (User Picker / Directory API) cho Phase 14E Project Management (`SCR-PRJ-03`, `SCR-PRJ-07`) và tái sử dụng cho các phân hệ tiếp theo.
+- **Tình trạng**: APPROVED / FROZEN.
+- **Tài liệu tham chiếu**: `reports/PHASE_14E_REFERENCE_DATA_CONTRACT_RESOLUTION.md`, `reports/PHASE_14E_PROJECT_MANAGEMENT_REPORT.md`.
+- **Nội dung quyết định**:
+  1. **Khóa Endpoint Danh Bạ Công Khai Tối Thiểu (Purpose-Scoped Directory API)**:
+     - Khóa endpoint `GET /api/v1/directory/users` thuộc phân hệ Identity (`com.worksphere.identity`).
+     - Phục vụ tìm kiếm và chọn nhân viên cho các luồng nghiệp vụ không quản trị (gán thành viên dự án, phân công yêu cầu, gán tài sản).
+     - Tuyệt đối không mở rộng quyền `USER_READ` hoặc tái sử dụng endpoint quản trị `/api/v1/admin/users` cho Project Manager hay nhân viên thông thường (`ADMIN_USER_API_OVERPRIVILEGED_FOR_PROJECT_PICKER`).
+  2. **Khóa Giảm Thiểu Dữ Liệu (Data Minimization DTO)**:
+     - DTO trả về `UserDirectoryResponse` chỉ gồm 6 trường danh bạ công khai: `id` (UUID), `username`, `fullName`, `email`, `avatarUrl`, `departmentName`.
+     - Tuyệt đối loại trừ: `roles`, `permissions`, `phoneNumber`, `status`, `lastLoginAt`, `failedLoginCount`, `passwordHash`, và các trường kiểm toán nội bộ.
+  3. **Khóa Điều Kiện Hoạt Động (Active Accounts Only)**:
+     - Endpoint chỉ trả về tài khoản hoạt động (`deleted = false AND status = 'ACTIVE'`).
+     - Loại trừ toàn bộ tài khoản `PENDING`, `LOCKED`, `DISABLED`, `DELETED`.
+  4. **Khóa Mô Hình Phân Quyền (Authentication Boundary)**:
+     - Endpoint yêu cầu xác thực Bearer token thông thường (`AUTHENTICATED`), tương tự `GET /api/v1/departments`.
+     - Không yêu cầu quyền quản trị hay di trú bảng `permissions` (Zero Flyway migration).
+  5. **Khóa Lộ Trình Vá Lỗ Hổng Hợp Đồng (Gap Patches)**:
+     - `14E-G1`: Triển khai và kiểm thử độc lập backend directory endpoint.
+     - `14E-G2`: Triển khai và kiểm thử độc lập mobile directory adapter và modal component `UserPickerModal`.
+     - Sau khi hoàn thành hai bước trên, Subphase 14E tiếp tục triển khai các màn hình quản lý dự án.
