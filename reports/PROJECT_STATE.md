@@ -9,21 +9,29 @@
 - Phase 13 Audit Conclusion: `PHASE_13_FINAL_AUDIT_PASS_WITH_E2E_DEFERRALS`
 - Phase 14 Baseline Checkpoint: `785c155b69309284066252701ec1554d35d4e795` (`docs(phase14): record architecture decision D-061 phase 14 contract freeze`)
 - Phase 14A Implementation Checkpoint: `55cc13e6372ba4374d3533fe3f82f7afcd84dcff` (`feat(mobile): add phase 14 dashboard project contracts`)
-- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 15 Mobile Task Management: IN_PROGRESS (Subphase 15A IMPLEMENTED, Subphase 15B NOT STARTED).
+- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 15 Mobile Task Management: IN_PROGRESS (Subphases 15A and 15B IMPLEMENTED, Subphase 15C NOT STARTED).
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening
 
-- Latest Implementation: Subphase 15A Task Contract Foundation
-- Implementation Report: `reports/PHASE_15A_TASK_CONTRACT_FOUNDATION_REPORT.md`
+- Latest Implementation: Subphase 15B Mobile Task List (`SCR-TSK-01`)
+- Implementation Report: `reports/PHASE_15B_TASK_LIST_REPORT.md`
 - Scope Implemented:
+  - Custom Hook: `useTasks.ts` with 300ms search input debouncing, monotonic query generation identity (`queryGenerationRef`) ensuring latest-query-wins concurrency, synchronous append lock (`paginationLockRef`), stale append rejection, in-place deduplication by `task.id`, and pull-to-refresh.
+  - Component: `TaskCard.tsx` presentation-only card rendering project badge, task title, priority and status badges, clamped progress bar with percentage, formatted due date with overdue highlighting, assignee names/counts, and subtask/comment counts. Strictly zero raw UUIDs, non-button accessibility role, zero navigation.
+  - Screen Container: `TasksScreen.tsx` production replacement for placeholder screen in `MainTabNavigator`, incorporating search bar, canonical status chip row (`ALL`, `TODO`, `IN_PROGRESS`, `IN_REVIEW`, `COMPLETED`), canonical priority chip row (`ALL`, `CRITICAL`, `HIGH`, `MEDIUM`, `LOW`), `FlatList` with header/footer loaders, pull-to-refresh, empty and error states.
+  - Staged Navigation: Staged capability gating preserves non-clickable TaskCard and deferred CreateTask button until Phase 15C and 15D.
+  - Validation: 67 test suites, 611 tests PASS; TypeScript 0 errors; ESLint 0 errors; Android assembleDebug BUILD SUCCESSFUL (203 actionable tasks).
+  - Next Action: `INDEPENDENT AUDIT PHASE 15B` or `PHASE 15C IMPLEMENTATION`.
+- Prior Implementation: Subphase 15A Task Contract Foundation
+- Prior Report: `reports/PHASE_15A_TASK_CONTRACT_FOUNDATION_REPORT.md`
+- Prior Scope Implemented:
   - Transport Contracts: `taskTypes.ts` with closed unions (`TaskStatus`, `TaskPriority`), runtime type guards (`isTaskSummary`, `isTaskDetail`, `isTaskComment`, page guards), and distinct `assignmentId != userId` semantics.
   - API Adapter: `taskApi.ts` covering all 15 endpoints with strict query serialization, whitelisted sort, and response validation.
   - Presentation Error Mapping: `taskErrorMapper.ts` mapping all backend codes safely to Vietnamese user messages with distinguishable `isConflict: true`.
   - Component Extension: Narrow `StatusBadge.tsx` extension supporting `type="task"` presentation without regression.
   - Navigation Contracts: Added `TaskDetail`, `CreateTask`, `EditTask`, `SubtaskList`, `TaskComments` to `MainTabParamList` (type contracts only, no runtime screens registered).
-  - Validation: 64 test suites, 579 tests PASS; TypeScript 0 errors; ESLint 0 errors; Android assembleDebug BUILD SUCCESSFUL.
-  - Next Action: `INDEPENDENT AUDIT PHASE 15A`. Subphase 15B: NOT STARTED.
+  - Prior Validation: 64 test suites, 579 tests PASS; TypeScript 0 errors; ESLint 0 errors; Android assembleDebug BUILD SUCCESSFUL.
 - Prior Milestone: Phase 15 Mobile Task Management Contract & Decision Freeze (`D-063`)
 - Prior Validated Implementation: Subphase 14F Integration, Regression & Security Hardening
 - Subphase 14F Validations & Invariants:
