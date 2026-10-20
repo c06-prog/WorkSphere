@@ -27,7 +27,7 @@ The Phase 14 mobile scope encompasses exactly 10 screens across Personal Dashboa
 | `SCR-PRJ-02` | Project Detail | `ProjectDetail` | YES | YES (Auxiliary) | `GET /projects/{id}` | YES | Authenticated (`PROJECT_READ`) |
 | `SCR-PRJ-03` | Create Project | `CreateProject` | YES | YES (Auxiliary) | `POST /projects` | YES | `PROJECT_CREATE` client & server |
 | `SCR-PRJ-04` | Edit Project | `EditProject` | YES | YES (Auxiliary) | `PUT /projects/{id}` | YES | `PROJECT_UPDATE` + `canEdit` server |
-| `SCR-PRJ-05` | Change Status Modal | Modal on Detail | YES | Modal component | `PUT /projects/{id}/status` | YES | `PROJECT_STATUS_CHANGE` + `canChangeStatus` |
+| `SCR-PRJ-05` | Change Status Modal | Modal on Detail | YES | Modal component | `PUT /projects/{id}/status` | YES | `PROJECT_UPDATE` + `canChangeStatus` |
 | `SCR-PRJ-06` | Project Members | `ProjectMembers` | YES | YES (Auxiliary) | `GET /projects/{id}/members` | YES | `PROJECT_READ` list |
 | `SCR-PRJ-07` | Member Management | Modals on Members | YES | Modal components | `POST/PUT/DELETE /members` | YES | `MANAGE_MEMBERS` authoritative |
 | `SCR-PRJ-08` | Project Milestones | `ProjectMilestones` | YES | YES (Auxiliary) | `GET /projects/{id}/milestones` | YES | `PROJECT_READ` list |
@@ -103,7 +103,7 @@ Zero Phase 15 screens or placeholder routes are implemented or registered.
 - Concurrency & Dedup: Managed by `useProjectDetail` with monotonic generation supersession, same-ID in-flight deduplication, and unmount safety.
 - Post-Mutation Freshness: `navigation.addListener('focus')` combined with `isFirstMountRef` ensures zero duplicate initial GET on mount, while automatically triggering a fresh authoritative GET when returning from `EditProjectScreen`.
 - UI Presentation: Status badge, priority badge, progress bar (clamped 0..100%), description, manager, department, member count, milestone summary.
-- Authoritative Capability Gating: `allowedActions` array from backend dictates visibility of action buttons (`EDIT`, `CHANGE_STATUS`, `MANAGE_MEMBERS`, `CREATE_MILESTONE`). Unknown actions are silently ignored; raw `allowedActions` strings are never displayed.
+- Authoritative Capability Gating: `allowedActions` array from backend dictates visibility of action buttons (`UPDATE`, `CHANGE_STATUS`, `MANAGE_MEMBERS`, `CREATE_MILESTONE`). Unknown actions are silently ignored; raw `allowedActions` strings are never displayed.
 
 ## Create/Edit
 
@@ -172,8 +172,8 @@ Zero Phase 15 screens or placeholder routes are implemented or registered.
 | View Project List | `@PreAuthorize("hasAuthority('PROJECT_READ')")` | Authenticated session | Navigates to Project List | 403 error state displayed |
 | View Project Detail | `@PreAuthorize("hasAuthority('PROJECT_READ')")` | Authenticated session | Direct navigation with `{ projectId }` | 403 error state / back button |
 | Create Project | `@PreAuthorize("hasAuthority('PROJECT_CREATE')")` | `hasPermission('PROJECT_CREATE')` | Hidden FAB if missing; form blocked | 403 banner on API submit |
-| Edit Project | `@PreAuthorize("hasAuthority('PROJECT_UPDATE')")` | `allowedActions.includes('EDIT')` | Button hidden if absent | 403 banner on submit |
-| Change Status | `@PreAuthorize("hasAuthority('PROJECT_STATUS_CHANGE')")` | `allowedActions.includes('CHANGE_STATUS')` | Button hidden if absent | 403 banner on submit |
+| Edit Project | `@PreAuthorize("hasAuthority('PROJECT_UPDATE')")` | `allowedActions.includes('UPDATE')` | Button hidden if absent | 403 banner on submit |
+| Change Status | `@PreAuthorize("hasAuthority('PROJECT_UPDATE')")` | `allowedActions.includes('CHANGE_STATUS')` | Button hidden if absent | 403 banner on submit |
 | View Members | `@PreAuthorize("hasAuthority('PROJECT_READ')")` | Authenticated session | List displayed read-only | 403 error state |
 | Manage Members | `@PreAuthorize("hasAuthority('PROJECT_MEMBER_MANAGE')")` | `allowedActions.includes('MANAGE_MEMBERS')` | Add/Edit/Delete actions hidden | 403 banner on submit |
 | View Milestones | `@PreAuthorize("hasAuthority('PROJECT_READ')")` | Authenticated session | List displayed read-only | 403 error state |
@@ -217,11 +217,11 @@ Zero Phase 15 screens or placeholder routes are implemented or registered.
 | Project Detail | Dedup + cross-ID supersession | `queryGenerationRef` + active request cancellation | `useProjectDetail.test.tsx` |
 | Directory Picker | Debounce + latest-query-wins | 300ms debounce + `queryGenerationRef` + append lock | `useUserDirectory.test.tsx` |
 | Member List | Generation + pagination lock | `isMounted` ref + search generation | `ProjectMembersScreen.test.tsx` |
-| All Mutations (7 actions) | Synchronous submit locks | `submitting` boolean lock states | Component integration tests |
+| All Mutations (7 actions) | State-only submit guard | `submitting` boolean lock states (`STATE_ONLY_GUARD`) | Component integration tests |
 
 ## Mutation safety
 
-All 7 mutation flows implement synchronous submit locking:
+All 7 mutation flows implement state-only submit locking (`STATE_ONLY_GUARD / DISABLED_UI_ONLY`):
 1. `CreateProjectScreen`: `isSubmitting` flag disables "Tạo dự án" button.
 2. `EditProjectScreen`: `isSubmitting` flag disables "Lưu thay đổi" button.
 3. `ChangeStatusModal`: `submitting` state disables "Cập nhật" button and radio options.

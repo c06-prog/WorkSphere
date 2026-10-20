@@ -9,7 +9,7 @@
 - Phase 13 Audit Conclusion: `PHASE_13_FINAL_AUDIT_PASS_WITH_E2E_DEFERRALS`
 - Phase 14 Baseline Checkpoint: `785c155b69309284066252701ec1554d35d4e795` (`docs(phase14): record architecture decision D-061 phase 14 contract freeze`)
 - Phase 14A Implementation Checkpoint: `55cc13e6372ba4374d3533fe3f82f7afcd84dcff` (`feat(mobile): add phase 14 dashboard project contracts`)
-- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects: Subphases 14A..14D CLOSED/AUDITED, Subphases 14E-G1 & 14E-G2 CLOSED/AUDITED, Subphase 14E CLOSED/HARDENED, Subphase 14F IMPLEMENTED & VALIDATED. Phase 14 IMPLEMENTATION COMPLETE, AWAITING FINAL INDEPENDENT AUDIT. Phase 15: NOT STARTED.
+- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects: Subphase 14A CLOSED / AUDITED, Subphase 14B CLOSED / HARDENED, Subphase 14C CLOSED / HARDENED, Subphase 14D CLOSED / AUDITED, Subphase 14E CLOSED / HARDENED, Subphase 14F VALIDATED. Phase 14: IMPLEMENTATION_COMPLETE, FINAL_AUDIT_PASS_WITH_E2E_DEFERRALS, RECONCILED, MEMORY_CHECKPOINT_PENDING. Phase 15: NOT STARTED.
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening
@@ -27,7 +27,7 @@
   - Android Clean Build: `gradlew.bat clean assembleDebug --no-daemon` BUILD SUCCESSFUL in 5m 51s (213 actionable tasks). APK generated at `mobile/android/app/build/outputs/apk/debug/app-debug.apk` (157,662,829 bytes).
   - Emulator Smoke: Installed and launched on `emulator-5554` (`Window{... MainActivity}` PID 22064, zero crash, `PRE_AUTH_ANDROID_SMOKE_PASS`).
   - E2E Credentials: E2E environment variables absent (`PHASE_14_AUTH_E2E_CREDENTIALS_NOT_AVAILABLE_SAFE_SKIP`). Mutation E2E safely deferred (`PHASE_14_MUTATION_E2E_DEFERRED`). Offline device E2E deferred (`PHASE_14_OFFLINE_DEVICE_E2E_DEFERRED`).
-  - Next Action: `FINAL INDEPENDENT AUDIT PHASE 14`. Phase 15: NOT STARTED.
+  - Next Action: `PHASE 14 MEMORY CHECKPOINT`. Phase 15: NOT STARTED.
 - Prior Validated Implementation: Subphase 14E Security Capability & Freshness Hardening (`SCR-PRJ-03` to `SCR-PRJ-09`)
 - Subphase 14E Hardening Invariants:
   - `ProjectMembersScreen.tsx`: Authoritative `canManageMembers = !!projectDetail?.allowedActions?.includes('MANAGE_MEMBERS')` derived from server `useProjectDetail(projectId)`. Fails closed (false) while loading or on fetch error. When false, mutation controls (`+ Thêm thành viên`, `Đổi vai trò`, `Xóa`) and modals are omitted. Read-only member list remains accessible under `PROJECT_READ`.
