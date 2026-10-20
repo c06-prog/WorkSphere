@@ -9,12 +9,22 @@
 - Phase 13 Audit Conclusion: `PHASE_13_FINAL_AUDIT_PASS_WITH_E2E_DEFERRALS`
 - Phase 14 Baseline Checkpoint: `785c155b69309284066252701ec1554d35d4e795` (`docs(phase14): record architecture decision D-061 phase 14 contract freeze`)
 - Phase 14A Implementation Checkpoint: `55cc13e6372ba4374d3533fe3f82f7afcd84dcff` (`feat(mobile): add phase 14 dashboard project contracts`)
-- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects: Subphase 14A CLOSED / AUDITED, Subphase 14B CLOSED / HARDENED, Subphase 14C CLOSED / HARDENED, Subphase 14D CLOSED / AUDITED, Subphase 14E-G1 CLOSED / AUDITED, Subphase 14E-G2 CLOSED / AUDITED, Subphase 14E CLOSED / HARDENED, Subphase 14F CLOSED / VALIDATED. Phase 14: CLOSED (IMPLEMENTATION_COMPLETE, FINAL_AUDIT_PASS_WITH_E2E_DEFERRALS, RECONCILED, MEMORY_CHECKPOINT_CLOSED). Phase 15: NOT STARTED.
+- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects CLOSED (MEMORY_CHECKPOINT_CLOSED). Pre-Phase 15 Mobile Task Management Audit: COMPLETED (`PRE_PHASE_15_AUDIT_PASS_READY_FOR_DECISION_FREEZE`). Phase 15: AUDITED / IMPLEMENTATION_NOT_STARTED.
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening
 
-- Latest Validated Implementation: Subphase 14F Integration, Regression & Security Hardening
+- Latest Audit & Discovery: Pre-Phase 15 Mobile Task Management Readiness & Contract Reconciliation
+- Audit Report: `reports/PRE_PHASE_15_TASK_MANAGEMENT_AUDIT.md`
+- Pre-Phase 15 Discoveries & Invariants:
+  - Canonical Scope: Task Management screens (`SCR-TSK-01` .. `SCR-TSK-08`) covering task listing, task detail, create, edit, subtasks, comments, status transitions, and progress updates.
+  - Backend Endpoints: All 15 endpoints verified in `TaskController.java` with test coverage (318 backend tests passing).
+  - Assignee Eligibility Rule: Assignees MUST be active project members (`projectMemberRepository.existsByProjectIdAndUserIdAndActiveTrue`). Assignee selection must query `GET /api/v1/projects/{projectId}/members` instead of global directory.
+  - Unassign Mutation Contract: `DELETE /api/v1/tasks/{taskId}/assignments/{assignmentId}` requires the assignment entity UUID (`assignmentId`), not `userId`.
+  - Concurrency & Optimistic Locking: Mutating operations require `version: number`. All mutation handlers will adopt synchronous `isSubmittingRef.current` locks from day 1 to prevent double-submits.
+  - Client-Side Capability Gating: UI buttons and actions must gate on `allowedActions: Set<String>` returned in `TaskDetailResponse`.
+  - Next Action: `PHASE 15 DECISION FREEZE & ARCHITECTURE SPECIFICATION (D-063)`. Phase 15 Implementation: NOT STARTED.
+- Prior Validated Implementation: Subphase 14F Integration, Regression & Security Hardening
 - Subphase 14F Validations & Invariants:
   - Phase 14 Inventory: Complete validation of all 10 Phase 14 screens (`SCR-MAIN-01`, `SCR-PRJ-01`..`09`). All routes registered, wired, security gated, and tested.
   - Navigation: Exactly 5 visible bottom tabs on `MainTabNavigator` (`Dashboard`, `Projects`, `Tasks`, `ServiceRequests`, `More`). All 9 auxiliary routes hidden via `tabBarButton: () => null`.
