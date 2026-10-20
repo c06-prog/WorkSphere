@@ -4,13 +4,18 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: PHASE 14D - PROJECT DETAIL (SCR-PRJ-02)
-- Status: Phase 14D IMPLEMENTED, TESTED, AUDITED (useProjectDetail hook with generation supersession and deduplication, ProjectDetailScreen container, registered hidden auxiliary route, re-enabled ProjectCard interactive navigation, 50/50 test suites, 437/437 tests pass, clean Android build). READY FOR 14E.
+- Current Task: PHASE 14E - PROJECT MANAGEMENT ACTIONS
+- Status: Phase 14E BLOCKED by reference-data gaps (PROJECT_MEMBER_SELECTION_API_GAP, PROJECT_CREATE_REFERENCE_DATA_GAP). Source left clean and uncorrupted; no free-text UUID entry exposed. Baseline metrics preserved: 50 test suites, 437 tests PASS.
 - Baseline Checkpoint: `f0eca143763e80a43d8230bcf9f28eea778428e1`
-- Phase 14D Report: `reports/PHASE_14D_PROJECT_DETAIL_REPORT.md`
-- Next Action: `INDEPENDENT AUDIT PHASE 14D`
+- Phase 14E Report: `reports/PHASE_14E_PROJECT_MANAGEMENT_REPORT.md`
+- Next Action: `BACKEND_REFERENCE_DATA_API_PROVISION` or `ARCHITECTURE_GOVERNANCE_REVIEW` for unprivileged user search endpoint.
 - Scope Boundary:
-  - Phase 14E NOT STARTED.
+  - Subphase 14E BLOCKED (`PHASE_14E_REFERENCE_DATA_BLOCKED`).
+  - Audited Reference Data Status:
+    1. `departmentId` available via `GET /api/v1/departments`.
+    2. `initialMemberIds` (`SCR-PRJ-03`) missing unprivileged user lookup source (`PROJECT_CREATE_REFERENCE_DATA_GAP`).
+    3. `userId` for `SCR-PRJ-07 Add Member` missing unprivileged user lookup source (`PROJECT_MEMBER_SELECTION_API_GAP`). Only `GET /api/v1/admin/users` exists, requiring `USER_READ` (Admin only). Non-admin Project Managers cannot query candidate users, and free-text UUID controls are strictly forbidden by UX and security standards.
+  - Phase 14E Implementation Deferred until reference data API is provisioned.
   - NO Create Project form (`CreateProjectScreen.tsx` deferred to 14E).
   - NO Edit Project form (`EditProjectScreen.tsx` deferred to 14E).
   - NO Change Status modal (`ChangeStatusModal.tsx` deferred to 14E).

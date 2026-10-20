@@ -9,12 +9,22 @@
 - Phase 13 Audit Conclusion: `PHASE_13_FINAL_AUDIT_PASS_WITH_E2E_DEFERRALS`
 - Phase 14 Baseline Checkpoint: `785c155b69309284066252701ec1554d35d4e795` (`docs(phase14): record architecture decision D-061 phase 14 contract freeze`)
 - Phase 14A Implementation Checkpoint: `55cc13e6372ba4374d3533fe3f82f7afcd84dcff` (`feat(mobile): add phase 14 dashboard project contracts`)
-- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects: Subphase 14D (Project Detail `SCR-PRJ-02`, `useProjectDetail`, `ProjectDetailScreen`, hidden auxiliary route registration, re-enabled interactive `ProjectCard` navigation, generation supersession, same-resource deduplication) IMPLEMENTED & TESTED. Subphase 14E NOT STARTED.
+- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects: Subphase 14D IMPLEMENTED & AUDITED. Subphase 14E BLOCKED by reference-data gaps (PROJECT_MEMBER_SELECTION_API_GAP, PROJECT_CREATE_REFERENCE_DATA_GAP).
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening
 
-- Latest Validated Implementation: `feat(mobile): implement project detail screen`
+- Latest Validated Audit: Subphase 14E Reference Data Blocker Audit
+- Subphase 14E Status & Scope:
+  - Subphase 14E BLOCKED (`PHASE_14E_REFERENCE_DATA_BLOCKED`).
+  - Reference Data Audit Tokens: `PROJECT_MEMBER_SELECTION_API_GAP`, `PROJECT_CREATE_REFERENCE_DATA_GAP`.
+  - Audited Root Causes:
+    1. `departmentId` is available via `GET /api/v1/departments` (open to all authenticated users).
+    2. `initialMemberIds` (`SCR-PRJ-03`) lacks an unprivileged user search endpoint for non-admin creators (`PROJECT_CREATE_REFERENCE_DATA_GAP`).
+    3. `userId` for `SCR-PRJ-07 Add Member` requires `@NotNull UUID userId`, but the only user search endpoint (`GET /api/v1/admin/users`) is restricted to `ADMIN` (`USER_READ`). Non-admin Project Managers cannot query users, and free-text UUID controls are prohibited by UX and security standards (`PROJECT_MEMBER_SELECTION_API_GAP`).
+  - Preserved Baseline Metrics: 50 test suites, 437 tests PASS, `tsc --noEmit` 0 errors, ESLint 0 warnings.
+  - Dedicated Report: `reports/PHASE_14E_PROJECT_MANAGEMENT_REPORT.md`.
+- Prior Validated Implementation: `feat(mobile): implement project detail screen`
 - Subphase 14D Scope:
   - `mobile/src/features/projects/hooks/useProjectDetail.ts`: Data hook managing project detail query (`GET /projects/{projectId}`), monotonic generation supersession ($A \rightarrow B$), same-resource in-flight deduplication, unmount safety, and non-blocking refresh error handling.
   - `mobile/src/features/projects/screens/ProjectDetailScreen.tsx`: Complete screen container displaying canonical details (code, name, description, department, manager, status badge, priority badge, clamped progress bar, timeline dates, member count summary, milestone summary list) with back navigation.
