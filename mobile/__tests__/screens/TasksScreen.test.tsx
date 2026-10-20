@@ -272,16 +272,22 @@ describe('TasksScreen (SCR-TSK-01)', () => {
     expect(mockRetryPagination).toHaveBeenCalledTimes(1);
   });
 
-  it('10. staged navigation: does NOT navigate to TaskDetail on card click and does NOT have Create Task button', async () => {
+  it('10. navigates to TaskDetail with exact taskId on card press, and does NOT have Create Task button', async () => {
     (useTasks as jest.Mock).mockReturnValue(defaultMockHookReturn);
 
-    const { queryByText, queryByTestId } = await renderScreen();
+    const { getByTestId, queryByText, queryByTestId } = await renderScreen();
 
-    // Verify Create Task button does not exist in 15B
+    // Verify Create Task button does not exist in 15C (deferred to 15D)
     expect(queryByText('Tạo công việc')).toBeNull();
     expect(queryByTestId('tasks-create-button')).toBeNull();
 
-    // Verify zero navigation calls occurred
-    expect(mockNavigate).not.toHaveBeenCalled();
+    // Press first task card
+    const firstCard = getByTestId('task-card-11111111-2222-3333-4444-555555555555');
+    fireEvent.press(firstCard);
+
+    expect(mockNavigate).toHaveBeenCalledTimes(1);
+    expect(mockNavigate).toHaveBeenCalledWith('TaskDetail', {
+      taskId: '11111111-2222-3333-4444-555555555555',
+    });
   });
 });

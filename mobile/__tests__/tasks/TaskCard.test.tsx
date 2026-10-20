@@ -1,5 +1,5 @@
 /**
- * Phase 15B: TaskCard Component Tests
+ * Phase 15C: TaskCard Component Tests
  * Verifies:
  * - Canonical field rendering (title, project name, progress, dates, assignees, subtasks, comments)
  * - Task StatusBadge presentation
@@ -7,12 +7,12 @@
  * - Defensive progress clamping (0..100)
  * - Due date and overdue indicator
  * - Absolute exclusion of raw UUIDs
- * - Staged navigation invariant: Presentation-only (no button role, no onPress)
+ * - Interactive capability: button role & onPress callback with task.id
  * - Accessible summary completeness
  */
 
 import React from 'react';
-import { render } from '@testing-library/react-native';
+import { render, fireEvent } from '@testing-library/react-native';
 import { TaskCard } from '../../src/features/tasks/components/TaskCard';
 import { TaskSummary } from '../../src/features/tasks/api/taskTypes';
 import { AppProviders } from '../../src/app/providers';
@@ -21,7 +21,7 @@ jest.mock('react-native-safe-area-context', () =>
   require('react-native-safe-area-context/jest/mock').default
 );
 
-describe('TaskCard Component (SCR-TSK-01)', () => {
+describe('TaskCard Component (SCR-TSK-01 / Phase 15C)', () => {
   const baseTask: TaskSummary = {
     id: '11111111-2222-3333-4444-555555555555',
     project: {
@@ -59,10 +59,14 @@ describe('TaskCard Component (SCR-TSK-01)', () => {
     updatedAt: '2026-10-20T10:00:00Z',
   };
 
-  const renderCard = async (task: TaskSummary, testID?: string) => {
+  const renderCard = async (
+    task: TaskSummary,
+    testID?: string,
+    onPress?: (taskId: string) => void
+  ) => {
     return await render(
       <AppProviders>
-        <TaskCard task={task} testID={testID} />
+        <TaskCard task={task} testID={testID} onPress={onPress} />
       </AppProviders>
     );
   };
@@ -98,12 +102,16 @@ describe('TaskCard Component (SCR-TSK-01)', () => {
     expect(queryByText(baseTask.reporter!.id)).toBeNull();
   });
 
-  it('2. presentation-only in 15B: does NOT have button accessibilityRole', async () => {
-    const { getByTestId } = await renderCard(baseTask, 'test-card');
+  it('2. interactive in 15C: has button accessibilityRole and triggers onPress with exact task.id', async () => {
+    const mockOnPress = jest.fn();
+    const { getByTestId } = await renderCard(baseTask, 'test-card', mockOnPress);
     const card = getByTestId('test-card');
 
-    // In 15B, card is presentation-only, not an interactive button
-    expect(card.props.accessibilityRole).toBeUndefined();
+    expect(card.props.accessibilityRole).toBe('button');
+
+    fireEvent.press(card);
+    expect(mockOnPress).toHaveBeenCalledTimes(1);
+    expect(mockOnPress).toHaveBeenCalledWith(baseTask.id);
   });
 
   it('3. renders overdue indicator and text when task is overdue', async () => {

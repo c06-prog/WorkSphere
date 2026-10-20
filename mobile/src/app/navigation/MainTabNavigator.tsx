@@ -9,7 +9,7 @@ import {
   ProjectMembersScreen,
   ProjectMilestonesScreen,
 } from '../../features/projects/screens';
-import { TasksScreen } from '../../features/tasks/screens';
+import { TasksScreen, TaskDetailScreen } from '../../features/tasks/screens';
 import { ServiceRequestsScreen } from '../../features/serviceRequests/screens';
 import { MoreScreen, SettingsScreen } from '../../features/more/screens';
 import {
@@ -176,6 +176,15 @@ export function MainTabNavigator() {
           tabBarButton: () => null,
           tabBarItemStyle: { display: 'none' },
           headerTitle: 'Mốc tiến độ',
+        }}
+      />
+      <Tab.Screen
+        name="TaskDetail"
+        component={TaskDetailScreen}
+        options={{
+          tabBarButton: () => null,
+          tabBarItemStyle: { display: 'none' },
+          headerTitle: 'Chi tiết công việc',
         }}
       />
     </Tab.Navigator>

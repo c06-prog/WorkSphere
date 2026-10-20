@@ -1,11 +1,12 @@
 /**
- * Phase 15B: TaskCard Component
+ * Phase 15C: TaskCard Component
  * Renders a canonical task item card for Task List Screen (SCR-TSK-01).
  *
- * Staged Navigation Rule (Phase 15B):
- * - Presentation-only during 15B (TaskDetail screen SCR-TSK-02 will be implemented in 15C).
- * - NO accessibilityRole="button".
- * - NO broken onPress navigation callback.
+ * Capabilities:
+ * - Interactive Pressable when onPress callback is provided (navigates to TaskDetail).
+ * - accessibilityRole="button" when interactive.
+ * - Minimum touch target >= 48dp.
+ * - Human-readable accessible label.
  *
  * Canonical Fields:
  * - title, project.name
@@ -20,22 +21,21 @@
  * Security & Presentation Invariants:
  * - Never renders raw UUIDs (id, parentTaskId, projectId, reporter.id).
  * - Never renders version or allowedActions.
- * - Minimum touch targets >= 48dp where interactive.
- * - Meaningful accessible summary without announcing button role.
  */
 
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useAppTheme } from '../../../app/providers/ThemeProvider';
 import { PriorityBadge, StatusBadge } from '../../../shared/components';
 import { TaskSummary } from '../api/taskTypes';
 
 export interface TaskCardProps {
   task: TaskSummary;
+  onPress?: (taskId: string) => void;
   testID?: string;
 }
 
-export function TaskCard({ task, testID }: TaskCardProps) {
+export function TaskCard({ task, onPress, testID }: TaskCardProps) {
   const theme = useAppTheme();
 
   // Defensive progress clamping: 0..100
@@ -75,22 +75,10 @@ export function TaskCard({ task, testID }: TaskCardProps) {
     .filter(Boolean)
     .join(', ');
 
-  return (
-    <View
-      testID={testID ?? `task-card-${task.id}`}
-      accessible={true}
-      accessibilityLabel={accessibleLabel}
-      style={[
-        styles.card,
-        {
-          backgroundColor: theme.colors.surface,
-          borderColor: theme.colors.border,
-          borderRadius: theme.radii.medium,
-          padding: theme.spacing.md,
-          marginBottom: theme.spacing.sm,
-        },
-      ]}
-    >
+  const isInteractive = typeof onPress === 'function';
+
+  const content = (
+    <>
       {/* Header: Project Name + Badges */}
       <View style={styles.headerRow}>
         <Text
@@ -108,11 +96,7 @@ export function TaskCard({ task, testID }: TaskCardProps) {
 
       {/* Task Title */}
       <Text
-        style={[
-          theme.typography.heading2,
-          styles.titleText,
-          { color: theme.colors.textPrimary, marginTop: theme.spacing.xs },
-        ]}
+        style={[theme.typography.heading3, styles.titleText, { color: theme.colors.textPrimary, marginTop: theme.spacing.xs }]}
         numberOfLines={2}
       >
         {task.title}
@@ -176,18 +160,74 @@ export function TaskCard({ task, testID }: TaskCardProps) {
 
         {/* Counts (Subtasks & Comments) */}
         <View style={styles.metaRight}>
-          {subtaskText ? (
-            <Text style={[theme.typography.caption, styles.countBadge, { color: theme.colors.textSecondary }]}>
-              {subtaskText}
-            </Text>
-          ) : null}
-          {task.commentCount > 0 ? (
-            <Text style={[theme.typography.caption, styles.countBadge, { color: theme.colors.textSecondary }]}>
-              {task.commentCount} bình luận
-            </Text>
-          ) : null}
+          <View style={styles.badgeRow}>
+            {subtaskText ? (
+              <View
+                style={[
+                  styles.countBadge,
+                  { backgroundColor: theme.colors.surfaceVariant, borderRadius: theme.radii.small },
+                ]}
+              >
+                <Text style={[theme.typography.caption, { color: theme.colors.textSecondary }]}>
+                  {subtaskText}
+                </Text>
+              </View>
+            ) : null}
+            {task.commentCount > 0 ? (
+              <View
+                style={[
+                  styles.countBadge,
+                  { backgroundColor: theme.colors.surfaceVariant, borderRadius: theme.radii.small },
+                ]}
+              >
+                <Text style={[theme.typography.caption, { color: theme.colors.textSecondary }]}>
+                  {task.commentCount} bình luận
+                </Text>
+              </View>
+            ) : null}
+          </View>
         </View>
       </View>
+    </>
+  );
+
+  const cardStyle = [
+    styles.card,
+    {
+      backgroundColor: theme.colors.surface,
+      borderColor: theme.colors.border,
+      borderRadius: theme.radii.medium,
+      padding: theme.spacing.md,
+      marginBottom: theme.spacing.sm,
+    },
+  ];
+
+  if (isInteractive) {
+    return (
+      <Pressable
+        testID={testID ?? `task-card-${task.id}`}
+        accessible={true}
+        accessibilityRole="button"
+        accessibilityLabel={accessibleLabel}
+        onPress={() => onPress(task.id)}
+        style={({ pressed }) => [
+          ...cardStyle,
+          { opacity: pressed ? 0.8 : 1 },
+        ]}
+      >
+        {content}
+      </Pressable>
+    );
+  }
+
+  return (
+    <View
+      testID={testID ?? `task-card-${task.id}`}
+      accessible={true}
+      accessibilityLabel={accessibleLabel}
+      style={cardStyle}
+    >
+      {content}
     </View>
   );
 }
@@ -255,6 +295,8 @@ const styles = StyleSheet.create({
   },
   countBadge: {
     marginLeft: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
   },
   progressPercentText: {
     fontWeight: '600',

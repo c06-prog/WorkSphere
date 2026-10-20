@@ -28,6 +28,8 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { MainTabNavProp } from '../../../app/navigation/types';
 import { useAppTheme } from '../../../app/providers/ThemeProvider';
 import { EmptyState, ErrorState, LoadingIndicator } from '../../../shared/components';
 import { SearchBar } from '../../../shared/components/SearchBar';
@@ -63,6 +65,7 @@ const PRIORITY_FILTERS: PriorityFilterOption[] = [
 
 export function TasksScreen() {
   const theme = useAppTheme();
+  const navigation = useNavigation<MainTabNavProp<'Tasks'>>();
 
   const {
     tasks,
@@ -341,7 +344,14 @@ export function TasksScreen() {
       <FlatList<TaskSummary>
         data={tasks}
         keyExtractor={item => item.id}
-        renderItem={({ item }) => <TaskCard task={item} />}
+        renderItem={({ item }) => (
+          <TaskCard
+            task={item}
+            onPress={taskId => {
+              navigation.navigate('TaskDetail', { taskId });
+            }}
+          />
+        )}
         ListHeaderComponent={renderHeader}
         ListFooterComponent={renderFooter}
         ListEmptyComponent={renderEmpty}

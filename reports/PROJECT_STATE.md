@@ -9,20 +9,29 @@
 - Phase 13 Audit Conclusion: `PHASE_13_FINAL_AUDIT_PASS_WITH_E2E_DEFERRALS`
 - Phase 14 Baseline Checkpoint: `785c155b69309284066252701ec1554d35d4e795` (`docs(phase14): record architecture decision D-061 phase 14 contract freeze`)
 - Phase 14A Implementation Checkpoint: `55cc13e6372ba4374d3533fe3f82f7afcd84dcff` (`feat(mobile): add phase 14 dashboard project contracts`)
-- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 15 Mobile Task Management: IN_PROGRESS (Subphases 15A and 15B IMPLEMENTED, Subphase 15C NOT STARTED).
+- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 15 Mobile Task Management: IN_PROGRESS (Subphases 15A, 15B, and 15C IMPLEMENTED, Subphase 15D NOT STARTED).
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening
 
-- Latest Implementation: Subphase 15B Mobile Task List (`SCR-TSK-01`)
-- Implementation Report: `reports/PHASE_15B_TASK_LIST_REPORT.md`
+- Latest Implementation: Subphase 15C Mobile Task Detail (`SCR-TSK-02`)
+- Implementation Report: `reports/PHASE_15C_TASK_DETAIL_REPORT.md`
 - Scope Implemented:
+  - Custom Hook: `useTaskDetail.ts` managing single task query lifecycle with in-flight same-ID deduplication (`inFlightPromiseRef`), monotonic generation supersession (`generationRef`), non-destructive pull-to-refresh data retention with separate `refreshError`, and unmount safety (`isMountedRef`).
+  - Screen Container: `TaskDetailScreen.tsx` (`SCR-TSK-02`) implementing canonical Vietnamese UI: header with project breadcrumb and back button, title, priority badge, status badge, clamped progress bar, formatted dates (start date, due date with overdue warning, completed date), description, hierarchy parent task and milestone, reporter and assignees list, read-only subtask and comment summaries, chronological status history timeline, and friendly 404 Not Found, 403 Forbidden, and retryable network error states.
+  - Navigation Route: Registered auxiliary hidden route `TaskDetail: { taskId: string }` on `MainTabNavigator` using `tabBarButton: () => null`, preserving exactly 5 visible bottom tabs (`Dashboard`, `Projects`, `Tasks`, `Notifications`, `More`).
+  - Interactive Card: Re-enabled `onPress` on `TaskCard.tsx` with `accessibilityRole="button"` and minimum touch target size of 48dp, wired navigation from `TasksScreen.tsx`.
+  - Staged Gating: Staged read-only in Phase 15C. No mutation controls, child screens, or modals active for `CreateTask` (15D), `EditTask` (15E), Status/Progress modals (15E), Assignment (15E), Subtasks (15F), or Comments (15F). Zero raw IDs or unhandled `allowedActions` strings exposed.
+  - Validation: 69 test suites, 627 tests PASS; TypeScript 0 errors; ESLint 0 errors; Android assembleDebug BUILD SUCCESSFUL (203 actionable tasks).
+  - Next Action: `INDEPENDENT AUDIT PHASE 15C` or `PHASE 15D IMPLEMENTATION`.
+- Prior Implementation: Subphase 15B Mobile Task List (`SCR-TSK-01`)
+- Prior Report: `reports/PHASE_15B_TASK_LIST_REPORT.md`
+- Prior Scope Implemented:
   - Custom Hook: `useTasks.ts` with 300ms search input debouncing, monotonic query generation identity (`queryGenerationRef`) ensuring latest-query-wins concurrency, synchronous append lock (`paginationLockRef`), stale append rejection, in-place deduplication by `task.id`, and pull-to-refresh.
-  - Component: `TaskCard.tsx` presentation-only card rendering project badge, task title, priority and status badges, clamped progress bar with percentage, formatted due date with overdue highlighting, assignee names/counts, and subtask/comment counts. Strictly zero raw UUIDs, non-button accessibility role, zero navigation.
+  - Component: `TaskCard.tsx` presentation card rendering project badge, task title, priority and status badges, clamped progress bar with percentage, formatted due date with overdue highlighting, assignee names/counts, and subtask/comment counts.
   - Screen Container: `TasksScreen.tsx` production replacement for placeholder screen in `MainTabNavigator`, incorporating search bar, canonical status chip row (`ALL`, `TODO`, `IN_PROGRESS`, `IN_REVIEW`, `COMPLETED`), canonical priority chip row (`ALL`, `CRITICAL`, `HIGH`, `MEDIUM`, `LOW`), `FlatList` with header/footer loaders, pull-to-refresh, empty and error states.
   - Staged Navigation: Staged capability gating preserves non-clickable TaskCard and deferred CreateTask button until Phase 15C and 15D.
   - Validation: 67 test suites, 611 tests PASS; TypeScript 0 errors; ESLint 0 errors; Android assembleDebug BUILD SUCCESSFUL (203 actionable tasks).
-  - Next Action: `INDEPENDENT AUDIT PHASE 15B` or `PHASE 15C IMPLEMENTATION`.
 - Prior Implementation: Subphase 15A Task Contract Foundation
 - Prior Report: `reports/PHASE_15A_TASK_CONTRACT_FOUNDATION_REPORT.md`
 - Prior Scope Implemented:
