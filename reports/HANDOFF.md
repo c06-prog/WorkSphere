@@ -4,11 +4,11 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: PHASE 14E-G1 - BACKEND USER DIRECTORY CONTRACT
-- Status: Phase 14 IN_PROGRESS. Subphase 14E: BLOCKED_BY_REFERENCE_DATA. Gap patch 14E-G1 IMPLEMENTED and TESTED (GET /api/v1/directory/users, 318/318 backend tests pass, 0 Checkstyle violations). G2 NOT STARTED.
-- Baseline Checkpoint: `57c428daa14842d3d7ee81fba1a2ace75988b737`
-- Report: `reports/PHASE_14E_G1_BACKEND_DIRECTORY_REPORT.md`
-- Next Action: `INDEPENDENT AUDIT 14E-G1` (followed by Phase 14E-G2 Mobile Directory Foundation).
+- Current Task: PHASE 14E-G2 - MOBILE USER DIRECTORY FOUNDATION & PICKER
+- Status: Phase 14 IN_PROGRESS. Subphase 14E: BLOCKED_BY_REFERENCE_DATA. Gap patch 14E-G1 IMPLEMENTED and AUDITED. Gap patch 14E-G2 IMPLEMENTED and TESTED (mobile user directory transport, hook, and UserPickerModal; 54/54 suites, 483/483 tests pass, Android assembleDebug BUILD SUCCESSFUL).
+- Baseline Checkpoint: `c555ca76b3f21321bea4b567370df12303298295`
+- Report: `reports/PHASE_14E_G2_MOBILE_DIRECTORY_REPORT.md`
+- Next Action: `INDEPENDENT AUDIT 14E-G2` (followed by Phase 14E Core Project Management resumption).
 - Scope Boundary:
   - Subphase 14E BLOCKED (`PHASE_14E_REFERENCE_DATA_BLOCKED`).
   - Audited Reference Data Status:

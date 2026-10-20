@@ -9,12 +9,22 @@
 - Phase 13 Audit Conclusion: `PHASE_13_FINAL_AUDIT_PASS_WITH_E2E_DEFERRALS`
 - Phase 14 Baseline Checkpoint: `785c155b69309284066252701ec1554d35d4e795` (`docs(phase14): record architecture decision D-061 phase 14 contract freeze`)
 - Phase 14A Implementation Checkpoint: `55cc13e6372ba4374d3533fe3f82f7afcd84dcff` (`feat(mobile): add phase 14 dashboard project contracts`)
-- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects (IN_PROGRESS): Subphase 14D IMPLEMENTED & AUDITED. Subphase 14E: BLOCKED_BY_REFERENCE_DATA (Subphase 14E-G1 Backend Directory Contract IMPLEMENTED; G2 NOT STARTED; next = INDEPENDENT AUDIT 14E-G1).
+- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects (IN_PROGRESS): Subphase 14D IMPLEMENTED & AUDITED. Subphase 14E-G1 Backend Directory Contract IMPLEMENTED & AUDITED. Subphase 14E-G2 Mobile Directory Foundation & Picker IMPLEMENTED & TESTED. Core Phase 14E (SCR-PRJ-03..09) BLOCKED pending independent audit of 14E-G2.
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening
 
-- Latest Validated Implementation: Subphase 14E-G1 Backend Directory Contract (`GET /api/v1/directory/users`)
+- Latest Validated Implementation: Subphase 14E-G2 Mobile User Directory Foundation & Picker (`mobile/src/features/directory/`)
+- Subphase 14E-G2 Scope & Invariants:
+  - `directoryTypes.ts`: Full transport interfaces (`UserDirectoryItem`, `UserDirectoryQuery`), constants (`DIRECTORY_DEFAULT_PAGE_SIZE = 20`, `DIRECTORY_ALLOWED_SORT = 'fullName,asc'`), runtime guards (`isUserDirectoryItem`, `isUserDirectoryPage`), and error presentation mapper (`mapDirectoryError`).
+  - `directoryApi.ts`: API client querying `/directory/users` with query param serialization, search trimming, page size clamping, sort whitelisting, and envelope extraction.
+  - `useUserDirectory.ts`: Data hook with 300ms debounce, monotonic generation identity (`queryGenerationRef`) ensuring latest-query-wins concurrency, append locking (`paginationLockRef`) preventing duplicate requests, in-place item deduplication by `user.id`, and lifecycle gating via `enabled` option.
+  - `UserPickerModal.tsx`: Accessible, reusable modal supporting single (radio) and multiple (checkbox) selection modes. Strictly ZERO raw UUIDs rendered in UI. Local draft selection with cancellation safety. Accessible `disabledIds` support with customizable reason badge (`disabledReason="Đã tham gia"`). WCAG touch targets ($\ge 48\,\text{dp}$).
+  - Mobile Tests: 4 new dedicated directory suites (40 tests), total mobile baseline: 54 suites, 483 tests PASS (0 failures, 0 skipped).
+  - Static Quality: `eslint .` PASS (0 errors, 0 warnings), `tsc --noEmit` PASS (0 errors).
+  - Android Build: `.\gradlew.bat assembleDebug --no-daemon` BUILD SUCCESSFUL (203 actionable tasks, exit code 0).
+  - Dedicated Report: `reports/PHASE_14E_G2_MOBILE_DIRECTORY_REPORT.md`.
+- Prior Validated Implementation: Subphase 14E-G1 Backend Directory Contract (`GET /api/v1/directory/users`)
 - Subphase 14E-G1 Scope & Invariants:
   - `UserDirectoryItemResponse`: Minimized public workplace contact card (`id`, `username`, `fullName`, `email`, `avatarUrl`, `departmentName`) with strict exclusion of sensitive PII, passwords, security metadata, and administrative fields.
   - `UserManagementApplicationService.searchDirectory`: Reuses existing `UserRepository.searchUsers` query to enforce `deleted = false AND status = 'ACTIVE'`. Batch resolves department names via `departmentRepository.findAllById`.
