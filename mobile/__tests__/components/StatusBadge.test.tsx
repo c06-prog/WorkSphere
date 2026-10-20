@@ -39,6 +39,18 @@ describe('StatusBadge Component', () => {
     expect(getCancelled('Đã hủy')).toBeTruthy();
   });
 
+  test('renders canonical task statuses (TODO and IN_REVIEW) with correct labels', async () => {
+    const { getByText: getTodo } = await renderWithProviders(
+      <StatusBadge status="TODO" type="task" />
+    );
+    expect(getTodo('Cần làm')).toBeTruthy();
+
+    const { getByText: getInReview } = await renderWithProviders(
+      <StatusBadge status="IN_REVIEW" type="task" />
+    );
+    expect(getInReview('Đang kiểm tra')).toBeTruthy();
+  });
+
   test('supports custom label override and unknown status fallback', async () => {
     const { getByText: getCustom } = await renderWithProviders(
       <StatusBadge status="ACTIVE" label="Tùy biến" />

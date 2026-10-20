@@ -31,6 +31,12 @@ export type MainTabParamList = {
   EditProject: { projectId: string };
   ProjectMembers: { projectId: string };
   ProjectMilestones: { projectId: string };
+  // Phase 15 Task Stack Screens (Type contracts only - routes registered in later subphases)
+  TaskDetail: { taskId: string };
+  CreateTask: { projectId?: string; parentTaskId?: string } | undefined;
+  EditTask: { taskId: string };
+  SubtaskList: { parentTaskId: string; projectId: string };
+  TaskComments: { taskId: string };
 };
 
 export type RootStackParamList = {

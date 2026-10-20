@@ -25,6 +25,7 @@ const CANONICAL_STATUS_LABELS: Record<string, string> = {
   OPEN: 'Mở',
   ACTIVE: 'Đang thực hiện',
   IN_PROGRESS: 'Đang xử lý',
+  IN_REVIEW: 'Đang kiểm tra',
   DONE: 'Đã hoàn thành',
   RESOLVED: 'Đã giải quyết',
   ON_HOLD: 'Tạm dừng',
@@ -37,9 +38,18 @@ const CANONICAL_STATUS_LABELS: Record<string, string> = {
   REJECTED: 'Từ chối',
 };
 
+const TASK_STATUS_LABELS: Record<string, string> = {
+  TODO: 'Cần làm',
+  IN_PROGRESS: 'Đang làm',
+  IN_REVIEW: 'Đang kiểm tra',
+  COMPLETED: 'Hoàn thành',
+  CANCELLED: 'Đã hủy',
+};
+
 export function StatusBadge({
   status,
   label,
+  type,
   testID,
   style,
 }: StatusBadgeProps) {
@@ -69,6 +79,7 @@ export function StatusBadge({
       case 'WAITING':
       case 'WAITING_FOR_USER':
       case 'PENDING':
+      case 'IN_REVIEW':
         return {
           bg: theme.colors.warningContainer,
           text: theme.colors.warning,
@@ -88,6 +99,12 @@ export function StatusBadge({
           text: theme.colors.error,
           border: theme.colors.error,
         };
+      case 'TODO':
+        return {
+          bg: theme.colors.surfaceVariant,
+          text: theme.colors.textSecondary,
+          border: theme.colors.border,
+        };
       default:
         return {
           bg: theme.colors.surfaceVariant,
@@ -98,7 +115,8 @@ export function StatusBadge({
   };
 
   const colors = getBadgeColors();
-  const displayLabel = label ?? CANONICAL_STATUS_LABELS[normalized] ?? status;
+  const taskLabel = type === 'task' ? TASK_STATUS_LABELS[normalized] : undefined;
+  const displayLabel = label ?? taskLabel ?? CANONICAL_STATUS_LABELS[normalized] ?? status;
 
   return (
     <View

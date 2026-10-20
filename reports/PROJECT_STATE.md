@@ -9,25 +9,22 @@
 - Phase 13 Audit Conclusion: `PHASE_13_FINAL_AUDIT_PASS_WITH_E2E_DEFERRALS`
 - Phase 14 Baseline Checkpoint: `785c155b69309284066252701ec1554d35d4e795` (`docs(phase14): record architecture decision D-061 phase 14 contract freeze`)
 - Phase 14A Implementation Checkpoint: `55cc13e6372ba4374d3533fe3f82f7afcd84dcff` (`feat(mobile): add phase 14 dashboard project contracts`)
-- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 15 Mobile Task Management: AUDITED, CONTRACT_FROZEN (D-063), IMPLEMENTATION_NOT_STARTED.
+- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 15 Mobile Task Management: IN_PROGRESS (Subphase 15A IMPLEMENTED, Subphase 15B NOT STARTED).
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening
 
-- Latest Contract & Architecture Freeze: Phase 15 Mobile Task Management Contract & Decision Freeze
-- Architecture Decision: `D-063 Phase 15 Task Management Mobile Contract Freeze`
-- Freeze Report: `reports/PHASE_15_TASK_CONTRACT_FREEZE.md`
-- Pre-Phase 15 Audit: `reports/PRE_PHASE_15_TASK_MANAGEMENT_AUDIT.md` (AUDITED, PASS)
-- Phase 15 Frozen Architectural Invariants:
-  - Canonical Scope: Task Management screens (`SCR-TSK-01` .. `SCR-TSK-08`) covering task listing, task detail, create, edit, subtasks, comments, status transitions, and progress updates.
-  - Subphase Ownership: Exactly one subphase owns each screen (15B: `SCR-TSK-01`, 15C: `SCR-TSK-02`, 15D: `SCR-TSK-03`/`04`, 15E: `SCR-TSK-07`/`08`, 15F: `SCR-TSK-05`/`06`, 15G: Integration/Regression).
-  - Assignee Eligibility Rule: Assignees MUST be active project members (`projectMemberRepository.existsByProjectIdAndUserIdAndActiveTrue`). Assignee selection must query `GET /api/v1/projects/{projectId}/members` via dedicated `ProjectMemberAssigneePickerModal`. Global directory `/directory/users` is prohibited for direct task assignment.
-  - Assignment Identity: `assignmentId != userId`. `DELETE /tasks/{taskId}/assignments/{assignmentId}` requires `assignmentId`.
-  - Mutation-Lock Standard: All mutation handlers use synchronous `isSubmittingRef.current` guards to eliminate double-submits.
-  - Concurrency & Optimistic Locking: `version: number` enforced on update task, change status, and update progress.
-  - Domain State Invariants: Setting progress to 100% does NOT automatically complete task.
-  - Attachment Boundary Drift: Task attachments upload deferred; comments scope focused on text discussions (`PRE_PHASE_15_ATTACHMENT_SCOPE_DRIFT`).
-  - Next Action: `PHASE 15A TASK CONTRACT FOUNDATION`. Phase 15 Implementation: NOT STARTED.
+- Latest Implementation: Subphase 15A Task Contract Foundation
+- Implementation Report: `reports/PHASE_15A_TASK_CONTRACT_FOUNDATION_REPORT.md`
+- Scope Implemented:
+  - Transport Contracts: `taskTypes.ts` with closed unions (`TaskStatus`, `TaskPriority`), runtime type guards (`isTaskSummary`, `isTaskDetail`, `isTaskComment`, page guards), and distinct `assignmentId != userId` semantics.
+  - API Adapter: `taskApi.ts` covering all 15 endpoints with strict query serialization, whitelisted sort, and response validation.
+  - Presentation Error Mapping: `taskErrorMapper.ts` mapping all backend codes safely to Vietnamese user messages with distinguishable `isConflict: true`.
+  - Component Extension: Narrow `StatusBadge.tsx` extension supporting `type="task"` presentation without regression.
+  - Navigation Contracts: Added `TaskDetail`, `CreateTask`, `EditTask`, `SubtaskList`, `TaskComments` to `MainTabParamList` (type contracts only, no runtime screens registered).
+  - Validation: 64 test suites, 579 tests PASS; TypeScript 0 errors; ESLint 0 errors; Android assembleDebug BUILD SUCCESSFUL.
+  - Next Action: `INDEPENDENT AUDIT PHASE 15A`. Subphase 15B: NOT STARTED.
+- Prior Milestone: Phase 15 Mobile Task Management Contract & Decision Freeze (`D-063`)
 - Prior Validated Implementation: Subphase 14F Integration, Regression & Security Hardening
 - Subphase 14F Validations & Invariants:
   - Phase 14 Inventory: Complete validation of all 10 Phase 14 screens (`SCR-MAIN-01`, `SCR-PRJ-01`..`09`). All routes registered, wired, security gated, and tested.
