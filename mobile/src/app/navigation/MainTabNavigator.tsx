@@ -1,7 +1,14 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { DashboardScreen } from '../../features/dashboard/screens';
-import { ProjectsScreen, ProjectDetailScreen } from '../../features/projects/screens';
+import {
+  ProjectsScreen,
+  ProjectDetailScreen,
+  CreateProjectScreen,
+  EditProjectScreen,
+  ProjectMembersScreen,
+  ProjectMilestonesScreen,
+} from '../../features/projects/screens';
 import { TasksScreen } from '../../features/tasks/screens';
 import { ServiceRequestsScreen } from '../../features/serviceRequests/screens';
 import { MoreScreen, SettingsScreen } from '../../features/more/screens';
@@ -133,6 +140,42 @@ export function MainTabNavigator() {
           tabBarButton: () => null,
           tabBarItemStyle: { display: 'none' },
           headerTitle: 'Chi tiết dự án',
+        }}
+      />
+      <Tab.Screen
+        name="CreateProject"
+        component={CreateProjectScreen}
+        options={{
+          tabBarButton: () => null,
+          tabBarItemStyle: { display: 'none' },
+          headerTitle: 'Tạo dự án mới',
+        }}
+      />
+      <Tab.Screen
+        name="EditProject"
+        component={EditProjectScreen}
+        options={{
+          tabBarButton: () => null,
+          tabBarItemStyle: { display: 'none' },
+          headerTitle: 'Chỉnh sửa dự án',
+        }}
+      />
+      <Tab.Screen
+        name="ProjectMembers"
+        component={ProjectMembersScreen}
+        options={{
+          tabBarButton: () => null,
+          tabBarItemStyle: { display: 'none' },
+          headerTitle: 'Thành viên dự án',
+        }}
+      />
+      <Tab.Screen
+        name="ProjectMilestones"
+        component={ProjectMilestonesScreen}
+        options={{
+          tabBarButton: () => null,
+          tabBarItemStyle: { display: 'none' },
+          headerTitle: 'Mốc tiến độ',
         }}
       />
     </Tab.Navigator>

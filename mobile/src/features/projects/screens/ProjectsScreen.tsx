@@ -26,6 +26,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAppTheme } from '../../../app/providers/ThemeProvider';
+import { useAuth } from '../../../app/auth/AuthProvider';
 import { MainTabNavProp } from '../../../app/navigation/types';
 import { EmptyState, ErrorState, LoadingIndicator } from '../../../shared/components';
 import { SearchBar } from '../../../shared/components/SearchBar';
@@ -54,6 +55,8 @@ const STATUS_FILTERS: StatusFilterOption[] = [
 export function ProjectsScreen() {
   const theme = useAppTheme();
   const navigation = useNavigation<MainTabNavProp<'Projects'>>();
+  const { currentUser } = useAuth();
+  const canCreateProject = currentUser?.permissions?.includes('PROJECT_CREATE') ?? false;
 
   const {
     projects,
@@ -131,6 +134,33 @@ export function ProjectsScreen() {
             SCR-PRJ-01: Quản lý và theo dõi tiến độ dự án
           </Text>
         </View>
+        {canCreateProject ? (
+          <Pressable
+            onPress={() => navigation.navigate('CreateProject')}
+            style={[
+              styles.createButton,
+              {
+                backgroundColor: theme.colors.primary,
+                borderRadius: theme.radii.medium,
+                paddingHorizontal: theme.spacing.md,
+                paddingVertical: theme.spacing.sm,
+              },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Tạo dự án mới"
+            testID="btn-create-project"
+          >
+            <Text
+              style={[
+                theme.typography.caption,
+                styles.createButtonText,
+                { color: theme.colors.onPrimary, fontWeight: '600' },
+              ]}
+            >
+              + Tạo mới
+            </Text>
+          </Pressable>
+        ) : null}
       </View>
 
       {/* Controlled Search Bar */}
@@ -334,6 +364,14 @@ const styles = StyleSheet.create({
   },
   pageTitle: {
     fontWeight: '700',
+  },
+  createButton: {
+    minHeight: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  createButtonText: {
+    fontWeight: '600',
   },
   filterChipsRow: {
     flexDirection: 'row',

@@ -226,4 +226,65 @@ describe('ProjectDetailScreen Component', () => {
     // Project detail itself is still rendered and visible
     expect(getByText('PRJ-2026-001')).toBeTruthy();
   });
+
+  it('7. renders action buttons when allowedActions includes UPDATE and CHANGE_STATUS', async () => {
+    (useProjectDetail as jest.Mock).mockReturnValue(defaultMockHook);
+
+    const { getByTestId } = await render(
+      <AppProviders>
+        <ProjectDetailScreen />
+      </AppProviders>
+    );
+
+    const editBtn = getByTestId('btn-edit-project');
+    expect(editBtn).toBeTruthy();
+    fireEvent.press(editBtn);
+    expect(mockNavigate).toHaveBeenCalledWith('EditProject', {
+      projectId: '11111111-1111-1111-1111-111111111111',
+    });
+
+    const statusBtn = getByTestId('btn-change-status');
+    expect(statusBtn).toBeTruthy();
+  });
+
+  it('8. navigates to ProjectMembers and ProjectMilestones from cards', async () => {
+    (useProjectDetail as jest.Mock).mockReturnValue(defaultMockHook);
+
+    const { getByTestId } = await render(
+      <AppProviders>
+        <ProjectDetailScreen />
+      </AppProviders>
+    );
+
+    const membersBtn = getByTestId('btn-manage-members');
+    fireEvent.press(membersBtn);
+    expect(mockNavigate).toHaveBeenCalledWith('ProjectMembers', {
+      projectId: '11111111-1111-1111-1111-111111111111',
+    });
+
+    const milestonesBtn = getByTestId('btn-view-milestones');
+    fireEvent.press(milestonesBtn);
+    expect(mockNavigate).toHaveBeenCalledWith('ProjectMilestones', {
+      projectId: '11111111-1111-1111-1111-111111111111',
+    });
+  });
+
+  it('9. hides action buttons when allowedActions is empty', async () => {
+    (useProjectDetail as jest.Mock).mockReturnValue({
+      ...defaultMockHook,
+      project: {
+        ...mockProjectDetail,
+        allowedActions: [],
+      },
+    });
+
+    const { queryByTestId } = await render(
+      <AppProviders>
+        <ProjectDetailScreen />
+      </AppProviders>
+    );
+
+    expect(queryByTestId('btn-edit-project')).toBeNull();
+    expect(queryByTestId('btn-change-status')).toBeNull();
+  });
 });

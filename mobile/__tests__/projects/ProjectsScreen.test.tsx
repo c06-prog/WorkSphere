@@ -163,11 +163,22 @@ describe('ProjectsScreen (SCR-PRJ-01)', () => {
     });
   });
 
-  it('5. does not render Create Project button while CreateProject capability is deferred to 14E', async () => {
+  it('5. renders Create Project button and navigates to CreateProject when user has PROJECT_CREATE permission', async () => {
     (useProjects as jest.Mock).mockReturnValue(defaultMockHookReturn);
 
-    // Even if user has PROJECT_CREATE permission, client capability is deferred until 14E
-    const { queryByTestId } = await renderScreenWithAuth(['PROJECT_READ', 'PROJECT_CREATE']);
+    const { getByTestId } = await renderScreenWithAuth(['PROJECT_READ', 'PROJECT_CREATE']);
+
+    const createBtn = getByTestId('btn-create-project');
+    expect(createBtn).toBeTruthy();
+
+    fireEvent.press(createBtn);
+    expect(mockNavigate).toHaveBeenCalledWith('CreateProject');
+  });
+
+  it('5b. hides Create Project button when user lacks PROJECT_CREATE permission', async () => {
+    (useProjects as jest.Mock).mockReturnValue(defaultMockHookReturn);
+
+    const { queryByTestId } = await renderScreenWithAuth(['PROJECT_READ']);
 
     expect(queryByTestId('btn-create-project')).toBeNull();
   });

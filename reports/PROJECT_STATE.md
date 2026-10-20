@@ -9,12 +9,24 @@
 - Phase 13 Audit Conclusion: `PHASE_13_FINAL_AUDIT_PASS_WITH_E2E_DEFERRALS`
 - Phase 14 Baseline Checkpoint: `785c155b69309284066252701ec1554d35d4e795` (`docs(phase14): record architecture decision D-061 phase 14 contract freeze`)
 - Phase 14A Implementation Checkpoint: `55cc13e6372ba4374d3533fe3f82f7afcd84dcff` (`feat(mobile): add phase 14 dashboard project contracts`)
-- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects (IN_PROGRESS): Subphase 14D IMPLEMENTED & AUDITED. Subphase 14E-G1 Backend Directory Contract IMPLEMENTED & AUDITED. Subphase 14E-G2 Mobile Directory Foundation & Picker IMPLEMENTED & TESTED. Core Phase 14E (SCR-PRJ-03..09) BLOCKED pending independent audit of 14E-G2.
+- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects (IN_PROGRESS): Subphase 14A AUDITED, Subphase 14B HARDENED, Subphase 14C HARDENED, Subphase 14D AUDITED, Subphases 14E-G1 & 14E-G2 AUDITED. Subphase 14E Core Project Management Flows (SCR-PRJ-03..09) IMPLEMENTED, TESTED, & ASSEMBLE_DEBUG VERIFIED.
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening
 
-- Latest Validated Implementation: Subphase 14E-G2 Mobile User Directory Foundation & Picker (`mobile/src/features/directory/`)
+- Latest Validated Implementation: Subphase 14E Core Project Management Actions (`SCR-PRJ-03` to `SCR-PRJ-09`)
+- Subphase 14E Scope & Invariants:
+  - `SCR-PRJ-03`: `CreateProjectScreen.tsx` with department selector adapter (`features/organization/`), initial members multi-picker (`features/directory/`), client-side date range validation (`plannedEndDate >= startDate`), and permission-gating on `ProjectsScreen.tsx` (`+ Tạo mới` button checking `PROJECT_CREATE`).
+  - `SCR-PRJ-04`: `EditProjectScreen.tsx` with authoritative prefill from `GET /projects/{projectId}`, immutable `code` and `department` fields, version-tracking optimistic locking, and HTTP 409 conflict reload prompt ("Tải lại dữ liệu").
+  - `SCR-PRJ-05`: `ChangeStatusModal.tsx` backed by pure transition domain machine (`domain/projectStatusTransitions.ts` enforcing `DRAFT -> ACTIVE, CANCELLED`; `ACTIVE -> ON_HOLD, COMPLETED, CANCELLED`; `ON_HOLD -> ACTIVE, CANCELLED`; terminal states blocked), optimistic locking with `version`.
+  - `SCR-PRJ-06 & SCR-PRJ-07`: `ProjectMembersScreen.tsx` with role filter chips, single-select `UserPickerModal` with `disabledIds` preventing duplicate addition, role selection modal, edit role modal, and remove confirmation dialog. Strictly preserves D-013 last PM invariant (`PROJECT_MANAGER_REQUIRED` surfaces error banner, no local mutation).
+  - `SCR-PRJ-08 & SCR-PRJ-09`: `ProjectMilestonesScreen.tsx` and `CreateMilestoneModal.tsx` with status filtering, date validation, and pull-to-refresh.
+  - Navigation: Registered `CreateProject`, `EditProject`, `ProjectMembers`, and `ProjectMilestones` in `MainTabNavigator.tsx` as hidden auxiliary screens, keeping exactly 5 visible bottom tabs.
+  - Mobile Tests: 7 new suites (36 tests), total mobile baseline: 61 suites, 519 tests PASS (0 failures, 0 skipped).
+  - Static Quality: `eslint .` PASS (0 errors), `tsc --noEmit` PASS (0 errors).
+  - Android Build: `.\gradlew.bat assembleDebug --no-daemon` BUILD SUCCESSFUL (203 actionable tasks, exit code 0).
+  - Dedicated Report: `reports/PHASE_14E_PROJECT_MANAGEMENT_REPORT.md`.
+- Prior Validated Implementation: Subphase 14E-G2 Mobile User Directory Foundation & Picker (`mobile/src/features/directory/`)
 - Subphase 14E-G2 Scope & Invariants:
   - `directoryTypes.ts`: Full transport interfaces (`UserDirectoryItem`, `UserDirectoryQuery`), constants (`DIRECTORY_DEFAULT_PAGE_SIZE = 20`, `DIRECTORY_ALLOWED_SORT = 'fullName,asc'`), runtime guards (`isUserDirectoryItem`, `isUserDirectoryPage`), and error presentation mapper (`mapDirectoryError`).
   - `directoryApi.ts`: API client querying `/directory/users` with query param serialization, search trimming, page size clamping, sort whitelisting, and envelope extraction.

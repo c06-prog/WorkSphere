@@ -13,7 +13,7 @@
  * - Safe presentation error handling with reload/retry
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Pressable,
   RefreshControl,
@@ -32,6 +32,8 @@ import {
   StatusBadge,
 } from '../../../shared/components';
 import { useProjectDetail } from '../hooks/useProjectDetail';
+import { ChangeStatusModal } from '../components/ChangeStatusModal';
+import { CreateMilestoneModal } from '../components/CreateMilestoneModal';
 
 function formatDate(isoOrDate: string | null | undefined): string {
   if (!isoOrDate) {
@@ -54,6 +56,9 @@ export function ProjectDetailScreen() {
   const { projectId } = route.params;
   const { project, initialLoading, refreshing, error, refreshError, load, refresh } =
     useProjectDetail(projectId);
+
+  const [statusModalVisible, setStatusModalVisible] = useState(false);
+  const [createMilestoneVisible, setCreateMilestoneVisible] = useState(false);
 
   // 1. Initial Loading State
   if (initialLoading) {
@@ -184,6 +189,53 @@ export function ProjectDetailScreen() {
               </Text>
             </Text>
           </View>
+
+          {/* Action buttons gated by allowedActions */}
+          {project.allowedActions && project.allowedActions.length > 0 ? (
+            <View style={[styles.actionsRow, { borderTopColor: theme.colors.border }]}>
+              {project.allowedActions.includes('UPDATE') ? (
+                <Pressable
+                  onPress={() => navigation.navigate('EditProject', { projectId: project.id })}
+                  style={[
+                    styles.actionBtn,
+                    {
+                      borderColor: theme.colors.primary,
+                      backgroundColor: theme.colors.surfaceVariant,
+                      borderRadius: theme.radii.small,
+                    },
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Chỉnh sửa dự án"
+                  testID="btn-edit-project"
+                >
+                  <Text style={[theme.typography.caption, { color: theme.colors.primary, fontWeight: '600' }]}>
+                    Chỉnh sửa
+                  </Text>
+                </Pressable>
+              ) : null}
+
+              {project.allowedActions.includes('CHANGE_STATUS') ? (
+                <Pressable
+                  onPress={() => setStatusModalVisible(true)}
+                  style={[
+                    styles.actionBtn,
+                    {
+                      borderColor: theme.colors.border,
+                      backgroundColor: theme.colors.surfaceVariant,
+                      borderRadius: theme.radii.small,
+                    },
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Đổi trạng thái dự án"
+                  testID="btn-change-status"
+                >
+                  <Text style={[theme.typography.caption, { color: theme.colors.textPrimary, fontWeight: '600' }]}>
+                    Đổi trạng thái
+                  </Text>
+                </Pressable>
+              ) : null}
+            </View>
+          ) : null}
         </View>
 
         {/* Progress & Timeline Section */}
@@ -267,6 +319,17 @@ export function ProjectDetailScreen() {
             <Text style={[theme.typography.heading3, styles.sectionTitle, { color: theme.colors.textPrimary }]}>
               THÀNH VIÊN ({project.memberCount})
             </Text>
+            <Pressable
+              onPress={() => navigation.navigate('ProjectMembers', { projectId: project.id })}
+              style={styles.cardHeaderAction}
+              accessibilityRole="button"
+              accessibilityLabel="Quản lý thành viên dự án"
+              testID="btn-manage-members"
+            >
+              <Text style={[theme.typography.caption, { color: theme.colors.primary, fontWeight: '600' }]}>
+                Quản lý →
+              </Text>
+            </Pressable>
           </View>
           <Text style={[theme.typography.caption, styles.membersSubtext, { color: theme.colors.textSecondary }]}>
             Quản lý dự án: {project.manager.fullName} cùng {Math.max(0, project.memberCount - 1)} thành viên khác.
@@ -291,6 +354,17 @@ export function ProjectDetailScreen() {
             <Text style={[theme.typography.heading3, styles.sectionTitle, { color: theme.colors.textPrimary }]}>
               MỐC TIẾN ĐỘ ({project.milestones.length})
             </Text>
+            <Pressable
+              onPress={() => navigation.navigate('ProjectMilestones', { projectId: project.id })}
+              style={styles.cardHeaderAction}
+              accessibilityRole="button"
+              accessibilityLabel="Xem tất cả mốc tiến độ"
+              testID="btn-view-milestones"
+            >
+              <Text style={[theme.typography.caption, { color: theme.colors.primary, fontWeight: '600' }]}>
+                Xem tất cả →
+              </Text>
+            </Pressable>
           </View>
 
           {project.milestones.length === 0 ? (
@@ -322,6 +396,35 @@ export function ProjectDetailScreen() {
           )}
         </View>
       </ScrollView>
+
+      {/* Change Status Modal (SCR-PRJ-05) */}
+      {statusModalVisible ? (
+        <ChangeStatusModal
+          visible={statusModalVisible}
+          projectId={project.id}
+          currentStatus={project.status}
+          version={project.version}
+          onSuccess={() => {
+            refresh();
+          }}
+          onClose={() => setStatusModalVisible(false)}
+          onConflictReload={refresh}
+          testID="modal-change-status"
+        />
+      ) : null}
+
+      {/* Create Milestone Modal (SCR-PRJ-09) */}
+      {createMilestoneVisible ? (
+        <CreateMilestoneModal
+          visible={createMilestoneVisible}
+          projectId={project.id}
+          onSuccess={() => {
+            refresh();
+          }}
+          onClose={() => setCreateMilestoneVisible(false)}
+          testID="modal-create-milestone"
+        />
+      ) : null}
     </View>
   );
 }
@@ -461,5 +564,27 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontWeight: '600',
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 16,
+    paddingTop: 12,
+    borderTopWidth: 1,
+  },
+  actionBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderWidth: 1,
+    minHeight: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cardHeaderAction: {
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    minHeight: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
