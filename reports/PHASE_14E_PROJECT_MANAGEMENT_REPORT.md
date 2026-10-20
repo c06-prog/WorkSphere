@@ -101,6 +101,20 @@ All actions are strictly capability-gated via server `allowedActions` and user p
 
 ---
 
-## 5. Conclusion & Checkpoint
+## 5. Audit Reconciliation & Security Hardening
 
-Phase 14E core project management flows are complete, hardened, and verified against all canonical rules and wireframe specifications. Ready for commit, push, and handoff.
+### Source Truth Reconciliation
+- **Visible Tabs:** Exactly 5 visible tabs on `MainTabNavigator`: `Dashboard`, `Projects`, `Tasks`, `ServiceRequests`, `More`. (Prior audit wording mistake corrected; runtime navigation was never drifted).
+- **DELETE Project Member:** Backend `ProjectController.removeProjectMember` emits `HTTP 200 OK` with `ApiResponse<Void>` (`success: true`, `data: null`, `message: "Thành viên đã được xóa khỏi dự án"` via `ApiResponse.successNoContent`). Handled cleanly by `projectApi.removeProjectMember` and `apiClient.delete`. (Prior audit wording claiming 204 corrected).
+- **ESLint Warning Debt:** `PHASE_14E_LINT_WARNING_DEBT`: 48 total warnings (`react-native/no-inline-styles`: 47 introduced in 14E screens/components, 1 pre-existing in 14C; exit code 0, 0 errors). Classified LOW / non-blocking debt.
+
+### Security Capability & Freshness Hardening
+1. **Authoritative Member Capability Gate:** `ProjectMembersScreen` derives `canManageMembers = !!projectDetail?.allowedActions?.includes('MANAGE_MEMBERS')` from server `useProjectDetail(projectId)`. Fails closed (false) during initial loading or fetch failure. When false, all mutation entry points (`+ Thêm thành viên`, `Đổi vai trò`, `Xóa`) and mutation modals are omitted, protecting direct-route access. Read-only member list remains accessible.
+2. **Authoritative Milestone Capability Gate:** `ProjectMilestonesScreen` derives `canCreateMilestone = !!projectDetail?.allowedActions?.includes('CREATE_MILESTONE')` from server `useProjectDetail(projectId)`. Fails closed (false) during initial loading or fetch failure. When false, `+ Thêm mốc` action and `CreateMilestoneModal` are omitted, protecting direct-route access. Read-only milestone list remains accessible.
+3. **Edit Return Freshness:** `ProjectDetailScreen` integrates React Navigation focus lifecycle listener (`navigation.addListener('focus')`) with initial-mount guard (`isFirstMountRef`), guaranteeing exactly one GET on initial entry while triggering an authoritative refetch (`refresh()`) upon return from `EditProjectScreen` to replace stale state without manual pull-to-refresh.
+
+---
+
+## 6. Conclusion & Checkpoint
+
+Phase 14E core project management flows are complete, capability-hardened, and reconciled against all canonical rules and wireframe specifications. Ready for final narrow verification.

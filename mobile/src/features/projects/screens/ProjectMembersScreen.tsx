@@ -39,6 +39,7 @@ import {
   PROJECT_ROLE_VALUES,
 } from '../api/projectTypes';
 import { useProjectMembers } from '../hooks/useProjectMembers';
+import { useProjectDetail } from '../hooks/useProjectDetail';
 
 const ROLE_LABELS: Record<ProjectRole, string> = {
   PROJECT_MANAGER: 'Quản lý dự án',
@@ -83,6 +84,14 @@ export function ProjectMembersScreen() {
     addLocalMember,
   } = useProjectMembers(projectId);
 
+  // Authoritative capability derived strictly from server ProjectDetail.
+  // Fails closed (false) while loading, on fetch failure, or if MANAGE_MEMBERS is absent.
+  const {
+    project: projectDetail,
+    refresh: refreshProjectDetail,
+  } = useProjectDetail(projectId);
+  const canManageMembers = !!projectDetail?.allowedActions?.includes('MANAGE_MEMBERS');
+
   // Add Member State
   const [pickerVisible, setPickerVisible] = useState(false);
   const [pendingUser, setPendingUser] = useState<UserDirectoryItem | null>(null);
@@ -108,6 +117,7 @@ export function ProjectMembersScreen() {
 
   // 1. Handle Add Member
   const handleUserSelected = (users: UserDirectoryItem[]) => {
+    if (!canManageMembers) return;
     if (users.length > 0) {
       setPendingUser(users[0]);
       setSelectedRoleForAdd('MEMBER');
@@ -117,7 +127,7 @@ export function ProjectMembersScreen() {
   };
 
   const handleConfirmAddMember = async () => {
-    if (!pendingUser) return;
+    if (!canManageMembers || !pendingUser) return;
     setActionError(null);
     setAddingMember(true);
     try {
@@ -137,13 +147,14 @@ export function ProjectMembersScreen() {
 
   // 2. Handle Edit Role
   const handleOpenEditRole = (member: ProjectMember) => {
+    if (!canManageMembers) return;
     setEditingMember(member);
     setSelectedRoleForEdit(member.projectRole);
     setActionError(null);
   };
 
   const handleConfirmEditRole = async () => {
-    if (!editingMember) return;
+    if (!canManageMembers || !editingMember) return;
     setActionError(null);
     setUpdatingRole(true);
     try {
@@ -162,13 +173,14 @@ export function ProjectMembersScreen() {
 
   // 3. Handle Remove Member
   const handleOpenRemoveDialog = (member: ProjectMember) => {
+    if (!canManageMembers) return;
     setRemovingMember(member);
     setRemoveDialogVisible(true);
     setActionError(null);
   };
 
   const handleConfirmRemove = async () => {
-    if (!removingMember) return;
+    if (!canManageMembers || !removingMember) return;
     setActionError(null);
     setRemoving(true);
     try {
@@ -201,23 +213,25 @@ export function ProjectMembersScreen() {
         >
           <Text style={[theme.typography.body, { color: theme.colors.primary, fontWeight: '600' }]}>← Quay lại</Text>
         </Pressable>
-        <Pressable
-          onPress={() => {
-            setActionError(null);
-            setPickerVisible(true);
-          }}
-          style={[
-            styles.addMemberBtn,
-            { backgroundColor: theme.colors.primary, borderRadius: theme.radii.medium },
-          ]}
-          accessibilityRole="button"
-          accessibilityLabel="Thêm thành viên mới vào dự án"
-          testID="btn-add-member"
-        >
-          <Text style={[theme.typography.caption, { color: theme.colors.onPrimary, fontWeight: '600' }]}>
-            + Thêm thành viên
-          </Text>
-        </Pressable>
+        {canManageMembers ? (
+          <Pressable
+            onPress={() => {
+              setActionError(null);
+              setPickerVisible(true);
+            }}
+            style={[
+              styles.addMemberBtn,
+              { backgroundColor: theme.colors.primary, borderRadius: theme.radii.medium },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Thêm thành viên mới vào dự án"
+            testID="btn-add-member"
+          >
+            <Text style={[theme.typography.caption, { color: theme.colors.onPrimary, fontWeight: '600' }]}>
+              + Thêm thành viên
+            </Text>
+          </Pressable>
+        ) : null}
       </View>
 
       <Text style={[theme.typography.heading1, styles.titleText, { color: theme.colors.textPrimary }]}>
@@ -352,7 +366,10 @@ export function ProjectMembersScreen() {
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
-            onRefresh={refresh}
+            onRefresh={() => {
+              refresh();
+              refreshProjectDetail();
+            }}
             colors={[theme.colors.primary]}
             tintColor={theme.colors.primary}
           />
@@ -425,38 +442,40 @@ export function ProjectMembersScreen() {
               </View>
             </View>
 
-            {/* Member Actions */}
-            <View style={[styles.cardActionsRow, { borderTopColor: theme.colors.border }]}>
-              <Pressable
-                onPress={() => handleOpenEditRole(item)}
-                style={styles.actionBtn}
-                accessibilityRole="button"
-                accessibilityLabel={`Đổi vai trò thành viên ${item.fullName}`}
-                testID={`btn-edit-role-${item.id}`}
-              >
-                <Text style={[theme.typography.caption, { color: theme.colors.primary, fontWeight: '600' }]}>
-                  Đổi vai trò
-                </Text>
-              </Pressable>
+            {/* Member Actions - Only rendered if user has authoritative MANAGE_MEMBERS capability */}
+            {canManageMembers ? (
+              <View style={[styles.cardActionsRow, { borderTopColor: theme.colors.border }]}>
+                <Pressable
+                  onPress={() => handleOpenEditRole(item)}
+                  style={styles.actionBtn}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Đổi vai trò thành viên ${item.fullName}`}
+                  testID={`btn-edit-role-${item.id}`}
+                >
+                  <Text style={[theme.typography.caption, { color: theme.colors.primary, fontWeight: '600' }]}>
+                    Đổi vai trò
+                  </Text>
+                </Pressable>
 
-              <Pressable
-                onPress={() => handleOpenRemoveDialog(item)}
-                style={styles.actionBtn}
-                accessibilityRole="button"
-                accessibilityLabel={`Xóa thành viên ${item.fullName}`}
-                testID={`btn-remove-member-${item.id}`}
-              >
-                <Text style={[theme.typography.caption, { color: theme.colors.error, fontWeight: '600' }]}>
-                  Xóa
-                </Text>
-              </Pressable>
-            </View>
+                <Pressable
+                  onPress={() => handleOpenRemoveDialog(item)}
+                  style={styles.actionBtn}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Xóa thành viên ${item.fullName}`}
+                  testID={`btn-remove-member-${item.id}`}
+                >
+                  <Text style={[theme.typography.caption, { color: theme.colors.error, fontWeight: '600' }]}>
+                    Xóa
+                  </Text>
+                </Pressable>
+              </View>
+            ) : null}
           </View>
         )}
       />
 
       {/* 1. User Directory Picker Modal */}
-      {pickerVisible ? (
+      {canManageMembers && pickerVisible ? (
         <UserPickerModal
           visible={pickerVisible}
           mode="single"
@@ -470,7 +489,7 @@ export function ProjectMembersScreen() {
       ) : null}
 
       {/* 2. Select Role Dialog for Add Member */}
-      {roleModalVisible && pendingUser ? (
+      {canManageMembers && roleModalVisible && pendingUser ? (
         <Modal
           visible={roleModalVisible}
           transparent
@@ -560,7 +579,7 @@ export function ProjectMembersScreen() {
       ) : null}
 
       {/* 3. Edit Role Modal */}
-      {editingMember ? (
+      {canManageMembers && editingMember ? (
         <Modal
           visible={!!editingMember}
           transparent
@@ -648,7 +667,7 @@ export function ProjectMembersScreen() {
 
       {/* 4. Remove Member Confirmation Dialog */}
       <ConfirmationDialog
-        visible={removeDialogVisible}
+        visible={canManageMembers && removeDialogVisible}
         title="Xóa thành viên"
         message={
           removingMember

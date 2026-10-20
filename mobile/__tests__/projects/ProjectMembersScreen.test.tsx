@@ -71,8 +71,30 @@ describe('ProjectMembersScreen (SCR-PRJ-06 & SCR-PRJ-07)', () => {
     active: true,
   };
 
+  const mockProjectDetail = {
+    id: 'project-1',
+    code: 'PRJ-1',
+    name: 'Test Project',
+    description: 'Test Desc',
+    status: 'ACTIVE' as const,
+    priority: 'HIGH' as const,
+    manager: { id: 'user-pm', fullName: 'Trưởng Dự Án', avatarUrl: null },
+    department: null,
+    startDate: '2026-09-01',
+    plannedEndDate: '2026-12-31',
+    actualEndDate: null,
+    progressPercent: 50,
+    memberCount: 2,
+    milestones: [],
+    allowedActions: ['UPDATE', 'MANAGE_MEMBERS', 'CREATE_MILESTONE'],
+    version: 1,
+    createdAt: '2026-09-01T00:00:00Z',
+    updatedAt: '2026-09-01T00:00:00Z',
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
+    (projectApi.getProject as jest.Mock).mockResolvedValue(mockProjectDetail);
     (projectApi.listMembers as jest.Mock).mockResolvedValue({
       items: [mockMemberPM, mockMemberDev],
       page: 0,
@@ -251,5 +273,82 @@ describe('ProjectMembersScreen (SCR-PRJ-06 & SCR-PRJ-07)', () => {
       // Last PM must still be in list
       expect(getByTestId('member-item-mem-pm')).toBeTruthy();
     });
+  });
+
+  it('7. direct route without MANAGE_MEMBERS: renders read-only member list and hides all mutation controls', async () => {
+    (projectApi.getProject as jest.Mock).mockResolvedValue({
+      ...mockProjectDetail,
+      allowedActions: ['UPDATE', 'CREATE_TASK'], // No MANAGE_MEMBERS
+    });
+
+    const { getByTestId, queryByTestId, getByText } = await renderScreen();
+
+    await waitFor(() => {
+      expect(getByTestId('screen-project-members')).toBeTruthy();
+      expect(getByText('Thành viên dự án (2)')).toBeTruthy();
+    });
+
+    // Read list remains visible
+    expect(getByTestId('member-item-mem-pm')).toBeTruthy();
+    expect(getByTestId('member-item-mem-dev')).toBeTruthy();
+
+    // All mutation controls must be completely absent
+    expect(queryByTestId('btn-add-member')).toBeNull();
+    expect(queryByTestId('btn-edit-role-mem-dev')).toBeNull();
+    expect(queryByTestId('btn-remove-member-mem-dev')).toBeNull();
+    expect(queryByTestId('btn-edit-role-mem-pm')).toBeNull();
+    expect(queryByTestId('btn-remove-member-mem-pm')).toBeNull();
+  });
+
+  it('8. direct route with MANAGE_MEMBERS: renders mutation controls for members', async () => {
+    (projectApi.getProject as jest.Mock).mockResolvedValue({
+      ...mockProjectDetail,
+      allowedActions: ['MANAGE_MEMBERS'],
+    });
+
+    const { getByTestId } = await renderScreen();
+
+    await waitFor(() => {
+      expect(getByTestId('screen-project-members')).toBeTruthy();
+    });
+
+    expect(getByTestId('btn-add-member')).toBeTruthy();
+    expect(getByTestId('btn-edit-role-mem-dev')).toBeTruthy();
+    expect(getByTestId('btn-remove-member-mem-dev')).toBeTruthy();
+  });
+
+  it('9. capability loading fail-closed: mutation controls absent while ProjectDetail is loading', async () => {
+    // getProject never resolves immediately
+    (projectApi.getProject as jest.Mock).mockReturnValue(new Promise(() => {}));
+
+    const { getByTestId, queryByTestId } = await renderScreen();
+
+    await waitFor(() => {
+      expect(getByTestId('screen-project-members')).toBeTruthy();
+    });
+
+    // Fails closed from first render: no mutation buttons
+    expect(queryByTestId('btn-add-member')).toBeNull();
+    expect(queryByTestId('btn-edit-role-mem-dev')).toBeNull();
+    expect(queryByTestId('btn-remove-member-mem-dev')).toBeNull();
+  });
+
+  it('10. capability fetch error fail-closed: mutation controls absent if ProjectDetail fetch fails', async () => {
+    (projectApi.getProject as jest.Mock).mockRejectedValue(new Error('Network error'));
+
+    const { getByTestId, queryByTestId, getByText } = await renderScreen();
+
+    await waitFor(() => {
+      expect(getByTestId('screen-project-members')).toBeTruthy();
+      expect(getByText('Thành viên dự án (2)')).toBeTruthy();
+    });
+
+    // Member list still renders (read-only)
+    expect(getByTestId('member-item-mem-pm')).toBeTruthy();
+
+    // Mutation controls fail-closed
+    expect(queryByTestId('btn-add-member')).toBeNull();
+    expect(queryByTestId('btn-edit-role-mem-dev')).toBeNull();
+    expect(queryByTestId('btn-remove-member-mem-dev')).toBeNull();
   });
 });

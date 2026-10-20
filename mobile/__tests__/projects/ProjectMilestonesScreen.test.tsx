@@ -55,8 +55,30 @@ describe('ProjectMilestonesScreen (SCR-PRJ-08 & SCR-PRJ-09)', () => {
     version: 1,
   };
 
+  const mockProjectDetail = {
+    id: 'project-1',
+    code: 'PRJ-1',
+    name: 'Test Project',
+    description: 'Test Desc',
+    status: 'ACTIVE' as const,
+    priority: 'HIGH' as const,
+    manager: { id: 'user-pm', fullName: 'Trưởng Dự Án', avatarUrl: null },
+    department: null,
+    startDate: '2026-09-01',
+    plannedEndDate: '2026-12-31',
+    actualEndDate: null,
+    progressPercent: 50,
+    memberCount: 2,
+    milestones: [],
+    allowedActions: ['UPDATE', 'MANAGE_MEMBERS', 'CREATE_MILESTONE'],
+    version: 1,
+    createdAt: '2026-09-01T00:00:00Z',
+    updatedAt: '2026-09-01T00:00:00Z',
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
+    (projectApi.getProject as jest.Mock).mockResolvedValue(mockProjectDetail);
     (projectApi.listMilestones as jest.Mock).mockResolvedValue([
       mockMilestone1,
       mockMilestone2,
@@ -161,5 +183,67 @@ describe('ProjectMilestonesScreen (SCR-PRJ-08 & SCR-PRJ-09)', () => {
     });
 
     expect(mockGoBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('5. direct route without CREATE_MILESTONE: list is visible but "+ Thêm mốc" action is absent', async () => {
+    (projectApi.getProject as jest.Mock).mockResolvedValue({
+      ...mockProjectDetail,
+      allowedActions: ['UPDATE', 'MANAGE_MEMBERS'], // No CREATE_MILESTONE
+    });
+
+    const { getByTestId, queryByTestId, getByText } = await renderScreen();
+
+    await waitFor(() => {
+      expect(getByTestId('screen-project-milestones')).toBeTruthy();
+      expect(getByText('Mốc tiến độ (2)')).toBeTruthy();
+    });
+
+    // Milestones list still visible
+    expect(getByTestId('milestone-item-m-1')).toBeTruthy();
+    expect(getByTestId('milestone-item-m-2')).toBeTruthy();
+
+    // Create action must be absent
+    expect(queryByTestId('btn-create-milestone')).toBeNull();
+  });
+
+  it('6. direct route with CREATE_MILESTONE: "+ Thêm mốc" action is present and active', async () => {
+    (projectApi.getProject as jest.Mock).mockResolvedValue({
+      ...mockProjectDetail,
+      allowedActions: ['CREATE_MILESTONE'],
+    });
+
+    const { getByTestId } = await renderScreen();
+
+    await waitFor(() => {
+      expect(getByTestId('screen-project-milestones')).toBeTruthy();
+    });
+
+    expect(getByTestId('btn-create-milestone')).toBeTruthy();
+  });
+
+  it('7. capability loading fail-closed: "+ Thêm mốc" is absent while ProjectDetail is loading', async () => {
+    (projectApi.getProject as jest.Mock).mockReturnValue(new Promise(() => {}));
+
+    const { getByTestId, queryByTestId } = await renderScreen();
+
+    await waitFor(() => {
+      expect(getByTestId('screen-project-milestones')).toBeTruthy();
+    });
+
+    expect(queryByTestId('btn-create-milestone')).toBeNull();
+  });
+
+  it('8. capability failure fail-closed: "+ Thêm mốc" is absent when ProjectDetail fetch fails', async () => {
+    (projectApi.getProject as jest.Mock).mockRejectedValue(new Error('Network error'));
+
+    const { getByTestId, queryByTestId, getByText } = await renderScreen();
+
+    await waitFor(() => {
+      expect(getByTestId('screen-project-milestones')).toBeTruthy();
+      expect(getByText('Mốc tiến độ (2)')).toBeTruthy();
+    });
+
+    expect(getByTestId('milestone-item-m-1')).toBeTruthy();
+    expect(queryByTestId('btn-create-milestone')).toBeNull();
   });
 });

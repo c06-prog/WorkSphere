@@ -13,7 +13,7 @@
  * - Safe presentation error handling with reload/retry
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Pressable,
   RefreshControl,
@@ -59,6 +59,29 @@ export function ProjectDetailScreen() {
 
   const [statusModalVisible, setStatusModalVisible] = useState(false);
   const [createMilestoneVisible, setCreateMilestoneVisible] = useState(false);
+
+  const isFirstMountRef = useRef(true);
+
+  // Reset first-mount flag if projectId changes
+  useEffect(() => {
+    isFirstMountRef.current = true;
+  }, [projectId]);
+
+  // Focus-aware refresh for return-from-edit freshness without initial duplicate GET
+  useEffect(() => {
+    if (!navigation?.addListener) return;
+    const unsubscribe = navigation.addListener('focus', () => {
+      if (isFirstMountRef.current) {
+        isFirstMountRef.current = false;
+        return;
+      }
+      refresh();
+    });
+
+    return () => {
+      unsubscribe?.();
+    };
+  }, [navigation, refresh]);
 
   // 1. Initial Loading State
   if (initialLoading) {

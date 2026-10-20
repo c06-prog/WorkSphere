@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, fireEvent } from '@testing-library/react-native';
+import { render, fireEvent, waitFor, cleanup, act } from '@testing-library/react-native';
 import { ProjectDetailScreen } from '../../src/features/projects/screens/ProjectDetailScreen';
 import { useProjectDetail } from '../../src/features/projects/hooks/useProjectDetail';
 import { ProjectDetail } from '../../src/features/projects/api/projectTypes';
@@ -13,6 +13,7 @@ jest.mock('../../src/features/projects/hooks/useProjectDetail');
 
 const mockNavigate = jest.fn();
 const mockGoBack = jest.fn();
+const mockAddListener = jest.fn();
 
 jest.mock('@react-navigation/native', () => {
   const actualNav = jest.requireActual('@react-navigation/native');
@@ -21,6 +22,7 @@ jest.mock('@react-navigation/native', () => {
     useNavigation: () => ({
       navigate: mockNavigate,
       goBack: mockGoBack,
+      addListener: mockAddListener,
     }),
     useRoute: () => ({
       params: { projectId: '11111111-1111-1111-1111-111111111111' },
@@ -96,6 +98,11 @@ describe('ProjectDetailScreen Component', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockAddListener.mockReturnValue(jest.fn());
+  });
+
+  afterEach(async () => {
+    await cleanup();
   });
 
   it('1. renders loading indicator when initialLoading is true', async () => {
@@ -286,5 +293,45 @@ describe('ProjectDetailScreen Component', () => {
 
     expect(queryByTestId('btn-edit-project')).toBeNull();
     expect(queryByTestId('btn-change-status')).toBeNull();
+  });
+
+  it('10. focus lifecycle: initial entry does not trigger duplicate refresh, but focus return after Edit triggers authoritative refresh', async () => {
+    let focusCb: (() => void) | null = null;
+    mockAddListener.mockImplementation((event: string, cb: () => void) => {
+      if (event === 'focus') {
+        focusCb = cb;
+      }
+      return jest.fn();
+    });
+
+    const mockRefresh = jest.fn();
+    (useProjectDetail as jest.Mock).mockReturnValue({
+      ...defaultMockHook,
+      refresh: mockRefresh,
+    });
+
+    render(
+      <AppProviders>
+        <ProjectDetailScreen />
+      </AppProviders>
+    );
+
+    // Initial listener registered after render/effects flush
+    await waitFor(() => {
+      expect(mockAddListener).toHaveBeenCalledWith('focus', expect.any(Function));
+    });
+    expect(focusCb).toBeTruthy();
+
+    // 1. First focus event on screen entry: must NOT trigger refresh (guarded against duplicate initial GET)
+    act(() => {
+      focusCb!();
+    });
+    expect(mockRefresh).not.toHaveBeenCalled();
+
+    // 2. Return from Edit (subsequent focus): MUST trigger authoritative refresh to replace stale state
+    act(() => {
+      focusCb!();
+    });
+    expect(mockRefresh).toHaveBeenCalledTimes(1);
   });
 });

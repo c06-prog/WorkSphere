@@ -35,6 +35,7 @@ import {
   MILESTONE_STATUS_VALUES,
 } from '../api/projectTypes';
 import { CreateMilestoneModal } from '../components/CreateMilestoneModal';
+import { useProjectDetail } from '../hooks/useProjectDetail';
 
 function formatDate(isoOrDate: string | null | undefined): string {
   if (!isoOrDate) return 'Chưa xác định';
@@ -68,6 +69,14 @@ export function ProjectMilestonesScreen() {
 
   const [statusFilter, setStatusFilter] = useState<MilestoneStatus | undefined>(undefined);
   const [createModalVisible, setCreateModalVisible] = useState(false);
+
+  // Authoritative capability derived strictly from server ProjectDetail.
+  // Fails closed (false) while loading, on fetch failure, or if CREATE_MILESTONE is absent.
+  const {
+    project: projectDetail,
+    refresh: refreshProjectDetail,
+  } = useProjectDetail(projectId);
+  const canCreateMilestone = !!projectDetail?.allowedActions?.includes('CREATE_MILESTONE');
 
   const mountedRef = useRef(true);
 
@@ -133,20 +142,22 @@ export function ProjectMilestonesScreen() {
           <Text style={[theme.typography.body, { color: theme.colors.primary, fontWeight: '600' }]}>← Quay lại</Text>
         </Pressable>
 
-        <Pressable
-          onPress={() => setCreateModalVisible(true)}
-          style={[
-            styles.createBtn,
-            { backgroundColor: theme.colors.primary, borderRadius: theme.radii.medium },
-          ]}
-          accessibilityRole="button"
-          accessibilityLabel="Tạo mốc tiến độ mới"
-          testID="btn-create-milestone"
-        >
-          <Text style={[theme.typography.caption, { color: theme.colors.onPrimary, fontWeight: '600' }]}>
-            + Thêm mốc
-          </Text>
-        </Pressable>
+        {canCreateMilestone ? (
+          <Pressable
+            onPress={() => setCreateModalVisible(true)}
+            style={[
+              styles.createBtn,
+              { backgroundColor: theme.colors.primary, borderRadius: theme.radii.medium },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Tạo mốc tiến độ mới"
+            testID="btn-create-milestone"
+          >
+            <Text style={[theme.typography.caption, { color: theme.colors.onPrimary, fontWeight: '600' }]}>
+              + Thêm mốc
+            </Text>
+          </Pressable>
+        ) : null}
       </View>
 
       <Text style={[theme.typography.heading1, styles.titleText, { color: theme.colors.textPrimary }]}>
@@ -290,7 +301,9 @@ export function ProjectMilestonesScreen() {
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
-            onRefresh={() => loadMilestones(true)}
+            onRefresh={async () => {
+              await Promise.all([loadMilestones(true), refreshProjectDetail()]);
+            }}
             colors={[theme.colors.primary]}
             tintColor={theme.colors.primary}
           />
@@ -347,14 +360,16 @@ export function ProjectMilestonesScreen() {
         )}
       />
 
-      {/* Create Milestone Modal (SCR-PRJ-09) */}
-      <CreateMilestoneModal
-        visible={createModalVisible}
-        projectId={projectId}
-        onSuccess={handleMilestoneCreated}
-        onClose={() => setCreateModalVisible(false)}
-        testID="modal-create-milestone"
-      />
+      {/* Create Milestone Modal (SCR-PRJ-09) - Gated strictly by canCreateMilestone */}
+      {canCreateMilestone && createModalVisible ? (
+        <CreateMilestoneModal
+          visible={createModalVisible}
+          projectId={projectId}
+          onSuccess={handleMilestoneCreated}
+          onClose={() => setCreateModalVisible(false)}
+          testID="modal-create-milestone"
+        />
+      ) : null}
     </View>
   );
 }

@@ -9,12 +9,22 @@
 - Phase 13 Audit Conclusion: `PHASE_13_FINAL_AUDIT_PASS_WITH_E2E_DEFERRALS`
 - Phase 14 Baseline Checkpoint: `785c155b69309284066252701ec1554d35d4e795` (`docs(phase14): record architecture decision D-061 phase 14 contract freeze`)
 - Phase 14A Implementation Checkpoint: `55cc13e6372ba4374d3533fe3f82f7afcd84dcff` (`feat(mobile): add phase 14 dashboard project contracts`)
-- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects (IN_PROGRESS): Subphase 14A AUDITED, Subphase 14B HARDENED, Subphase 14C HARDENED, Subphase 14D AUDITED, Subphases 14E-G1 & 14E-G2 AUDITED. Subphase 14E Core Project Management Flows (SCR-PRJ-03..09) IMPLEMENTED, TESTED, & ASSEMBLE_DEBUG VERIFIED.
+- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects (IN_PROGRESS): Subphase 14A AUDITED, Subphase 14B HARDENED, Subphase 14C HARDENED, Subphase 14D AUDITED, Subphases 14E-G1 & 14E-G2 AUDITED. Subphase 14E Core Project Management Flows (SCR-PRJ-03..09) IMPLEMENTED, HARDENED, & PENDING FINAL NARROW VERIFICATION. Phase 14F: NOT STARTED.
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening
 
-- Latest Validated Implementation: Subphase 14E Core Project Management Actions (`SCR-PRJ-03` to `SCR-PRJ-09`)
+- Latest Validated Implementation: Subphase 14E Security Capability & Freshness Hardening (`SCR-PRJ-03` to `SCR-PRJ-09`)
+- Subphase 14E Hardening Invariants:
+  - `ProjectMembersScreen.tsx`: Authoritative `canManageMembers = !!projectDetail?.allowedActions?.includes('MANAGE_MEMBERS')` derived from server `useProjectDetail(projectId)`. Fails closed (false) while loading or on fetch error. When false, mutation controls (`+ Thêm thành viên`, `Đổi vai trò`, `Xóa`) and modals are omitted. Read-only member list remains accessible under `PROJECT_READ`.
+  - `ProjectMilestonesScreen.tsx`: Authoritative `canCreateMilestone = !!projectDetail?.allowedActions?.includes('CREATE_MILESTONE')` derived from server `useProjectDetail(projectId)`. Fails closed (false) while loading or on fetch error. When false, `+ Thêm mốc` action and `CreateMilestoneModal` are omitted. Read-only milestone list remains accessible under `PROJECT_READ`.
+  - `ProjectDetailScreen.tsx`: Integrated focus lifecycle listener (`navigation.addListener('focus')`) with initial-mount guard (`isFirstMountRef`), avoiding duplicate initial GET while refreshing project details upon return from `EditProjectScreen` to replace stale state without manual pull-to-refresh.
+  - Report Reconciliation: Corrected audit metadata in `reports/PHASE_14E_PROJECT_MANAGEMENT_REPORT.md` (exact visible tabs: Dashboard, Projects, Tasks, ServiceRequests, More; DELETE member status: HTTP 200 OK with `ApiResponse.successNoContent`).
+  - ESLint Debt: Recorded `PHASE_14E_LINT_WARNING_DEBT` (48 warnings for react-native/no-inline-styles: 47 from 14E screens, 1 pre-existing; exit code 0, 0 errors, classified LOW / non-blocking).
+  - Mobile Tests: 61 suites, 528 tests PASS (0 failures, 0 skipped, +9 hardening tests).
+  - Static Quality: `eslint .` PASS (0 errors), `tsc --noEmit` PASS (0 errors).
+  - Android Build: `.\gradlew.bat assembleDebug --no-daemon` BUILD SUCCESSFUL (203 actionable tasks, exit code 0).
+  - Next Action: `FINAL NARROW VERIFY PHASE 14E HARDENING`. Phase 14F: NOT STARTED.
 - Subphase 14E Scope & Invariants:
   - `SCR-PRJ-03`: `CreateProjectScreen.tsx` with department selector adapter (`features/organization/`), initial members multi-picker (`features/directory/`), client-side date range validation (`plannedEndDate >= startDate`), and permission-gating on `ProjectsScreen.tsx` (`+ Tạo mới` button checking `PROJECT_CREATE`).
   - `SCR-PRJ-04`: `EditProjectScreen.tsx` with authoritative prefill from `GET /projects/{projectId}`, immutable `code` and `department` fields, version-tracking optimistic locking, and HTTP 409 conflict reload prompt ("Tải lại dữ liệu").
