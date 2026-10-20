@@ -9,12 +9,26 @@
 - Phase 13 Audit Conclusion: `PHASE_13_FINAL_AUDIT_PASS_WITH_E2E_DEFERRALS`
 - Phase 14 Baseline Checkpoint: `785c155b69309284066252701ec1554d35d4e795` (`docs(phase14): record architecture decision D-061 phase 14 contract freeze`)
 - Phase 14A Implementation Checkpoint: `55cc13e6372ba4374d3533fe3f82f7afcd84dcff` (`feat(mobile): add phase 14 dashboard project contracts`)
-- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects (IN_PROGRESS): Subphase 14A AUDITED, Subphase 14B HARDENED, Subphase 14C HARDENED, Subphase 14D AUDITED, Subphases 14E-G1 & 14E-G2 AUDITED. Subphase 14E Core Project Management Flows (SCR-PRJ-03..09) IMPLEMENTED, HARDENED, & PENDING FINAL NARROW VERIFICATION. Phase 14F: NOT STARTED.
+- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects: Subphases 14A..14D CLOSED/AUDITED, Subphases 14E-G1 & 14E-G2 CLOSED/AUDITED, Subphase 14E CLOSED/HARDENED, Subphase 14F IMPLEMENTED & VALIDATED. Phase 14 IMPLEMENTATION COMPLETE, AWAITING FINAL INDEPENDENT AUDIT. Phase 15: NOT STARTED.
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening
 
-- Latest Validated Implementation: Subphase 14E Security Capability & Freshness Hardening (`SCR-PRJ-03` to `SCR-PRJ-09`)
+- Latest Validated Implementation: Subphase 14F Integration, Regression & Security Hardening
+- Subphase 14F Validations & Invariants:
+  - Phase 14 Inventory: Complete validation of all 10 Phase 14 screens (`SCR-MAIN-01`, `SCR-PRJ-01`..`09`). All routes registered, wired, security gated, and tested.
+  - Navigation: Exactly 5 visible bottom tabs on `MainTabNavigator` (`Dashboard`, `Projects`, `Tasks`, `ServiceRequests`, `More`). All 9 auxiliary routes hidden via `tabBarButton: () => null`.
+  - Session Integration: Phase 13 session handling preserved; all requests via `apiClient`; single-flight refresh; zero direct token storage or manual 401 handling.
+  - Data Persistence: Zero persistent storage of authenticated project/directory data in `AsyncStorage` or `Keychain`. State cleanly destroyed on logout/unmount (`PHASE_14_AUTHENTICATED_DATA_PERSISTENCE_RISK` = ABSENT).
+  - Identifier & Type Safety: Zero raw UUIDs or version numbers leak into user-facing text or accessibility labels. Zero `@ts-ignore`, zero `@ts-expect-error`, zero `eslint-disable`. Single runtime guard in `projectApi.ts`.
+  - Concurrency & Mutation Safety: Submit locks across all 7 mutation flows prevent duplicate submits on rapid taps. Focus lifecycle with initial-mount guard maintains freshness on return from edit.
+  - Mobile Regression: 61/61 test suites, 528/528 tests PASS (0 failures, 0 skipped, 0 snapshots). TypeScript 0 errors. ESLint 0 errors, 48 warnings (`PHASE_14E_LINT_WARNING_DEBT` low/non-blocking).
+  - Backend Regression: 31/31 targeted integration tests PASS (`ProjectMockMvcTest`, `DashboardMockMvcTest`, `UserDirectoryMockMvcTest`), Checkstyle 0 violations, BUILD SUCCESS.
+  - Android Clean Build: `gradlew.bat clean assembleDebug --no-daemon` BUILD SUCCESSFUL in 5m 51s (213 actionable tasks). APK generated at `mobile/android/app/build/outputs/apk/debug/app-debug.apk` (157,662,829 bytes).
+  - Emulator Smoke: Installed and launched on `emulator-5554` (`Window{... MainActivity}` PID 22064, zero crash, `PRE_AUTH_ANDROID_SMOKE_PASS`).
+  - E2E Credentials: E2E environment variables absent (`PHASE_14_AUTH_E2E_CREDENTIALS_NOT_AVAILABLE_SAFE_SKIP`). Mutation E2E safely deferred (`PHASE_14_MUTATION_E2E_DEFERRED`). Offline device E2E deferred (`PHASE_14_OFFLINE_DEVICE_E2E_DEFERRED`).
+  - Next Action: `FINAL INDEPENDENT AUDIT PHASE 14`. Phase 15: NOT STARTED.
+- Prior Validated Implementation: Subphase 14E Security Capability & Freshness Hardening (`SCR-PRJ-03` to `SCR-PRJ-09`)
 - Subphase 14E Hardening Invariants:
   - `ProjectMembersScreen.tsx`: Authoritative `canManageMembers = !!projectDetail?.allowedActions?.includes('MANAGE_MEMBERS')` derived from server `useProjectDetail(projectId)`. Fails closed (false) while loading or on fetch error. When false, mutation controls (`+ Thêm thành viên`, `Đổi vai trò`, `Xóa`) and modals are omitted. Read-only member list remains accessible under `PROJECT_READ`.
   - `ProjectMilestonesScreen.tsx`: Authoritative `canCreateMilestone = !!projectDetail?.allowedActions?.includes('CREATE_MILESTONE')` derived from server `useProjectDetail(projectId)`. Fails closed (false) while loading or on fetch error. When false, `+ Thêm mốc` action and `CreateMilestoneModal` are omitted. Read-only milestone list remains accessible under `PROJECT_READ`.
