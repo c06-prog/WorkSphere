@@ -20,6 +20,7 @@ import { CreateTaskScreen } from '../../src/features/tasks/screens/CreateTaskScr
 import { projectApi } from '../../src/features/projects/api/projectApi';
 import { ProjectMember, ProjectSummary } from '../../src/features/projects/api/projectTypes';
 import { AppProviders } from '../../src/app/providers';
+import { AuthContext } from '../../src/app/auth/AuthProvider';
 
 jest.mock('react-native-safe-area-context', () =>
   require('react-native-safe-area-context/jest/mock').default
@@ -230,9 +231,24 @@ describe('Cross-Project Candidate Race & Invalidation (Phase 15D)', () => {
       });
     });
 
+    const authContextValue: any = {
+      currentUser: {
+        id: 'user-task-creator',
+        fullName: 'Task Creator',
+        email: 'creator@worksphere.com',
+        username: 'taskcreator',
+        roles: ['PROJECT_MANAGER'],
+        permissions: ['TASK_CREATE'],
+      },
+      initialized: true,
+      sessionState: 'AUTHENTICATED',
+    };
+
     const { getByTestId, getByText, queryByText } = await render(
       <AppProviders>
-        <CreateTaskScreen />
+        <AuthContext.Provider value={authContextValue}>
+          <CreateTaskScreen />
+        </AuthContext.Provider>
       </AppProviders>
     );
 

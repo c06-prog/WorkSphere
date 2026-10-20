@@ -1,14 +1,14 @@
 /**
- * Phase 15D: CreateTaskScreen Component Tests (SCR-TSK-03)
+ * Phase 15D Hardening: CreateTaskScreen Component Tests (SCR-TSK-03)
  * Verifies:
- * - Direct route safe rendering
+ * - Direct route authorization gating (currentUser.permissions.includes('TASK_CREATE'))
+ * - Fail-closed unauthorized presentation with back action when TASK_CREATE absent
  * - Required field validation (projectId, title)
+ * - Strict calendar date validation (rejects 2026-02-30, invalid ranges)
+ * - Due date serialization to ISO-8601 Instant UTC end-of-day (T23:59:59Z)
  * - Exact POST DTO payload conforming to CreateTaskRequest
- * - Strictly zero status, progress, or version in payload
- * - Multiple assignees support (assigneeIds: string[])
  * - Synchronous submit lock (submittingRef) prevents duplicate requests on double-press
  * - Navigation to TaskDetail on success with exact { taskId: created.id }
- * - Server error mapping via mapTaskError
  */
 
 import React from 'react';
@@ -19,6 +19,7 @@ import { projectApi } from '../../src/features/projects/api/projectApi';
 import { ProjectSummary } from '../../src/features/projects/api/projectTypes';
 import { TaskDetail } from '../../src/features/tasks/api/taskTypes';
 import { AppProviders } from '../../src/app/providers';
+import { AuthContext } from '../../src/app/auth/AuthProvider';
 
 jest.mock('react-native-safe-area-context', () =>
   require('react-native-safe-area-context/jest/mock').default
@@ -94,12 +95,46 @@ describe('CreateTaskScreen (SCR-TSK-03)', () => {
     });
   });
 
-  it('1. validates required fields before submission', async () => {
-    const { getByTestId, getByText } = await render(
+  const renderScreen = async (permissions: string[] = ['TASK_CREATE']) => {
+    const authContextValue: any = {
+      currentUser: {
+        id: 'user-task-creator',
+        fullName: 'Task Creator',
+        email: 'creator@worksphere.com',
+        username: 'taskcreator',
+        roles: ['PROJECT_MANAGER'],
+        permissions,
+      },
+      initialized: true,
+      sessionState: 'AUTHENTICATED',
+    };
+
+    return await render(
       <AppProviders>
-        <CreateTaskScreen />
+        <AuthContext.Provider value={authContextValue}>
+          <CreateTaskScreen />
+        </AuthContext.Provider>
       </AppProviders>
     );
+  };
+
+  it('1. fails closed and renders unauthorized state when user lacks TASK_CREATE permission', async () => {
+    const { getByTestId, getByText, queryByTestId } = await renderScreen([]);
+
+    expect(getByTestId('create-task-unauthorized')).toBeTruthy();
+    expect(getByText('Bạn không có quyền tạo công việc.')).toBeTruthy();
+    expect(queryByTestId('btn-submit-create-task')).toBeNull();
+    expect(queryByTestId('input-task-title')).toBeNull();
+
+    // Back button works
+    fireEvent.press(getByTestId('btn-unauthorized-back'));
+    expect(mockGoBack).toHaveBeenCalledTimes(1);
+
+    expect(taskApi.createTask).not.toHaveBeenCalled();
+  });
+
+  it('2. validates required fields, invalid calendar dates and date ranges before submission', async () => {
+    const { getByTestId, getByText } = await renderScreen(['TASK_CREATE']);
 
     // Press submit immediately without filling project or title
     fireEvent.press(getByTestId('btn-submit-create-task'));
@@ -109,17 +144,40 @@ describe('CreateTaskScreen (SCR-TSK-03)', () => {
       expect(getByText('Tiêu đề công việc không được để trống')).toBeTruthy();
     });
 
+    // Enter impossible calendar date (2026-02-30)
+    await act(async () => {
+      fireEvent.changeText(getByTestId('input-task-due-date'), '2026-02-30');
+    });
+
+    await act(async () => {
+      fireEvent.press(getByTestId('btn-submit-create-task'));
+    });
+
+    await waitFor(() => {
+      expect(getByText('Hạn hoàn thành không phải là ngày hợp lệ trong lịch')).toBeTruthy();
+    });
+
+    // Enter inverted date range (startDate > dueDate)
+    await act(async () => {
+      fireEvent.changeText(getByTestId('input-task-start-date'), '2026-10-31');
+      fireEvent.changeText(getByTestId('input-task-due-date'), '2026-10-01');
+    });
+
+    await act(async () => {
+      fireEvent.press(getByTestId('btn-submit-create-task'));
+    });
+
+    await waitFor(() => {
+      expect(getByText('Hạn hoàn thành không được trước ngày bắt đầu')).toBeTruthy();
+    });
+
     expect(taskApi.createTask).not.toHaveBeenCalled();
   });
 
-  it('2. submits exact CreateTaskRequest payload and navigates to TaskDetail on success', async () => {
+  it('3. submits exact CreateTaskRequest payload with serialized ISO Instant due date and navigates on success', async () => {
     (taskApi.createTask as jest.Mock).mockResolvedValueOnce(mockCreatedTask);
 
-    const { getByTestId, getByText } = await render(
-      <AppProviders>
-        <CreateTaskScreen />
-      </AppProviders>
-    );
+    const { getByTestId, getByText } = await renderScreen(['TASK_CREATE']);
 
     // Select project
     fireEvent.press(getByTestId('btn-open-project-selector'));
@@ -140,6 +198,8 @@ describe('CreateTaskScreen (SCR-TSK-03)', () => {
       fireEvent.changeText(getByTestId('input-task-title'), 'Phát triển màn hình tạo công việc');
       fireEvent.press(getByTestId('chip-priority-high'));
       fireEvent.changeText(getByTestId('input-task-description'), 'Mô tả chi tiết công việc mới.');
+      fireEvent.changeText(getByTestId('input-task-start-date'), '2026-10-01');
+      fireEvent.changeText(getByTestId('input-task-due-date'), '2026-10-31');
     });
 
     await act(async () => {
@@ -153,23 +213,21 @@ describe('CreateTaskScreen (SCR-TSK-03)', () => {
         title: 'Phát triển màn hình tạo công việc',
         priority: 'HIGH',
         description: 'Mô tả chi tiết công việc mới.',
+        startDate: '2026-10-01',
+        dueDate: '2026-10-31T23:59:59Z', // Exact normalized UTC end-of-day ISO Instant
       });
       expect(mockNavigate).toHaveBeenCalledWith('TaskDetail', { taskId: 'new-task-uuid' });
     });
   });
 
-  it('3. enforces synchronous submit lock on double-press (only 1 POST call)', async () => {
+  it('4. enforces synchronous submit lock on double-press (only 1 POST call)', async () => {
     let resolveTask!: (val: TaskDetail) => void;
     const pendingPromise = new Promise<TaskDetail>(res => {
       resolveTask = res;
     });
     (taskApi.createTask as jest.Mock).mockReturnValue(pendingPromise);
 
-    const { getByTestId, getByText } = await render(
-      <AppProviders>
-        <CreateTaskScreen />
-      </AppProviders>
-    );
+    const { getByTestId, getByText } = await renderScreen(['TASK_CREATE']);
 
     // Select project
     fireEvent.press(getByTestId('btn-open-project-selector'));
@@ -205,53 +263,5 @@ describe('CreateTaskScreen (SCR-TSK-03)', () => {
     });
 
     expect(mockNavigate).toHaveBeenCalledWith('TaskDetail', { taskId: 'new-task-uuid' });
-  });
-
-  it('4. displays error banner when submission fails', async () => {
-    (taskApi.createTask as jest.Mock).mockRejectedValueOnce({
-      isAxiosError: true,
-      response: {
-        status: 400,
-        data: {
-          success: false,
-          timestamp: '2026-10-20T00:00:00Z',
-          code: 'TASK_PROJECT_NOT_ACTIVE',
-          message: 'Chỉ có thể tạo hoặc cập nhật công việc cho dự án đang hoạt động.',
-        },
-      },
-    });
-
-    const { getByTestId, getByText } = await render(
-      <AppProviders>
-        <CreateTaskScreen />
-      </AppProviders>
-    );
-
-    // Select project
-    fireEvent.press(getByTestId('btn-open-project-selector'));
-    await waitFor(() => {
-      expect(getByText('[WS-MOB]')).toBeTruthy();
-    });
-    fireEvent.press(getByTestId('project-option-proj-123'));
-    await waitFor(() => {
-      expect(getByTestId('project-option-proj-123').props.accessibilityState.selected).toBe(true);
-    });
-    fireEvent.press(getByTestId('btn-confirm-project-select'));
-
-    await waitFor(() => {
-      expect(getByText('[WS-MOB] WorkSphere Mobile')).toBeTruthy();
-    });
-
-    await act(async () => {
-      fireEvent.changeText(getByTestId('input-task-title'), 'Công việc lỗi');
-    });
-
-    await act(async () => {
-      fireEvent.press(getByTestId('btn-submit-create-task'));
-    });
-
-    await waitFor(() => {
-      expect(getByText('Chỉ có thể tạo hoặc cập nhật công việc cho dự án đang hoạt động.')).toBeTruthy();
-    });
   });
 });

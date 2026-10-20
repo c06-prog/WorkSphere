@@ -129,6 +129,24 @@ BUILD SUCCESSFUL in 58s
 
 ---
 
-## 6. Verdict
+## 6. Hardening & Resolution of Audit Findings
 
-**Verdict:** `PHASE_15D_PASS_READY_FOR_AUDIT`
+### Audit Findings Addressed:
+1. **HIGH: `TASK_DUE_DATE_SERIALIZATION_DRIFT` (RESOLVED)**:
+   - Root Cause: Backend Java `Task.java` validates due dates via `dueDate.atZone(ZoneOffset.UTC).toLocalDate()`, and `06_API_CONTRACT.md` requires ISO-8601 Instant format (e.g. `2026-10-05T17:00:00Z`). Previously, mobile inputs sent raw `YYYY-MM-DD` strings, which failed backend instant deserialization.
+   - Solution: Created `mobile/src/features/tasks/utils/taskDate.ts` providing pure calendar date validation (`isValidCalendarDate`) that rejects non-existent dates (e.g. `2026-02-30`) without silent rollover, input parser `parseTaskDueDateForInput` that extracts `YYYY-MM-DD` for human editing, and `serializeTaskDueDate` that normalizes valid dates to UTC end-of-day ISO Instant (`${YYYY-MM-DD}T23:59:59Z`). Applied in both `CreateTaskScreen` and `EditTaskScreen`.
+2. **LOW: `TASK_CREATE_DIRECT_ROUTE_UI_AUTH_GAP` (RESOLVED)**:
+   - Root Cause: While the `+ Tạo mới` trigger button on `TasksScreen` was permission-gated, direct navigation to the `CreateTask` route lacked fail-closed capability checks in the screen component itself.
+   - Solution: Added direct-route authorization checks in `CreateTaskScreen.tsx` verifying `currentUser?.permissions?.includes('TASK_CREATE') === true`. If unauthorized, renders accessible error state (`create-task-unauthorized`) with a return navigation action.
+
+### Hardening Verification Results:
+- **TypeScript**: `npm --prefix mobile run typecheck` PASS (0 errors).
+- **ESLint**: `npm --prefix mobile run lint` PASS (0 errors, 48 preexisting warnings).
+- **Mobile Jest**: `npm --prefix mobile test -- --runInBand` PASS (75 test suites, 664 tests PASS, 0 failed, 0 skipped).
+- **Native Android Build**: `.\gradlew.bat assembleDebug --no-daemon` BUILD SUCCESSFUL in 38s (203 actionable tasks: 17 executed, 186 up-to-date).
+
+---
+
+## 7. Verdict
+
+**Verdict:** `PHASE_15D_HARDENING_PASS_READY_FOR_AUDIT`

@@ -1,8 +1,11 @@
 /**
- * Phase 15D: EditTaskScreen Component Tests (SCR-TSK-04)
+ * Phase 15D Hardening: EditTaskScreen Component Tests (SCR-TSK-04)
  * Verifies:
  * - Authoritative initial load on mount via taskApi.getTaskDetail
  * - Prefills fields accurately (title, description, priority, dates)
+ * - Due date parsing from ISO string for human input
+ * - Due date serialization to ISO-8601 Instant UTC end-of-day (T23:59:59Z)
+ * - Validation on invalid calendar dates and inverted date ranges
  * - Version is captured internally and never visible in user-facing UI
  * - Submits exact UpdateTaskRequest payload (with version, without status/progress/assignees)
  * - Synchronous submit lock prevents duplicate requests
@@ -51,7 +54,7 @@ describe('EditTaskScreen (SCR-TSK-04)', () => {
     priority: 'HIGH',
     progressPercent: 50,
     startDate: '2026-10-01',
-    dueDate: '2026-10-25T00:00:00Z',
+    dueDate: '2026-10-25T17:00:00Z',
     estimatedMinutes: 240,
     reporter: { id: 'user-rep', fullName: 'Người giao việc', avatarUrl: null },
     assignees: [],
@@ -93,7 +96,7 @@ describe('EditTaskScreen (SCR-TSK-04)', () => {
     expect(queryByText('Version: 3')).toBeNull();
   });
 
-  it('2. submits exact UpdateTaskRequest payload with internal version and calls goBack on success', async () => {
+  it('2. submits exact UpdateTaskRequest with normalized ISO Instant dueDate and calls goBack', async () => {
     (taskApi.getTaskDetail as jest.Mock).mockResolvedValueOnce(mockTask);
     (taskApi.updateTask as jest.Mock).mockResolvedValueOnce({
       ...mockTask,
@@ -127,7 +130,7 @@ describe('EditTaskScreen (SCR-TSK-04)', () => {
         description: 'Chi tiết mô tả nhiệm vụ',
         priority: 'HIGH',
         startDate: '2026-10-01',
-        dueDate: '2026-10-25',
+        dueDate: '2026-10-25T23:59:59Z', // Exact normalized UTC end-of-day ISO Instant
         estimatedMinutes: 240,
         version: 3,
       });
@@ -135,7 +138,54 @@ describe('EditTaskScreen (SCR-TSK-04)', () => {
     });
   });
 
-  it('3. enforces synchronous submit lock on rapid double-press (only 1 PUT call)', async () => {
+  it('3. validates date inputs and submits edited dueDate correctly', async () => {
+    (taskApi.getTaskDetail as jest.Mock).mockResolvedValueOnce(mockTask);
+    (taskApi.updateTask as jest.Mock).mockResolvedValueOnce({
+      ...mockTask,
+      dueDate: '2026-11-30T23:59:59Z',
+      version: 4,
+    });
+
+    const { getByTestId, getByText } = await render(
+      <AppProviders>
+        <EditTaskScreen />
+      </AppProviders>
+    );
+
+    await waitFor(() => {
+      expect(getByTestId('input-edit-task-title').props.value).toBe('Xây dựng module nhiệm vụ');
+    });
+
+    // Enter impossible calendar date (2026-02-30)
+    await act(async () => {
+      fireEvent.changeText(getByTestId('input-edit-task-due-date'), '2026-02-30');
+    });
+    await act(async () => {
+      fireEvent.press(getByTestId('btn-submit-edit-task'));
+    });
+
+    await waitFor(() => {
+      expect(getByText('Hạn hoàn thành không phải là ngày hợp lệ trong lịch')).toBeTruthy();
+    });
+    expect(taskApi.updateTask).not.toHaveBeenCalled();
+
+    // Now enter valid new due date (2026-11-30)
+    await act(async () => {
+      fireEvent.changeText(getByTestId('input-edit-task-due-date'), '2026-11-30');
+    });
+    await act(async () => {
+      fireEvent.press(getByTestId('btn-submit-edit-task'));
+    });
+
+    await waitFor(() => {
+      expect(taskApi.updateTask).toHaveBeenCalledTimes(1);
+      expect(taskApi.updateTask).toHaveBeenCalledWith('task-uuid-1', expect.objectContaining({
+        dueDate: '2026-11-30T23:59:59Z',
+      }));
+    });
+  });
+
+  it('4. enforces synchronous submit lock on rapid double-press (only 1 PUT call)', async () => {
     (taskApi.getTaskDetail as jest.Mock).mockResolvedValueOnce(mockTask);
 
     let resolveUpdate!: (val: TaskDetail) => void;
@@ -170,7 +220,7 @@ describe('EditTaskScreen (SCR-TSK-04)', () => {
     expect(mockGoBack).toHaveBeenCalledTimes(1);
   });
 
-  it('4. displays conflict dialog on HTTP 409 and reloads latest authoritative data on confirm', async () => {
+  it('5. displays conflict dialog on HTTP 409 and reloads latest authoritative data on confirm', async () => {
     (taskApi.getTaskDetail as jest.Mock).mockResolvedValueOnce(mockTask);
     (taskApi.updateTask as jest.Mock).mockRejectedValueOnce({
       isAxiosError: true,

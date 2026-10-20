@@ -5,6 +5,7 @@
  * Invariants & Correctness Guarantees:
  * - Authoritative task load on mount via taskApi.getTaskDetail(taskId).
  * - Exact UpdateTaskRequest DTO fields: title, description, priority, startDate, dueDate, estimatedMinutes, version.
+ * - Due date serialization: Converts date-only input (YYYY-MM-DD) to ISO-8601 Instant UTC end-of-day (T23:59:59Z).
  * - Captures version internally; NEVER displays version in user-facing UI.
  * - Strictly zero status, progress, assignees, or projectId in generic Edit form (15E boundary).
  * - Synchronous submit lock (submittingRef) prevents duplicate same-tick submissions.
@@ -35,6 +36,12 @@ import { PriorityBadge } from '../../../shared/components/PriorityBadge';
 import { taskApi } from '../api/taskApi';
 import { TaskDetail, TaskPriority, UpdateTaskRequest } from '../api/taskTypes';
 import { mapTaskError } from '../errors/taskErrorMapper';
+import {
+  parseTaskDueDateForInput,
+  serializeTaskDueDate,
+  validateTaskDateInput,
+  validateTaskDateRange,
+} from '../utils/taskDate';
 
 const PRIORITIES: { priority: TaskPriority; label: string }[] = [
   { priority: 'CRITICAL', label: 'Khẩn cấp' },
@@ -48,27 +55,21 @@ export function EditTaskScreen() {
   const navigation = useNavigation<MainTabNavProp<'EditTask'>>();
   const route = useRoute<MainTabScreenRouteProp<'EditTask'>>();
 
-  const { taskId } = route.params;
+  const taskId = route.params?.taskId;
 
-  // Initial Load State
-  const [initialLoading, setInitialLoading] = useState<boolean>(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
-
-  // Form Fields
+  // Form State
+  const [projectName, setProjectName] = useState<string>('');
   const [title, setTitle] = useState<string>('');
   const [description, setDescription] = useState<string>('');
   const [priority, setPriority] = useState<TaskPriority>('MEDIUM');
   const [startDate, setStartDate] = useState<string>('');
   const [dueDate, setDueDate] = useState<string>('');
   const [estimatedMinutes, setEstimatedMinutes] = useState<string>('');
-
-  // Project Context (Read-only for orientation)
-  const [projectName, setProjectName] = useState<string>('');
-
-  // Internal Version State (Never exposed in UI)
   const [version, setVersion] = useState<number>(0);
 
-  // Validation & Submission State
+  // Screen Lifecycle State
+  const [initialLoading, setInitialLoading] = useState<boolean>(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState<boolean>(false);
@@ -83,7 +84,7 @@ export function EditTaskScreen() {
     setDescription(data.description ?? '');
     setPriority(data.priority);
     setStartDate(data.startDate ?? '');
-    setDueDate(data.dueDate ? data.dueDate.split('T')[0] : '');
+    setDueDate(parseTaskDueDateForInput(data.dueDate));
     setEstimatedMinutes(
       data.estimatedMinutes !== null && data.estimatedMinutes !== undefined
         ? String(data.estimatedMinutes)
@@ -131,6 +132,27 @@ export function EditTaskScreen() {
       errors.title = 'Tiêu đề không được vượt quá 255 ký tự';
     }
 
+    if (startDate.trim().length > 0) {
+      const startErr = validateTaskDateInput(startDate, 'Ngày bắt đầu');
+      if (startErr) {
+        errors.startDate = startErr;
+      }
+    }
+
+    if (dueDate.trim().length > 0) {
+      const dueErr = validateTaskDateInput(dueDate, 'Hạn hoàn thành');
+      if (dueErr) {
+        errors.dueDate = dueErr;
+      }
+    }
+
+    if (!errors.startDate && !errors.dueDate && startDate.trim() && dueDate.trim()) {
+      const rangeErr = validateTaskDateRange(startDate, dueDate);
+      if (rangeErr) {
+        errors.dueDate = rangeErr;
+      }
+    }
+
     if (estimatedMinutes.trim().length > 0) {
       const minutes = parseInt(estimatedMinutes.trim(), 10);
       if (isNaN(minutes) || minutes < 0) {
@@ -172,7 +194,7 @@ export function EditTaskScreen() {
     }
 
     if (dueDate.trim().length > 0) {
-      payload.dueDate = dueDate.trim();
+      payload.dueDate = serializeTaskDueDate(dueDate);
     }
 
     if (estimatedMinutes.trim().length > 0) {
@@ -227,18 +249,19 @@ export function EditTaskScreen() {
           title="Không thể tải công việc"
           message={loadError}
           onRetry={loadTask}
-          testID="btn-retry-load-task"
+          testID="edit-task-error-state"
         />
         <Pressable
           onPress={() => navigation.goBack()}
           style={({ pressed }) => [
             styles.backNavRow,
-            { marginTop: 16, opacity: pressed ? 0.7 : 1 },
+            { opacity: pressed ? 0.7 : 1, marginTop: theme.spacing.md },
           ]}
           accessibilityRole="button"
           accessibilityLabel="Quay lại"
+          testID="btn-edit-task-error-back"
         >
-          <Text style={[theme.typography.body, { color: theme.colors.primary }]}>
+          <Text style={[theme.typography.body, styles.backNavText, { color: theme.colors.primary }]}>
             ← Quay lại
           </Text>
         </Pressable>
@@ -376,8 +399,14 @@ export function EditTaskScreen() {
             <AppTextInput
               label="Ngày bắt đầu (YYYY-MM-DD)"
               value={startDate}
-              onChangeText={setStartDate}
+              onChangeText={d => {
+                setStartDate(d);
+                if (fieldErrors.startDate) {
+                  setFieldErrors(prev => ({ ...prev, startDate: '' }));
+                }
+              }}
               placeholder="2026-10-01"
+              error={fieldErrors.startDate}
               testID="input-edit-task-start-date"
             />
           </View>
@@ -386,8 +415,14 @@ export function EditTaskScreen() {
             <AppTextInput
               label="Hạn hoàn thành (YYYY-MM-DD)"
               value={dueDate}
-              onChangeText={setDueDate}
+              onChangeText={d => {
+                setDueDate(d);
+                if (fieldErrors.dueDate) {
+                  setFieldErrors(prev => ({ ...prev, dueDate: '' }));
+                }
+              }}
               placeholder="2026-10-31"
+              error={fieldErrors.dueDate}
               testID="input-edit-task-due-date"
             />
           </View>
@@ -463,11 +498,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   screenTitle: {
-    marginBottom: 4,
+    marginBottom: 16,
     fontWeight: '700',
   },
   projectContextText: {
     marginBottom: 16,
+    fontStyle: 'italic',
   },
   errorBanner: {
     padding: 12,

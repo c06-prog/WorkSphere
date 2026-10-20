@@ -3,10 +3,12 @@
  * Implements canonical task creation form conforming strictly to 06_API_CONTRACT.md section 12.2.
  *
  * Invariants & Correctness Guarantees:
+ * - Direct-route capability gating: Enforces currentUser.permissions.includes('TASK_CREATE').
  * - Project selection via ProjectSelectModal (human-readable [code] name; strictly zero raw UUIDs).
  * - Assignee selection via ProjectMemberAssigneePickerModal (eligible active project members ONLY).
  * - Cross-project invalidation: changing project synchronously clears selected assignees.
  * - Exact CreateTaskRequest DTO fields: projectId, parentTaskId, title, description, priority, assigneeIds, startDate, dueDate, estimatedMinutes.
+ * - Due date serialization: Converts date-only input (YYYY-MM-DD) to ISO-8601 Instant UTC end-of-day (T23:59:59Z).
  * - Strictly zero status, progress, or version fields in create form.
  * - Synchronous submit lock (submittingRef) prevents duplicate same-tick submissions.
  * - On success, navigates directly to TaskDetail: { taskId: created.id }.
@@ -23,10 +25,12 @@ import {
   View,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useAuth } from '../../../app/auth/AuthProvider';
 import { useAppTheme } from '../../../app/providers/ThemeProvider';
 import { MainTabNavProp, MainTabScreenRouteProp } from '../../../app/navigation/types';
 import { AppButton } from '../../../shared/components/AppButton';
 import { AppTextInput } from '../../../shared/components/AppTextInput';
+import { ErrorState } from '../../../shared/components/ErrorState';
 import { LoadingIndicator } from '../../../shared/components/LoadingIndicator';
 import { PriorityBadge } from '../../../shared/components/PriorityBadge';
 import { projectApi } from '../../projects/api/projectApi';
@@ -36,6 +40,11 @@ import { CreateTaskRequest, TaskPriority } from '../api/taskTypes';
 import { mapTaskError } from '../errors/taskErrorMapper';
 import { ProjectMemberAssigneePickerModal } from '../components/ProjectMemberAssigneePickerModal';
 import { ProjectSelectModal } from '../components/ProjectSelectModal';
+import {
+  serializeTaskDueDate,
+  validateTaskDateInput,
+  validateTaskDateRange,
+} from '../utils/taskDate';
 
 const PRIORITIES: { priority: TaskPriority; label: string }[] = [
   { priority: 'CRITICAL', label: 'Khẩn cấp' },
@@ -48,6 +57,7 @@ export function CreateTaskScreen() {
   const theme = useAppTheme();
   const navigation = useNavigation<MainTabNavProp<'CreateTask'>>();
   const route = useRoute<MainTabScreenRouteProp<'CreateTask'>>();
+  const { currentUser, initialized, sessionState } = useAuth();
 
   const routeProjectId = route.params?.projectId;
   const routeParentTaskId = route.params?.parentTaskId;
@@ -154,6 +164,27 @@ export function CreateTaskScreen() {
       errors.title = 'Tiêu đề không được vượt quá 255 ký tự';
     }
 
+    if (startDate.trim().length > 0) {
+      const startErr = validateTaskDateInput(startDate, 'Ngày bắt đầu');
+      if (startErr) {
+        errors.startDate = startErr;
+      }
+    }
+
+    if (dueDate.trim().length > 0) {
+      const dueErr = validateTaskDateInput(dueDate, 'Hạn hoàn thành');
+      if (dueErr) {
+        errors.dueDate = dueErr;
+      }
+    }
+
+    if (!errors.startDate && !errors.dueDate && startDate.trim() && dueDate.trim()) {
+      const rangeErr = validateTaskDateRange(startDate, dueDate);
+      if (rangeErr) {
+        errors.dueDate = rangeErr;
+      }
+    }
+
     if (estimatedMinutes.trim().length > 0) {
       const minutes = parseInt(estimatedMinutes.trim(), 10);
       if (isNaN(minutes) || minutes < 0) {
@@ -193,7 +224,7 @@ export function CreateTaskScreen() {
     }
 
     if (dueDate.trim().length > 0) {
-      payload.dueDate = dueDate.trim();
+      payload.dueDate = serializeTaskDueDate(dueDate);
     }
 
     if (estimatedMinutes.trim().length > 0) {
@@ -225,6 +256,49 @@ export function CreateTaskScreen() {
       }
     }
   };
+
+  // Direct route authorization checks
+  if (!initialized || sessionState === 'INITIALIZING') {
+    return (
+      <View
+        style={[styles.centerContainer, { backgroundColor: theme.colors.background }]}
+        testID="create-task-auth-loading"
+      >
+        <LoadingIndicator size="large" message="Đang kiểm tra quyền truy cập..." />
+      </View>
+    );
+  }
+
+  const canCreateTask = currentUser?.permissions?.includes('TASK_CREATE') === true;
+
+  if (!canCreateTask) {
+    return (
+      <View
+        style={[styles.centerContainer, { backgroundColor: theme.colors.background }]}
+        testID="create-task-unauthorized"
+      >
+        <ErrorState
+          title="Không có quyền truy cập"
+          message="Bạn không có quyền tạo công việc."
+          testID="create-task-unauthorized-error"
+        />
+        <Pressable
+          onPress={() => navigation.goBack()}
+          style={({ pressed }) => [
+            styles.backNavRow,
+            { opacity: pressed ? 0.7 : 1, marginTop: theme.spacing.md },
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel="Quay lại"
+          testID="btn-unauthorized-back"
+        >
+          <Text style={[theme.typography.body, styles.backNavText, { color: theme.colors.primary }]}>
+            ← Quay lại
+          </Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   return (
     <KeyboardAvoidingView
@@ -277,7 +351,7 @@ export function CreateTaskScreen() {
             Dự án <Text style={{ color: theme.colors.error }}>*</Text>
           </Text>
           {resolvingProject ? (
-            <View style={styles.resolvingWrapper}>
+            <View style={styles.resolvingWrapper} testID="project-resolving-indicator">
               <LoadingIndicator size="small" message="Đang nạp thông tin dự án..." />
             </View>
           ) : (
@@ -286,27 +360,31 @@ export function CreateTaskScreen() {
               style={({ pressed }) => [
                 styles.selectorButton,
                 {
-                  backgroundColor: theme.colors.surface,
                   borderColor: fieldErrors.projectId ? theme.colors.error : theme.colors.border,
+                  backgroundColor: theme.colors.surface,
                   borderRadius: theme.radii.small,
                   opacity: pressed ? 0.8 : 1,
                 },
               ]}
               accessibilityRole="button"
-              accessibilityLabel="Chọn dự án"
+              accessibilityLabel={
+                selectedProject
+                  ? `Dự án: ${selectedProject.name}`
+                  : 'Chọn dự án cho công việc'
+              }
               testID="btn-open-project-selector"
             >
               <Text
                 style={[
                   theme.typography.body,
+                  selectedProject ? styles.fontSemiBold : styles.fontRegular,
                   {
                     color: selectedProject
                       ? theme.colors.textPrimary
                       : theme.colors.textSecondary,
                   },
-                  selectedProject ? styles.fontSemiBold : styles.fontRegular,
                 ]}
-                testID="create-task-selected-project-text"
+                numberOfLines={1}
               >
                 {selectedProject
                   ? `[${selectedProject.code}] ${selectedProject.name}`
@@ -384,17 +462,17 @@ export function CreateTaskScreen() {
             label="Mô tả công việc"
             value={description}
             onChangeText={setDescription}
-            placeholder="Nhập mô tả chi tiết công việc (tùy chọn)..."
+            placeholder="Nhập mô tả chi tiết công việc..."
             multiline
             numberOfLines={4}
             testID="input-task-description"
           />
         </View>
 
-        {/* 5. Assignees Selection */}
+        {/* 5. Assignees Picker */}
         <View style={styles.fieldSection}>
           <Text style={[theme.typography.caption, styles.fieldLabel, { color: theme.colors.textSecondary }]}>
-            Người thực hiện
+            Người thực hiện (Tùy chọn)
           </Text>
           <Pressable
             onPress={() => {
@@ -410,34 +488,39 @@ export function CreateTaskScreen() {
             style={({ pressed }) => [
               styles.selectorButton,
               {
-                backgroundColor: theme.colors.surface,
                 borderColor: theme.colors.border,
+                backgroundColor: theme.colors.surface,
                 borderRadius: theme.radii.small,
                 opacity: pressed ? 0.8 : 1,
               },
             ]}
             accessibilityRole="button"
-            accessibilityLabel="Chọn người thực hiện"
+            accessibilityLabel={
+              selectedAssigneeIds.length > 0
+                ? `Đã chọn ${selectedAssigneeIds.length} người thực hiện`
+                : 'Chọn người thực hiện từ dự án'
+            }
             testID="btn-open-assignee-picker"
           >
             <Text
               style={[
                 theme.typography.body,
+                selectedAssigneeIds.length > 0 ? styles.fontSemiBold : styles.fontRegular,
                 {
                   color:
-                    selectedMembers.length > 0
+                    selectedAssigneeIds.length > 0
                       ? theme.colors.textPrimary
                       : theme.colors.textSecondary,
                 },
-                selectedMembers.length > 0 ? styles.fontSemiBold : styles.fontRegular,
               ]}
+              numberOfLines={1}
               testID="create-task-selected-assignees-text"
             >
-              {selectedMembers.length === 0
+              {selectedAssigneeIds.length === 0
                 ? 'Chưa phân công người thực hiện'
-                : selectedMembers.length === 1
-                ? selectedMembers[0].fullName
-                : `${selectedMembers[0].fullName} (+${selectedMembers.length - 1})`}
+                : selectedAssigneeIds.length === 1
+                ? `${selectedMembers[0]?.fullName ?? '1 người được chọn'}`
+                : `${selectedMembers[0]?.fullName ?? 'Đã chọn'} (+${selectedAssigneeIds.length - 1})`}
             </Text>
             <Text style={[styles.chevron, { color: theme.colors.textSecondary }]}>▼</Text>
           </Pressable>
@@ -449,8 +532,14 @@ export function CreateTaskScreen() {
             <AppTextInput
               label="Ngày bắt đầu (YYYY-MM-DD)"
               value={startDate}
-              onChangeText={setStartDate}
+              onChangeText={d => {
+                setStartDate(d);
+                if (fieldErrors.startDate) {
+                  setFieldErrors(prev => ({ ...prev, startDate: '' }));
+                }
+              }}
               placeholder="2026-10-01"
+              error={fieldErrors.startDate}
               testID="input-task-start-date"
             />
           </View>
@@ -459,8 +548,14 @@ export function CreateTaskScreen() {
             <AppTextInput
               label="Hạn hoàn thành (YYYY-MM-DD)"
               value={dueDate}
-              onChangeText={setDueDate}
+              onChangeText={d => {
+                setDueDate(d);
+                if (fieldErrors.dueDate) {
+                  setFieldErrors(prev => ({ ...prev, dueDate: '' }));
+                }
+              }}
               placeholder="2026-10-31"
+              error={fieldErrors.dueDate}
               testID="input-task-due-date"
             />
           </View>
@@ -521,6 +616,12 @@ export function CreateTaskScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
   },
   scrollContent: {
     padding: 16,
