@@ -9,12 +9,26 @@
 - Phase 13 Audit Conclusion: `PHASE_13_FINAL_AUDIT_PASS_WITH_E2E_DEFERRALS`
 - Phase 14 Baseline Checkpoint: `785c155b69309284066252701ec1554d35d4e795` (`docs(phase14): record architecture decision D-061 phase 14 contract freeze`)
 - Phase 14A Implementation Checkpoint: `55cc13e6372ba4374d3533fe3f82f7afcd84dcff` (`feat(mobile): add phase 14 dashboard project contracts`)
-- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 15 Mobile Task Management: IN_PROGRESS (Subphases 15A, 15B, 15C, 15D, 15E IMPLEMENTED & AUDITED, Subphase 15F IMPLEMENTED, AUDITED & HARDENED / CLOSED; Subphase 15G NOT STARTED - READY_FOR_15G).
+- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 15 Mobile Task Management: IMPLEMENTATION COMPLETE / AWAITING FINAL INDEPENDENT AUDIT (Subphases 15A..15F CLOSED, Subphase 15G IMPLEMENTED & VALIDATED). Phase 16: NOT STARTED.
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening
 
-- Latest Implementation & Hardening: Subphase 15F Mobile Task Subtasks & Comments (`SCR-TSK-05` & `SCR-TSK-06`) Hardening & Version Chaining Test Gap Closure
+- Latest Implementation & Hardening: Subphase 15G Mobile Task Integration, Regression & Security Hardening
+- Implementation Report: `reports/PHASE_15G_INTEGRATION_HARDENING_REPORT.md`
+- Scope Integrated & Validated:
+  - Phase 15 Inventory: Complete validation across all 8 screens/modals (`SCR-TSK-01` .. `SCR-TSK-08`) plus existing-task assign/unassign.
+  - Route Data Minimization: Verified IDs-only navigation parameter contracts across `TaskDetail`, `CreateTask`, `EditTask`, `SubtaskList`, `TaskComments`. Zero security tokens, permissions, `allowedActions`, or version numbers travel via route parameters.
+  - Concurrency & Mutation Locks: Verified synchronous `useRef` locks across all 10 Phase 15 mutation flows, eliminating double-tap duplicate submissions.
+  - Freshness & Version Chaining: Verified continuous version propagation across successive mutations in a single mounted screen lifecycle; verified generation invalidation across `useSubtasks` and `useTaskComments`.
+  - Identity Integrity: Mapped and audited strict separation of `ProjectMember.userId` vs `AssigneeDetail.id` vs `AssigneeDetail.assignmentId`.
+  - Full Mobile Regression: 82 test suites, 735 tests PASS (0 failures, 0 skipped, 0 snapshots); TypeScript 0 errors; ESLint 0 errors (48 pre-existing warnings).
+  - Targeted Backend Task Regression: 47 tests PASS across `TaskTest`, `TaskWorkflowTest`, `TaskMockMvcTest`, `TaskAttachmentMockMvcTest` with 0 Checkstyle violations and `BUILD SUCCESS`.
+  - Android Clean Native Build: `gradlew.bat clean assembleDebug` -> `BUILD SUCCESSFUL` (213 actionable tasks).
+  - Emulator Smoke: Installed and launched on `emulator-5554`, verified active PID, focused `MainActivity` window, and 0 crashes (`PRE_AUTH_ANDROID_SMOKE_PASS`).
+  - E2E Classifications: Authenticated E2E safely skipped (`PHASE_15_AUTH_E2E_CREDENTIALS_NOT_AVAILABLE_SAFE_SKIP`), Mutation E2E deferred (`PHASE_15_MUTATION_E2E_DEFERRED`), Device Offline E2E deferred (`PHASE_15_OFFLINE_DEVICE_E2E_DEFERRED`).
+  - Status Verdict: `PHASE_15G_PASS_PUSHED_READY_FOR_FINAL_AUDIT`.
+- Prior Implementation: Subphase 15F Mobile Task Subtasks & Comments (`SCR-TSK-05` & `SCR-TSK-06`) Hardening & Version Chaining Test Gap Closure
 - Implementation Report: `reports/PHASE_15F_SUBTASKS_COMMENTS_REPORT.md`
 - Scope Implemented & Hardened:
   - Subtask List Screen (`SCR-TSK-05`): Implemented `SubtaskListScreen.tsx` with breadcrumb, parent task context, child tasks `FlatList` using `TaskCard`, navigation to `TaskDetail`, empty state, and pull-to-refresh error handling. Hardened with authoritative `useTaskDetail(parentTaskId)` check for `CREATE_SUBTASK` (eliminating `TASK_SUBTASK_CREATE_CAPABILITY_BYPASS`).
