@@ -254,6 +254,29 @@ describe('Phase 15C + 15E: TaskDetailScreen', () => {
 
     expect(getByTestId('task-detail-subtask-count').props.children).toEqual([1, ' công việc con']);
     expect(getByTestId('task-detail-comment-count').props.children).toEqual([1, ' bình luận']);
+    expect(getByTestId('btn-navigate-subtasks')).toBeTruthy();
+    expect(getByTestId('btn-navigate-comments')).toBeTruthy();
+
+    // Verify Subtasks row navigation (SCR-TSK-05)
+    await act(async () => {
+      fireEvent.press(getByTestId('btn-navigate-subtasks'));
+    });
+    expect(mockNavigate).toHaveBeenCalledWith('SubtaskList', {
+      parentTaskId: 'task-uuid-123',
+      projectId: 'proj-uuid-1',
+      parentTaskTitle: 'Phát triển API thanh toán trực tuyến',
+      canCreateSubtask: false,
+    });
+
+    // Verify Comments row navigation (SCR-TSK-06)
+    await act(async () => {
+      fireEvent.press(getByTestId('btn-navigate-comments'));
+    });
+    expect(mockNavigate).toHaveBeenCalledWith('TaskComments', {
+      taskId: 'task-uuid-123',
+      canAddComment: false,
+      taskTitle: 'Phát triển API thanh toán trực tuyến',
+    });
 
     expect(queryByText('task-uuid-123')).toBeNull();
     expect(queryByText('proj-uuid-1')).toBeNull();

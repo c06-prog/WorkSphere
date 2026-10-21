@@ -35,8 +35,8 @@ export type MainTabParamList = {
   TaskDetail: { taskId: string };
   CreateTask: { projectId?: string; parentTaskId?: string } | undefined;
   EditTask: { taskId: string };
-  SubtaskList: { parentTaskId: string; projectId: string };
-  TaskComments: { taskId: string };
+  SubtaskList: { parentTaskId: string; projectId: string; parentTaskTitle?: string; canCreateSubtask?: boolean };
+  TaskComments: { taskId: string; canAddComment?: boolean; taskTitle?: string };
 };
 
 export type RootStackParamList = {

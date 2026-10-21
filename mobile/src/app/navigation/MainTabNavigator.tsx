@@ -14,6 +14,8 @@ import {
   TaskDetailScreen,
   CreateTaskScreen,
   EditTaskScreen,
+  SubtaskListScreen,
+  TaskCommentsScreen,
 } from '../../features/tasks/screens';
 import { ServiceRequestsScreen } from '../../features/serviceRequests/screens';
 import { MoreScreen, SettingsScreen } from '../../features/more/screens';
@@ -208,6 +210,26 @@ export function MainTabNavigator() {
           tabBarButton: () => null,
           tabBarItemStyle: { display: 'none' },
           headerTitle: 'Chỉnh sửa công việc',
+        }}
+      />
+      <Tab.Screen
+        name="SubtaskList"
+        component={SubtaskListScreen}
+        options={{
+          tabBarButton: () => null,
+          tabBarItemStyle: { display: 'none' },
+          headerTitle: 'Công việc con',
+          headerShown: false,
+        }}
+      />
+      <Tab.Screen
+        name="TaskComments"
+        component={TaskCommentsScreen}
+        options={{
+          tabBarButton: () => null,
+          tabBarItemStyle: { display: 'none' },
+          headerTitle: 'Bình luận',
+          headerShown: false,
         }}
       />
     </Tab.Navigator>

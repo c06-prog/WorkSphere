@@ -13,7 +13,7 @@
  * 9. Unmount safety: pending request resolving or rejecting after unmount causes no state update.
  */
 
-import { act, renderHook } from '@testing-library/react-native';
+import { act, renderHook, waitFor } from '@testing-library/react-native';
 import { taskApi } from '../../src/features/tasks/api/taskApi';
 import { TaskDetail } from '../../src/features/tasks/api/taskTypes';
 import { useTaskDetail } from '../../src/features/tasks/hooks/useTaskDetail';
@@ -377,5 +377,95 @@ describe('Phase 15C: useTaskDetail Custom Hook', () => {
     expect(result.current.task?.title).toBe('Tiêu đề sau mutation B');
     expect(result.current.task?.status).toBe('IN_REVIEW');
     expect(result.current.task?.version).toBe(3);
+  });
+
+  it('10. in-flight ownership race: applyTaskUpdate followed by GET C does not have C lock prematurely cleared when GET A completes', async () => {
+    let resolveGetA!: (val: TaskDetail) => void;
+    const pendingGetA = new Promise<TaskDetail>(res => {
+      resolveGetA = res;
+    });
+    (taskApi.getTaskDetail as jest.Mock).mockReturnValueOnce(pendingGetA);
+
+    const { result } = await renderHook(() => useTaskDetail('task-uuid-1'));
+
+    // Apply mutation B while GET A is still in flight
+    const mutationResult: TaskDetail = {
+      ...mockTaskA,
+      title: 'Đã cập nhật sau mutation B',
+      version: 3,
+    };
+    await act(async () => {
+      result.current.applyTaskUpdate(mutationResult);
+    });
+
+    // Now start a fresh GET C (e.g. user manually requests load or refresh)
+    let resolveGetC!: (val: TaskDetail) => void;
+    const pendingGetC = new Promise<TaskDetail>(res => {
+      resolveGetC = res;
+    });
+    (taskApi.getTaskDetail as jest.Mock).mockReturnValueOnce(pendingGetC);
+
+    let loadCPromise: Promise<void> = result.current.load();
+
+    // Now old GET A completes
+    await act(async () => {
+      resolveGetA(mockTaskA);
+      await pendingGetA;
+    });
+
+    // An additional load() while GET C is pending should be deduplicated
+    const dupPromise = result.current.load();
+
+    // taskApi.getTaskDetail was called: once for A, once for C. Total: 2 calls (not 3)
+    expect(taskApi.getTaskDetail).toHaveBeenCalledTimes(2);
+
+    // Resolve C
+    const resultC: TaskDetail = {
+      ...mockTaskA,
+      title: 'Dữ liệu mới từ C',
+      version: 4,
+    };
+    await act(async () => {
+      resolveGetC(resultC);
+      await pendingGetC;
+      await loadCPromise;
+      await dupPromise;
+    });
+
+    expect(result.current.task?.title).toBe('Dữ liệu mới từ C');
+    expect(result.current.task?.version).toBe(4);
+  });
+
+  it('11. preserves version chain across successive applyTaskUpdate mutations (v2 -> v3 -> v4)', async () => {
+    (taskApi.getTaskDetail as jest.Mock).mockResolvedValueOnce(mockTaskA); // version 2
+
+    const { result } = await renderHook(() => useTaskDetail('task-uuid-1'));
+    await waitFor(() => {
+      expect(result.current.task?.version).toBe(2);
+    });
+
+    // Mutation 1: status change returns version 3
+    const v3Task: TaskDetail = {
+      ...mockTaskA,
+      version: 3,
+      status: 'IN_REVIEW',
+    };
+    await act(async () => {
+      result.current.applyTaskUpdate(v3Task);
+    });
+    expect(result.current.task?.version).toBe(3);
+    expect(result.current.task?.status).toBe('IN_REVIEW');
+
+    // Mutation 2: progress change returns version 4, chained from version 3
+    const v4Task: TaskDetail = {
+      ...v3Task,
+      version: 4,
+      progressPercent: 100,
+    };
+    await act(async () => {
+      result.current.applyTaskUpdate(v4Task);
+    });
+    expect(result.current.task?.version).toBe(4);
+    expect(result.current.task?.progressPercent).toBe(100);
   });
 });

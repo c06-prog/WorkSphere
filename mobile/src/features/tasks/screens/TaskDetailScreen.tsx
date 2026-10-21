@@ -811,7 +811,7 @@ export function TaskDetailScreen() {
           </View>
         </View>
 
-        {/* Summaries: Subtasks & Comments (Read-only summary in 15C) */}
+        {/* Summaries: Subtasks & Comments (Navigable to SCR-TSK-05 & SCR-TSK-06 in 15F) */}
         <View
           style={[
             styles.card,
@@ -832,29 +832,70 @@ export function TaskDetailScreen() {
             Công việc con & Bình luận
           </Text>
 
-          <View style={styles.infoRow}>
-            <Text style={[theme.typography.caption, styles.infoLabel, { color: theme.colors.textSecondary }]}>
-              Công việc con:
-            </Text>
-            <Text
-              style={[theme.typography.body, styles.infoValue, { color: theme.colors.textPrimary }]}
-              testID="task-detail-subtask-count"
-            >
-              {task.subtasks ? task.subtasks.length : 0} công việc con
-            </Text>
-          </View>
+          <Pressable
+            onPress={() =>
+              navigation.navigate('SubtaskList', {
+                parentTaskId: task.id,
+                projectId: task.project.id,
+                parentTaskTitle: task.title,
+                canCreateSubtask: task.allowedActions?.includes('CREATE_SUBTASK'),
+              })
+            }
+            style={({ pressed }) => [
+              styles.navRow,
+              { opacity: pressed ? 0.7 : 1 },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Xem danh sách công việc con"
+            testID="btn-navigate-subtasks"
+          >
+            <View style={styles.infoRow}>
+              <Text style={[theme.typography.caption, styles.infoLabel, { color: theme.colors.textSecondary }]}>
+                Công việc con:
+              </Text>
+              <View style={styles.navRowRight}>
+                <Text
+                  style={[theme.typography.body, styles.infoValue, { color: theme.colors.primary }]}
+                  testID="task-detail-subtask-count"
+                >
+                  {task.subtasks ? task.subtasks.length : 0} công việc con
+                </Text>
+                <Text style={[styles.navChevron, { color: theme.colors.primary }]}> ›</Text>
+              </View>
+            </View>
+          </Pressable>
 
-          <View style={styles.infoRow}>
-            <Text style={[theme.typography.caption, styles.infoLabel, { color: theme.colors.textSecondary }]}>
-              Bình luận gần đây:
-            </Text>
-            <Text
-              style={[theme.typography.body, styles.infoValue, { color: theme.colors.textPrimary }]}
-              testID="task-detail-comment-count"
-            >
-              {task.recentComments ? task.recentComments.length : 0} bình luận
-            </Text>
-          </View>
+          <Pressable
+            onPress={() =>
+              navigation.navigate('TaskComments', {
+                taskId: task.id,
+                canAddComment: task.allowedActions?.includes('ADD_COMMENT'),
+                taskTitle: task.title,
+              })
+            }
+            style={({ pressed }) => [
+              styles.navRow,
+              { opacity: pressed ? 0.7 : 1 },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Xem danh sách bình luận"
+            testID="btn-navigate-comments"
+          >
+            <View style={styles.infoRow}>
+              <Text style={[theme.typography.caption, styles.infoLabel, { color: theme.colors.textSecondary }]}>
+                Bình luận gần đây:
+              </Text>
+              <View style={styles.navRowRight}>
+                <Text
+                  style={[theme.typography.body, styles.infoValue, { color: theme.colors.primary }]}
+                  testID="task-detail-comment-count"
+                >
+                  {task.recentComments ? task.recentComments.length : 0} bình luận
+                </Text>
+                <Text style={[styles.navChevron, { color: theme.colors.primary }]}> ›</Text>
+              </View>
+            </View>
+          </Pressable>
         </View>
 
         {/* Status History Section */}
@@ -1255,5 +1296,20 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontWeight: '600',
+  },
+  navRow: {
+    minHeight: 48,
+    justifyContent: 'center',
+    paddingVertical: 4,
+  },
+  navRowRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 1,
+  },
+  navChevron: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginLeft: 4,
   },
 });

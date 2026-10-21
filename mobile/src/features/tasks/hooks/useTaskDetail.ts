@@ -68,7 +68,8 @@ export function useTaskDetail(taskId: string): UseTaskDetailResult {
         setError(null);
       }
 
-      const fetchPromise = (async () => {
+      let currentPromise: Promise<void> | null = null;
+      currentPromise = (async () => {
         try {
           const data = await taskApi.getTaskDetail(targetId);
 
@@ -91,7 +92,7 @@ export function useTaskDetail(taskId: string): UseTaskDetailResult {
             setError(mapped);
           }
         } finally {
-          if (inFlightPromiseRef.current?.id === targetId) {
+          if (inFlightPromiseRef.current?.promise === currentPromise) {
             inFlightPromiseRef.current = null;
           }
 
@@ -105,8 +106,8 @@ export function useTaskDetail(taskId: string): UseTaskDetailResult {
         }
       })();
 
-      inFlightPromiseRef.current = { id: targetId, promise: fetchPromise };
-      return fetchPromise;
+      inFlightPromiseRef.current = { id: targetId, promise: currentPromise };
+      return currentPromise;
     },
     []
   );
