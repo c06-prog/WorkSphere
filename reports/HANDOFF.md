@@ -4,20 +4,20 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: PHASE 16A SERVICE REQUEST CONTRACT FOUNDATION
-- Status: Phase 15 Mobile Task Management CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 15A..15G CLOSED). Phase 14 CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 16 Mobile Service Requests: IN_PROGRESS (Subphase 16A IMPLEMENTED, 16B NOT STARTED). Phase 17 Mobile Asset Management: NOT STARTED.
-  - Subphase 16A: IMPLEMENTED / VALIDATED (Contracts, Types, API Adapter, Error Mapper, StatusBadge)
+- Current Task: PHASE 16A SERVICE REQUEST CONTRACT FOUNDATION HARDENING
+- Status: Phase 15 Mobile Task Management CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 15A..15G CLOSED). Phase 14 CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 16 Mobile Service Requests: IN_PROGRESS (Subphase 16A IMPLEMENTED / HARDENED PENDING FINAL NARROW VERIFICATION, 16B NOT STARTED). Phase 17 Mobile Asset Management: NOT STARTED.
+  - Subphase 16A: IMPLEMENTED / HARDENED PENDING FINAL NARROW VERIFICATION (Contracts, Types, API Adapter, Error Mapper, StatusBadge)
   - Subphases 15A..15F: CLOSED / AUDITED / HARDENED
   - Subphase 15G: CLOSED / VALIDATED (Full Integration & Regression)
   - Subphases 14A..14F: CLOSED (MEMORY_CHECKPOINT_CLOSED)
 - Baseline Checkpoint: `756c12db20e9aeee0732f37dd247747d73cc1194` (Decision D-065 checkpoint)
 - Final Phase 15 Reconciliation Checkpoint: `eb0c973dfe44fc3a717925a87b8a48f313502575` (`fix(mobile): reconcile phase 15 final audit`)
 - Reports: `reports/PHASE_16A_SERVICE_REQUEST_CONTRACT_FOUNDATION_REPORT.md`, `reports/PHASE_16_SERVICE_REQUEST_CONTRACT_FREEZE.md`, `reports/PRE_PHASE_16_AUDIT.md`, `reports/PHASE_15_MEMORY_CHECKPOINT.md`, `reports/PHASE_15_FINAL_AUDIT_REPORT.md`, `reports/PHASE_15G_INTEGRATION_HARDENING_REPORT.md`, `reports/PHASE_15F_SUBTASKS_COMMENTS_REPORT.md`, `reports/PHASE_15E_TASK_MUTATIONS_REPORT.md`, `reports/PHASE_15_TASK_DUE_DATE_POLICY.md`, `reports/PHASE_15D_CREATE_EDIT_TASK_REPORT.md`, `reports/PHASE_15C_TASK_DETAIL_REPORT.md`, `reports/PHASE_15B_TASK_LIST_REPORT.md`, `reports/PHASE_15A_TASK_CONTRACT_FOUNDATION_REPORT.md`, `reports/PHASE_15_TASK_CONTRACT_FREEZE.md`, `reports/PRE_PHASE_15_TASK_MANAGEMENT_AUDIT.md`
-- Validation Baseline: Mobile 85/85 suites, 793/793 tests PASS (0 failures, 0 skipped, 0 snapshots); TypeScript 0 errors; ESLint 0 errors (48 pre-existing warnings); Android assembleDebug BUILD SUCCESSFUL (203 actionable tasks).
+- Validation Baseline: Mobile 85/85 suites, 796/796 tests PASS (0 failures, 0 skipped, 0 snapshots); TypeScript 0 errors; ESLint 0 errors (48 pre-existing warnings); Android assembleDebug BUILD SUCCESSFUL (203 actionable tasks).
 - Delivered Scope:
   - Personal Dashboard (`SCR-MAIN-01`), Project Management (`SCR-PRJ-01` .. `SCR-PRJ-09`), Task Management (`SCR-TSK-01` .. `SCR-TSK-08`).
-  - Phase 16A Service Request Foundation: 11 API adapter endpoints, transport types, runtime guards, error mapper with 15 business codes and optimistic lock conflict flag, StatusBadge extension (`type="serviceRequest"`), typed route contracts (`ServiceRequestDetail`, `CreateServiceRequest`, `ServiceRequestComments`, `ServiceRating`).
-- Next Action: PHASE 16B SERVICE REQUEST LIST SCREEN (SCR-SRV-01)
+  - Phase 16A Service Request Foundation & Hardening: 11 API adapter endpoints, transport types, runtime guards, presentation-safe error mapper (`serviceRequestErrorMapper.ts`) handling all business codes, eliminating phantom `SERVICE_RESOLUTION_COMMENT_REQUIRED`, and correctly mapping `SERVICE_RESOLUTION_REQUIRED`, `SERVICE_ASSIGNEE_REQUIRED`, `INVALID_REQUEST_STATE`, and optimistic lock conflict flag, StatusBadge extension (`type="serviceRequest"`), typed route contracts (`ServiceRequestDetail`, `CreateServiceRequest`, `ServiceRequestComments`, `ServiceRating`).
+- Next Action: FINAL NARROW VERIFY PHASE 16A
 - Explicitly Deferred Outside Phase 15:
   - Task Attachments & Upload (Excluded by D-063, deferred to File Management Module).
   - Task Delete (Deferred per roadmap).

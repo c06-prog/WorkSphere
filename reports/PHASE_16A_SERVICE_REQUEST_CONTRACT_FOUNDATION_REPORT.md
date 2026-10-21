@@ -148,6 +148,27 @@
 
 ---
 
+## 4. Independent Audit Hardening
+
+- **Finding Addressed**: `SERVICE_REQUEST_ERROR_MAPPING_DRIFT` (Medium severity).
+- **Audit Drift Analysis & Reconciliation**:
+  - The independent audit identified that the initial Phase 16A error mapper contained phantom error code `SERVICE_RESOLUTION_COMMENT_REQUIRED` (derived from earlier roadmap prose) which does not exist in backend production code or API contract.
+  - In contrast, three backend production-thrown error codes were missing explicit mappings:
+    1. `SERVICE_RESOLUTION_REQUIRED` (thrown in `ServiceRequestApplicationService.java:539` when transitioning status to `RESOLVED` without providing a resolution): Mapped to placement `'status'` with message `"Vui lòng nhập giải pháp xử lý trước khi hoàn tất yêu cầu."`.
+    2. `SERVICE_ASSIGNEE_REQUIRED` (thrown in `ServiceRequestApplicationService.java:546` when transitioning status to `ASSIGNED` without an active assignee): Mapped to placement `'status'` with message `"Yêu cầu cần có người xử lý trước khi chuyển sang trạng thái đã phân công."`.
+    3. `INVALID_REQUEST_STATE` (thrown in `ServiceRequestApplicationService.java:424` when attempting to update a service request that is no longer in `OPEN` state): Mapped to placement `'banner'` with message `"Chỉ có thể cập nhật yêu cầu khi yêu cầu đang ở trạng thái mở."`.
+  - The phantom code `SERVICE_RESOLUTION_COMMENT_REQUIRED` was eliminated. If received, it safely falls back to standard validation error handling (`placement: 'form'`) without inappropriate status placement.
+- **Test Suite Expansion**:
+  - `mobile/__tests__/serviceRequests/serviceRequestErrorMapper.test.ts` was expanded with 3 new test cases verifying exact mapping for `SERVICE_RESOLUTION_REQUIRED`, `SERVICE_ASSIGNEE_REQUIRED`, and `INVALID_REQUEST_STATE`, plus a negative regression test verifying that `SERVICE_RESOLUTION_COMMENT_REQUIRED` falls back to generic validation.
+  - Validation baseline expanded from 793 to 796 tests across 85 suites.
+- **Verification Evidence**:
+  - TypeScript: 0 errors (`npm run typecheck`).
+  - ESLint: 0 errors (`npm run lint`).
+  - Jest: 85 suites, 796 tests PASS (`npm test -- --runInBand`).
+  - Android Build: `cd mobile/android; .\gradlew.bat assembleDebug --no-daemon` -> `BUILD SUCCESSFUL in 26s`.
+
+---
+
 ## Conclusion
 
-PHASE_16A_PASS_PUSHED
+PHASE_16A_HARDENING_PASS_PUSHED

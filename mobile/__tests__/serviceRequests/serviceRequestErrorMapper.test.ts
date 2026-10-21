@@ -67,18 +67,65 @@ describe('Service Request Error Mapper (mapServiceRequestError)', () => {
       expect(result.retryable).toBe(false);
     });
 
-    it('maps SERVICE_RESOLUTION_COMMENT_REQUIRED to status placement', () => {
+    it('maps SERVICE_RESOLUTION_REQUIRED to status placement', () => {
       const error: NormalizedApiError = {
         kind: 'VALIDATION_ERROR',
-        backendCode: 'SERVICE_RESOLUTION_COMMENT_REQUIRED',
+        backendCode: 'SERVICE_RESOLUTION_REQUIRED',
         status: 400,
-        message: 'Comment required',
+        message: 'Cần cập nhật giải pháp xử lý khi hoàn tất yêu cầu',
       };
 
       const result = mapServiceRequestError(error);
 
-      expect(result.message).toBe('Vui lòng nhập giải pháp xử lý trước khi hoàn tất');
+      expect(result.message).toBe('Vui lòng nhập giải pháp xử lý trước khi hoàn tất yêu cầu.');
       expect(result.placement).toBe('status');
+      expect(result.retryable).toBe(false);
+    });
+
+    it('maps SERVICE_ASSIGNEE_REQUIRED to status placement', () => {
+      const error: NormalizedApiError = {
+        kind: 'VALIDATION_ERROR',
+        backendCode: 'SERVICE_ASSIGNEE_REQUIRED',
+        status: 400,
+        message: 'Yêu cầu cần có người xử lý trước khi chuyển sang trạng thái ASSIGNED',
+      };
+
+      const result = mapServiceRequestError(error);
+
+      expect(result.message).toBe('Yêu cầu cần có người xử lý trước khi chuyển sang trạng thái đã phân công.');
+      expect(result.placement).toBe('status');
+      expect(result.retryable).toBe(false);
+    });
+
+    it('maps INVALID_REQUEST_STATE to banner placement', () => {
+      const error: NormalizedApiError = {
+        kind: 'VALIDATION_ERROR',
+        backendCode: 'INVALID_REQUEST_STATE',
+        status: 400,
+        message: 'Chỉ có thể cập nhật yêu cầu khi ở trạng thái OPEN',
+      };
+
+      const result = mapServiceRequestError(error);
+
+      expect(result.message).toBe('Chỉ có thể cập nhật yêu cầu khi yêu cầu đang ở trạng thái mở.');
+      expect(result.placement).toBe('banner');
+      expect(result.retryable).toBe(false);
+    });
+
+    it('treats phantom SERVICE_RESOLUTION_COMMENT_REQUIRED as unknown and falls back to safe generic validation', () => {
+      const error: NormalizedApiError = {
+        kind: 'VALIDATION_ERROR',
+        backendCode: 'SERVICE_RESOLUTION_COMMENT_REQUIRED',
+        status: 400,
+        message: 'Internal exception raw text',
+      };
+
+      const result = mapServiceRequestError(error);
+
+      // Must not receive specialized placement="status"
+      expect(result.placement).toBe('form');
+      // Uses normalized fallback without exposing unverified specialized message
+      expect(result.message).toBe('Internal exception raw text');
     });
 
     it('maps SERVICE_RESOLUTION_REJECTION_FORBIDDEN to dialog with isForbidden=true', () => {

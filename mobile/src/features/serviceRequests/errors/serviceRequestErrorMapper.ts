@@ -86,10 +86,32 @@ export function mapServiceRequestError(error: unknown): ServiceRequestPresentati
           traceId,
         };
 
-      case 'SERVICE_RESOLUTION_COMMENT_REQUIRED':
+      case 'SERVICE_RESOLUTION_REQUIRED':
         return {
-          message: 'Vui lòng nhập giải pháp xử lý trước khi hoàn tất',
+          message: 'Vui lòng nhập giải pháp xử lý trước khi hoàn tất yêu cầu.',
           placement: 'status',
+          retryable: false,
+          isConflict: false,
+          isNotFound: false,
+          isForbidden: false,
+          traceId,
+        };
+
+      case 'SERVICE_ASSIGNEE_REQUIRED':
+        return {
+          message: 'Yêu cầu cần có người xử lý trước khi chuyển sang trạng thái đã phân công.',
+          placement: 'status',
+          retryable: false,
+          isConflict: false,
+          isNotFound: false,
+          isForbidden: false,
+          traceId,
+        };
+
+      case 'INVALID_REQUEST_STATE':
+        return {
+          message: 'Chỉ có thể cập nhật yêu cầu khi yêu cầu đang ở trạng thái mở.',
+          placement: 'banner',
           retryable: false,
           isConflict: false,
           isNotFound: false,
