@@ -1300,3 +1300,34 @@ Current operating mode:
   5. **Đối Soát Khoảng Ngày (Date Range Comparison)**:
      - Client-side validation đối soát trực tiếp ngày lịch `startDate` (`YYYY-MM-DD`) với ngày lịch được bóc tách từ `dueDate` (`YYYY-MM-DD`).
      - Ngày bắt đầu trùng ngày hạn chót (`startDate === dueDate`) là HỢP LỆ. Chỉ chặn khi `startDate > dueDate`.
+
+
+## D-065: Phase 16 Mobile Service Request Contract & Scope Freeze
+
+- **Ngày quyết định**: 2026-10-21.
+- **Phạm vi**: Khóa kiến trúc, hợp đồng API, phân rã phạm vi và quy chuẩn tích hợp Mobile Service Requests (Phase 16, màn hình `SCR-SRV-01` .. `SCR-SRV-06`).
+- **Tình trạng**: APPROVED / FROZEN.
+- **Tài liệu tham chiếu**: `reports/PHASE_16_SERVICE_REQUEST_CONTRACT_FREEZE.md`, `reports/PRE_PHASE_16_AUDIT.md`.
+- **Nội dung quyết định**:
+  1. **Tách Biệt Phạm Vi Phân Hệ (Module Scope Decoupling)**:
+     - Dựa trên tiền lệ thành công của Quyết định `D-061` (tách Roadmap Mục 18 thành Phase 14 Dashboard/Projects và Phase 15 Tasks), Phân hệ Mobile Service Request và Phân hệ Quản lý Tài sản (Asset) được tách biệt thành hai giai đoạn độc lập:
+       - **Phase 16**: **Mobile Service Requests** (`SCR-SRV-01` .. `SCR-SRV-06`).
+       - **Phase 17**: **Mobile Asset Management** (`SCR-AST-01` .. `SCR-AST-06`).
+     - Tuyệt đối không triển khai màn hình Quản lý Tài sản trong Phase 16.
+  2. **Nguồn Ứng Viên Phân Công (Assignee Candidate Source)**:
+     - Khác với Task (chỉ phân công thành viên dự án), Service Request mang tính chất hỗ trợ tổ chức; người xử lý được chọn từ Danh bạ nhân viên toàn công ty (`GET /api/v1/directory/users`).
+     - Tái sử dụng `UserPickerModal` từ Phase 14 (`mobile/src/features/directory/components/UserPickerModal.tsx`). Thao tác phân công chỉ hiển thị khi người dùng có quyền Quản trị hệ thống (`allowedActions.includes('ASSIGN')`).
+  3. **Nguồn Danh Mục Dịch Vụ (Service Category Source)**:
+     - Mobile chỉ tiêu thụ danh sách danh mục đang hoạt động qua `GET /api/v1/service-categories`. Không hiển thị hoặc triển khai chức năng quản trị danh mục (`/api/v1/admin/service-categories`), nội dung này thuộc Admin Module.
+  4. **Chính Sách Tài Sản Liên Kết (Asset Context Policy)**:
+     - Yêu cầu dịch vụ được phép tạo mà không cần gắn tài sản (`assetId: undefined`).
+     - Hỗ trợ nhận `assetId` qua tham số điều hướng phục vụ luồng "Báo hỏng" trong tương lai. Không tạo ô nhập UUID tự do; modal chọn tài sản trực tiếp trong form hoãn đến Phase 17.
+  5. **Ranh Giới Tệp Đính Kèm (Attachment Boundary Policy)**:
+     - Hỗ trợ hiển thị danh sách tệp đính kèm do server trả về (`originalName`, `sizeBytes`, `downloadUrl`) và mở tải tệp qua `apiClient`.
+     - Chức năng chọn tệp từ máy / upload nhị phân hoãn lại do giới hạn thư viện native (không thêm thư viện ngoài).
+  6. **Quy Chuẩn Khóa Đột Biến Bằng Ref (Synchronous Mutation-Lock Standard)**:
+     - Toàn bộ 7 luồng mutation (Tạo yêu cầu, Từ chối giải quyết, Cập nhật trạng thái, Phân công, Chỉnh sửa, Bình luận, Đánh giá) bắt buộc sử dụng synchronous `useRef` lock (`submittingRef.current = true` / `addingRef.current = true`) ngay khi kích hoạt để triệt tiêu nguy cơ duplicate submit do double-tap.
+  7. **Tối Thiểu Hóa Dữ Liệu Điều Hướng (Route Data Minimization)**:
+     - Tham số điều hướng chỉ truyền ID duy nhất (`requestId`, `assetId`). Tuyệt đối không truyền object thực thể, quyền hạn, `allowedActions`, hay số `version` qua route params.
+  8. **Mở Rộng StatusBadge (StatusBadge Extension)**:
+     - Bổ sung ngữ cảnh `type="serviceRequest"` trong `StatusBadge.tsx` với ánh xạ đầy đủ 7 trạng thái canonical (`OPEN`, `ASSIGNED`, `IN_PROGRESS`, `WAITING_FOR_USER`, `RESOLVED`, `CLOSED`, `CANCELLED`), đặc biệt bổ sung `'ASSIGNED': 'Đã phân công'`.

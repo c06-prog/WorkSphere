@@ -15,13 +15,24 @@
 - Phase 15 Audit Conclusion: `PHASE_15_FINAL_AUDIT_PASS_WITH_E2E_DEFERRALS`
 - Phase 15 Memory Checkpoint: `reports/PHASE_15_MEMORY_CHECKPOINT.md`
 - Pre-Phase 16 Audit Checkpoint: `reports/PRE_PHASE_16_AUDIT.md`
-- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 15 Mobile Task Management: CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 15A..15G CLOSED). Phase 16 Mobile Service Requests: AUDITED / IMPLEMENTATION_NOT_STARTED.
-- Next Action: PHASE 16 DECISION / CONTRACT FREEZE
+- Phase 16 Contract Freeze Checkpoint: `reports/PHASE_16_SERVICE_REQUEST_CONTRACT_FREEZE.md` (Decision D-065)
+- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 15 Mobile Task Management: CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 15A..15G CLOSED). Phase 16 Mobile Service Requests: CONTRACT_FROZEN / IMPLEMENTATION_NOT_STARTED. Phase 17 Mobile Asset Management: NOT STARTED.
+- Next Action: PHASE 16A CONTRACT FOUNDATION
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening
 
-- Latest Audit: Pre-Phase 16 Mobile Service Request Audit & Contract Reconciliation
+- Latest Decision: Phase 16 Mobile Service Request Contract & Scope Freeze (`D-065`)
+- Contract Freeze Report: `reports/PHASE_16_SERVICE_REQUEST_CONTRACT_FREEZE.md`
+- Scope Frozen:
+  - Canonical Scope: Mobile Service Requests (`SCR-SRV-01` .. `SCR-SRV-06`). Asset Management (`SCR-AST-01` .. `SCR-AST-06`) decoupled to Phase 17.
+  - Assignee Candidate Source: Company Directory via `GET /api/v1/directory/users`, reusing `UserPickerModal` from Phase 14.
+  - Category Source: Active categories via public `GET /api/v1/service-categories`. Admin category CRUD deferred.
+  - Asset Policy: Creation without asset supported (`assetId: undefined`). Zero UUID text inputs. In-form asset picker deferred to Phase 17.
+  - Attachment Policy: Display server attachments; native file upload deferred.
+  - Mutation Locks: Synchronous `useRef` locks across all 7 mutation flows.
+  - StatusBadge Extension: `type="serviceRequest"` supporting all 7 canonical statuses, adding `'ASSIGNED': 'Đã phân công'`.
+- Prior Audit: Pre-Phase 16 Mobile Service Request Audit & Contract Reconciliation (`reports/PRE_PHASE_16_AUDIT.md`)
 - Pre-Audit Report: `reports/PRE_PHASE_16_AUDIT.md`
 - Scope Audited & Reconciled:
   - Canonical Scope: Mobile Service Requests (`SCR-SRV-01` .. `SCR-SRV-06` per `design/02_SCREEN_INVENTORY.md`). Asset Management decoupled to Phase 17 following the proven Phase 14 / Phase 15 precedent.
@@ -524,10 +535,13 @@
 
 - **Giai đoạn 16: Mobile Service Requests** (theo đúng `docs/08_DEVELOPMENT_ROADMAP.md` Mục 19, P0).
   - Scope: Service Request List (`SCR-SRV-01`), Detail (`SCR-SRV-02`), Reject Resolution Sheet (`SCR-SRV-03`), Create (`SCR-SRV-04`), Comments (`SCR-SRV-05`), Rating (`SCR-SRV-06`).
-  - Pre-audit Report: `reports/PRE_PHASE_16_AUDIT.md` (`PRE_PHASE_16_AUDIT_PASS_READY_FOR_DECISION_FREEZE`).
+  - Contract Freeze Report: `reports/PHASE_16_SERVICE_REQUEST_CONTRACT_FREEZE.md`.
+  - Architecture Decision: `D-065` in `reports/DECISIONS.md`.
+  - Pre-audit Report: `reports/PRE_PHASE_16_AUDIT.md`.
   - Phụ thuộc: Phase 15 Mobile Task Management đã hoàn tất và memory checkpoint đã đóng (`PHASE_15_MEMORY_CHECKPOINT_CLOSED`).
-  - Next Action: `PHASE 16 DECISION / CONTRACT FREEZE` (Kiến trúc quyết định D-065).
-  - Phase 16 Status: `AUDITED / IMPLEMENTATION_NOT_STARTED`.
+  - Next Action: `PHASE 16A CONTRACT FOUNDATION`.
+  - Phase 16 Status: `CONTRACT_FROZEN / IMPLEMENTATION_NOT_STARTED`.
+  - Phase 17 (Asset Management): `NOT STARTED`.
 
 ## Trust Rules
 
@@ -538,8 +552,8 @@
 
 ## Recent Git Log
 
+- 128a8ba docs(mobile): audit phase 16 readiness
 - b49970b docs(mobile): close phase 15 memory checkpoint
 - eb0c973 fix(mobile): reconcile phase 15 final audit
 - 597b765 test(mobile): validate phase 15 integration
 - 7e25d9b test(mobile): close task mutation version chain gap in task detail screen
-- 91312bf fix(mobile): harden task subtasks and comments concurrency and auth
