@@ -4,14 +4,14 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: PHASE 15 MEMORY CHECKPOINT
-- Status: Phase 15 Mobile Task Management CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 15A..15G CLOSED). Phase 14 CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 16: NOT STARTED.
+- Current Task: PRE-PHASE 16 AUDIT / CONTRACT RECONCILIATION
+- Status: Phase 15 Mobile Task Management CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 15A..15G CLOSED). Phase 14 CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 16 Mobile Service Requests: AUDITED / IMPLEMENTATION_NOT_STARTED.
   - Subphases 15A..15F: CLOSED / AUDITED / HARDENED
   - Subphase 15G: CLOSED / VALIDATED (Full Integration & Regression)
   - Subphases 14A..14F: CLOSED (MEMORY_CHECKPOINT_CLOSED)
 - Baseline Checkpoint: `763b877d1b3e7ecde94f288dd64dea902f193b96` (Decision D-064 checkpoint)
 - Final Phase 15 Reconciliation Checkpoint: `eb0c973dfe44fc3a717925a87b8a48f313502575` (`fix(mobile): reconcile phase 15 final audit`)
-- Reports: `reports/PHASE_15_MEMORY_CHECKPOINT.md`, `reports/PHASE_15_FINAL_AUDIT_REPORT.md`, `reports/PHASE_15G_INTEGRATION_HARDENING_REPORT.md`, `reports/PHASE_15F_SUBTASKS_COMMENTS_REPORT.md`, `reports/PHASE_15E_TASK_MUTATIONS_REPORT.md`, `reports/PHASE_15_TASK_DUE_DATE_POLICY.md`, `reports/PHASE_15D_CREATE_EDIT_TASK_REPORT.md`, `reports/PHASE_15C_TASK_DETAIL_REPORT.md`, `reports/PHASE_15B_TASK_LIST_REPORT.md`, `reports/PHASE_15A_TASK_CONTRACT_FOUNDATION_REPORT.md`, `reports/PHASE_15_TASK_CONTRACT_FREEZE.md`, `reports/PRE_PHASE_15_TASK_MANAGEMENT_AUDIT.md`
+- Reports: `reports/PRE_PHASE_16_AUDIT.md`, `reports/PHASE_15_MEMORY_CHECKPOINT.md`, `reports/PHASE_15_FINAL_AUDIT_REPORT.md`, `reports/PHASE_15G_INTEGRATION_HARDENING_REPORT.md`, `reports/PHASE_15F_SUBTASKS_COMMENTS_REPORT.md`, `reports/PHASE_15E_TASK_MUTATIONS_REPORT.md`, `reports/PHASE_15_TASK_DUE_DATE_POLICY.md`, `reports/PHASE_15D_CREATE_EDIT_TASK_REPORT.md`, `reports/PHASE_15C_TASK_DETAIL_REPORT.md`, `reports/PHASE_15B_TASK_LIST_REPORT.md`, `reports/PHASE_15A_TASK_CONTRACT_FOUNDATION_REPORT.md`, `reports/PHASE_15_TASK_CONTRACT_FREEZE.md`, `reports/PRE_PHASE_15_TASK_MANAGEMENT_AUDIT.md`
 - Validation Baseline: Mobile 82/82 suites, 736/736 tests PASS; Backend 47/47 targeted Task regression tests PASS (0 checkstyle violations, BUILD SUCCESS); Android assembleDebug BUILD SUCCESSFUL (203 actionable tasks); emulator-5554 smoke PASS (`PRE_AUTH_ANDROID_SMOKE_PASS`).
 - Delivered Scope: Personal Dashboard (`SCR-MAIN-01`), Project Management (`SCR-PRJ-01` .. `SCR-PRJ-09`), Task List (`SCR-TSK-01`), Task Detail (`SCR-TSK-02`), Create Task (`SCR-TSK-03`), Edit Task (`SCR-TSK-04`), Subtasks List & Creation (`SCR-TSK-05`), Task Comments (`SCR-TSK-06`), Change Task Status Modal (`SCR-TSK-07`), Update Task Progress Modal (`SCR-TSK-08`), Existing Task Assign/Unassign, Continuous Version Chaining, Synchronous Ref Locks on all 10 mutations, Canonical ADMIN role enforcement.
 - Explicitly Deferred Outside Phase 15:
@@ -30,8 +30,8 @@
   - `PROJECT_MUTATION_DUPLICATE_SUBMIT_RISK`: 7 project mutation flows use React state-only submit guards rather than synchronous useRef locks (all 10 Task mutation flows in Phase 15 strictly use synchronous useRef locks).
 - Pre-Existing Toolchain Debt:
   - AGP deprecation notices, KSP 2.2.0-2.0.2 compiler warning, npm dev dependency advisories (55 vulnerabilities).
-- Phase 15 Status: CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 16: NOT STARTED.
-- Next Action: PRE-PHASE 16 AUDIT.
+- Phase 15 Status: CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 16: AUDITED / IMPLEMENTATION_NOT_STARTED.
+- Next Action: PHASE 16 DECISION / CONTRACT FREEZE.
 - Phase 13 Final Scope & Delivered Invariants:
   - Mobile Auth state machine, in-memory access token, hardware Keychain refresh token.
   - All screens implemented: `Login` (`SCR-AUTH-02`), `ForgotPassword` (`SCR-AUTH-03`), `ResetPassword` (`SCR-AUTH-04`), `Profile` (`SCR-ACC-01`), `EditProfile`, `ChangePassword` (`SCR-ACC-02`), `Settings` (`SCR-ACC-03`), `Logout Confirmation` (`SCR-ACC-04`).
@@ -179,10 +179,11 @@
 ## Next Permitted Phase
 
 - **Giai đoạn 16: Mobile Service Requests**
-  - Scope: `SCR-SR-01` .. `SCR-SR-07` per canonical roadmap `docs/08_DEVELOPMENT_ROADMAP.md` Section 19.
+  - Scope: `SCR-SRV-01` .. `SCR-SRV-06` per `design/02_SCREEN_INVENTORY.md` and `docs/08_DEVELOPMENT_ROADMAP.md` Section 19.2.
+  - Pre-audit Report: `reports/PRE_PHASE_16_AUDIT.md` (`PRE_PHASE_16_AUDIT_PASS_READY_FOR_DECISION_FREEZE`).
   - Phase 15 Status: CLOSED (MEMORY_CHECKPOINT_CLOSED).
-  - Phase 16 Status: NOT STARTED.
-  - Next Action: `PRE-PHASE 16 AUDIT` (hoặc `POST-PHASE-15 / PHASE-16 PRE-IMPLEMENTATION AUDIT`).
+  - Phase 16 Status: AUDITED / IMPLEMENTATION_NOT_STARTED.
+  - Next Action: `PHASE 16 DECISION / CONTRACT FREEZE` (Kiến trúc quyết định D-065).
 
 ## New Session Procedure
 

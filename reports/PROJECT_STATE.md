@@ -14,13 +14,25 @@
 - Phase 15 Final Reconciliation Checkpoint: `eb0c973dfe44fc3a717925a87b8a48f313502575` (`fix(mobile): reconcile phase 15 final audit`)
 - Phase 15 Audit Conclusion: `PHASE_15_FINAL_AUDIT_PASS_WITH_E2E_DEFERRALS`
 - Phase 15 Memory Checkpoint: `reports/PHASE_15_MEMORY_CHECKPOINT.md`
-- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 15 Mobile Task Management: CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 15A..15G CLOSED). Phase 16 Mobile Service Requests: NOT STARTED.
-- Next Action: PRE-PHASE 16 AUDIT
+- Pre-Phase 16 Audit Checkpoint: `reports/PRE_PHASE_16_AUDIT.md`
+- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 15 Mobile Task Management: CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 15A..15G CLOSED). Phase 16 Mobile Service Requests: AUDITED / IMPLEMENTATION_NOT_STARTED.
+- Next Action: PHASE 16 DECISION / CONTRACT FREEZE
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening
 
-- Latest Reconciliation: Phase 15 Final Reconciliation Post-Independent-Audit
+- Latest Audit: Pre-Phase 16 Mobile Service Request Audit & Contract Reconciliation
+- Pre-Audit Report: `reports/PRE_PHASE_16_AUDIT.md`
+- Scope Audited & Reconciled:
+  - Canonical Scope: Mobile Service Requests (`SCR-SRV-01` .. `SCR-SRV-06` per `design/02_SCREEN_INVENTORY.md`). Asset Management decoupled to Phase 17 following the proven Phase 14 / Phase 15 precedent.
+  - Backend Readiness: 17 REST endpoints in `ServiceRequestController` and `ServiceCategoryController` 100% verified against `docs/06_API_CONTRACT.md` Section 13.
+  - Concurrency & Optimistic Locking: 7 mutation flows identified; `@Version` required on 4 endpoints (`updateRequest`, `updateStatus`, `rejectResolution`, `updateCategory`); synchronous `useRef` locks planned for all 7 mutation handlers.
+  - Date/Time Semantics: Zero calendar date inputs; all timestamps are server-side UTC `Instant`; Decision `D-064` not applicable.
+  - Identity Model: Complete mapping of `requestId`, `requestNumber`, `categoryId`, `requesterId`, `assigneeId`, `assignmentId`, `assetId`.
+  - Reuse: `UserPickerModal` for company directory assignees (`/directory/users`), `PriorityBadge` (100% match), `StatusBadge` narrow extension (`ASSIGNED`), `useTasks`/`useTaskDetail` patterns.
+  - Test Baseline: Mobile 82 suites / 736 tests PASS; Backend 46 Service Request tests PASS.
+  - Pre-Audit Verdict: `PRE_PHASE_16_AUDIT_PASS_READY_FOR_DECISION_FREEZE`.
+- Prior Reconciliation: Phase 15 Final Reconciliation Post-Independent-Audit
 - Audit Report: `reports/PHASE_15_FINAL_AUDIT_REPORT.md`
 - Integration Report: `reports/PHASE_15G_INTEGRATION_HARDENING_REPORT.md`
 - Scope Reconciled & Validated:
@@ -511,10 +523,11 @@
 ## Next Permitted Phase
 
 - **Giai đoạn 16: Mobile Service Requests** (theo đúng `docs/08_DEVELOPMENT_ROADMAP.md` Mục 19, P0).
-  - Scope: Service Request List (`SCR-SR-01`), Detail (`SCR-SR-02`), Create (`SCR-SR-03`), Workflow & History (`SCR-SR-04`), Comments (`SCR-SR-05`), Feedback & Rating (`SCR-SR-06`), Service Categories (`SCR-SR-07`).
+  - Scope: Service Request List (`SCR-SRV-01`), Detail (`SCR-SRV-02`), Reject Resolution Sheet (`SCR-SRV-03`), Create (`SCR-SRV-04`), Comments (`SCR-SRV-05`), Rating (`SCR-SRV-06`).
+  - Pre-audit Report: `reports/PRE_PHASE_16_AUDIT.md` (`PRE_PHASE_16_AUDIT_PASS_READY_FOR_DECISION_FREEZE`).
   - Phụ thuộc: Phase 15 Mobile Task Management đã hoàn tất và memory checkpoint đã đóng (`PHASE_15_MEMORY_CHECKPOINT_CLOSED`).
-  - Next Action: `PRE-PHASE 16 AUDIT` (hoặc `POST-PHASE-15 / PHASE-16 PRE-IMPLEMENTATION AUDIT`).
-  - Phase 16 Status: `NOT STARTED`.
+  - Next Action: `PHASE 16 DECISION / CONTRACT FREEZE` (Kiến trúc quyết định D-065).
+  - Phase 16 Status: `AUDITED / IMPLEMENTATION_NOT_STARTED`.
 
 ## Trust Rules
 
@@ -525,8 +538,8 @@
 
 ## Recent Git Log
 
+- b49970b docs(mobile): close phase 15 memory checkpoint
 - eb0c973 fix(mobile): reconcile phase 15 final audit
 - 597b765 test(mobile): validate phase 15 integration
 - 7e25d9b test(mobile): close task mutation version chain gap in task detail screen
 - 91312bf fix(mobile): harden task subtasks and comments concurrency and auth
-- 4558c7c feat(mobile): implement task subtasks and comments (SCR-TSK-05, SCR-TSK-06)
