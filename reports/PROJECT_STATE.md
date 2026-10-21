@@ -9,8 +9,13 @@
 - Phase 13 Audit Conclusion: `PHASE_13_FINAL_AUDIT_PASS_WITH_E2E_DEFERRALS`
 - Phase 14 Baseline Checkpoint: `785c155b69309284066252701ec1554d35d4e795` (`docs(phase14): record architecture decision D-061 phase 14 contract freeze`)
 - Phase 14A Implementation Checkpoint: `55cc13e6372ba4374d3533fe3f82f7afcd84dcff` (`feat(mobile): add phase 14 dashboard project contracts`)
-- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 15 Mobile Task Management: IMPLEMENTATION_COMPLETE / FINAL_AUDIT_PASS_WITH_E2E_DEFERRALS / FINAL_RECONCILIATION_COMPLETE / READY_FOR_MEMORY_CHECKPOINT (Subphases 15A..15F CLOSED, Subphase 15G IMPLEMENTED & VALIDATED). Phase 16: NOT STARTED.
-- Next Action: PHASE 15 MEMORY CHECKPOINT
+- Phase 15 Baseline Checkpoint: `763b877d1b3e7ecde94f288dd64dea902f193b96` (`docs(mobile): record architecture decision D-064 phase 15 task due-date semantics`)
+- Phase 15 Final Implementation Checkpoint: `597b765296565fceb0c4a88792c8785cbc538ccb` (`test(mobile): validate phase 15 integration`)
+- Phase 15 Final Reconciliation Checkpoint: `eb0c973dfe44fc3a717925a87b8a48f313502575` (`fix(mobile): reconcile phase 15 final audit`)
+- Phase 15 Audit Conclusion: `PHASE_15_FINAL_AUDIT_PASS_WITH_E2E_DEFERRALS`
+- Phase 15 Memory Checkpoint: `reports/PHASE_15_MEMORY_CHECKPOINT.md`
+- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 15 Mobile Task Management: CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 15A..15G CLOSED). Phase 16 Mobile Service Requests: NOT STARTED.
+- Next Action: PRE-PHASE 16 AUDIT
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening
@@ -32,7 +37,7 @@
   - Android Native Build: `gradlew.bat assembleDebug` -> `BUILD SUCCESSFUL` (203 actionable tasks).
   - Emulator Smoke: Installed and launched on `emulator-5554`, verified active PID, focused `MainActivity` window, and 0 crashes (`PRE_AUTH_ANDROID_SMOKE_PASS`).
   - E2E Classifications: Authenticated E2E safely skipped (`PHASE_15_AUTH_E2E_CREDENTIALS_NOT_AVAILABLE_SAFE_SKIP`), Mutation E2E deferred (`PHASE_15_MUTATION_E2E_DEFERRED`), Device Offline E2E deferred (`PHASE_15_OFFLINE_DEVICE_E2E_DEFERRED`).
-  - Status Verdict: `PHASE_15_RECONCILIATION_PASS_READY_FOR_MEMORY_CHECKPOINT`.
+  - Status Verdict: `PHASE_15_MEMORY_CHECKPOINT_CLOSED`.
 - Prior Integration: Subphase 15G Mobile Task Integration, Regression & Security Hardening (`reports/PHASE_15G_INTEGRATION_HARDENING_REPORT.md`)
 - Implementation Report: `reports/PHASE_15G_INTEGRATION_HARDENING_REPORT.md`
 - Scope Integrated & Validated:
@@ -501,17 +506,15 @@
 - ASYNC_STORAGE_NATIVE_OPERATION_SMOKE_RESOLVED: Kiểm thử CRUD ghi đĩa AsyncStorage hoàn tất trên emulator-5554 trên khóa allowlisted @worksphere/theme_preference với dọn dẹp sạch sẽ 100%.
 - PHASE_13_MOBILE_AUTHENTICATION_RESOLVED: Toàn bộ module xác thực di động, điều hướng, quản lý phiên và hồ sơ cá nhân đã hoàn tất và kiểm toán độc lập PASS (`PHASE_13_FINAL_AUDIT_PASS_WITH_E2E_DEFERRALS`).
 - PHASE_14_MOBILE_DASHBOARD_PROJECTS_RESOLVED: Toàn bộ module Personal Dashboard và Project Management (`SCR-MAIN-01`, `SCR-PRJ-01` .. `SCR-PRJ-09`) cùng hạ tầng User Directory & Picker (`D-062`) đã hoàn tất, kiểm toán độc lập PASS (`PHASE_14_FINAL_AUDIT_PASS_WITH_E2E_DEFERRALS`), đối soát báo cáo hoàn tất, và memory checkpoint đã đóng (`PHASE_14_MEMORY_CHECKPOINT_CLOSED`).
+- PHASE_15_MOBILE_TASK_MANAGEMENT_RESOLVED: Toàn bộ module Mobile Task Management (`SCR-TSK-01` .. `SCR-TSK-08`) cùng quy tắc phân công thành viên dự án (`D-063`) và ngữ nghĩa hạn chót múi giờ Việt Nam (`D-064`) đã hoàn tất, kiểm toán độc lập PASS (`PHASE_15_FINAL_AUDIT_PASS_WITH_E2E_DEFERRALS`), đối soát báo cáo hoàn tất, và memory checkpoint đã đóng (`PHASE_15_MEMORY_CHECKPOINT_CLOSED`).
 
 ## Next Permitted Phase
 
-- **Giai đoạn 14: Mobile Dashboard và Projects** (theo đúng `docs/08_DEVELOPMENT_ROADMAP.md` Mục 18, P0).
-  - Scope: Dashboard cá nhân (tích hợp `GET /api/v1/dashboard/me`), Danh sách dự án, Chi tiết dự án, Thành viên dự án.
-  - Phụ thuộc: Phase 13 Mobile Authentication đã hoàn tất và kiểm toán độc lập PASS (`PHASE_13_FINAL_AUDIT_PASS_WITH_E2E_DEFERRALS`).
-  - Pre-audit Report: `reports/PRE_PHASE_14_DASHBOARD_PROJECTS_AUDIT.md`.
-  - Contract Reconciliation Report: `reports/PHASE_14_CONTRACT_RECONCILIATION.md`.
-  - Architectural Decision: `D-061` in `reports/DECISIONS.md`.
-  - Phase 14 Status: `AUDITED, CONTRACT_RECONCILED, DECISION_FROZEN, IMPLEMENTATION_NOT_STARTED`.
-  - Next Action: `PHASE 14A IMPLEMENTATION`.
+- **Giai đoạn 16: Mobile Service Requests** (theo đúng `docs/08_DEVELOPMENT_ROADMAP.md` Mục 19, P0).
+  - Scope: Service Request List (`SCR-SR-01`), Detail (`SCR-SR-02`), Create (`SCR-SR-03`), Workflow & History (`SCR-SR-04`), Comments (`SCR-SR-05`), Feedback & Rating (`SCR-SR-06`), Service Categories (`SCR-SR-07`).
+  - Phụ thuộc: Phase 15 Mobile Task Management đã hoàn tất và memory checkpoint đã đóng (`PHASE_15_MEMORY_CHECKPOINT_CLOSED`).
+  - Next Action: `PRE-PHASE 16 AUDIT` (hoặc `POST-PHASE-15 / PHASE-16 PRE-IMPLEMENTATION AUDIT`).
+  - Phase 16 Status: `NOT STARTED`.
 
 ## Trust Rules
 
@@ -522,8 +525,8 @@
 
 ## Recent Git Log
 
-- 29c68ab feat(mobile): implement settings and finalize phase 13
-- 1ec24b1 feat(mobile): implement forgot and reset password
-- db9fc94 feat(mobile): implement profile and change password
-- d594572 fix(mobile): tighten refresh eligibility and cleanup
-- 9be1190 fix(mobile): centralize bootstrap credential cleanup
+- eb0c973 fix(mobile): reconcile phase 15 final audit
+- 597b765 test(mobile): validate phase 15 integration
+- 7e25d9b test(mobile): close task mutation version chain gap in task detail screen
+- 91312bf fix(mobile): harden task subtasks and comments concurrency and auth
+- 4558c7c feat(mobile): implement task subtasks and comments (SCR-TSK-05, SCR-TSK-06)
