@@ -16,13 +16,24 @@
 - Phase 15 Memory Checkpoint: `reports/PHASE_15_MEMORY_CHECKPOINT.md`
 - Pre-Phase 16 Audit Checkpoint: `reports/PRE_PHASE_16_AUDIT.md`
 - Phase 16 Contract Freeze Checkpoint: `reports/PHASE_16_SERVICE_REQUEST_CONTRACT_FREEZE.md` (Decision D-065)
-- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 15 Mobile Task Management: CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 15A..15G CLOSED). Phase 16 Mobile Service Requests: CONTRACT_FROZEN / IMPLEMENTATION_NOT_STARTED. Phase 17 Mobile Asset Management: NOT STARTED.
-- Next Action: PHASE 16A CONTRACT FOUNDATION
+- Phase 16A Implementation Checkpoint: `reports/PHASE_16A_SERVICE_REQUEST_CONTRACT_FOUNDATION_REPORT.md`
+- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 15 Mobile Task Management: CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 15A..15G CLOSED). Phase 16 Mobile Service Requests: IN_PROGRESS (16A IMPLEMENTED, 16B NOT STARTED). Phase 17 Mobile Asset Management: NOT STARTED.
+- Next Action: PHASE 16B SERVICE REQUEST LIST SCREEN (SCR-SRV-01)
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening
 
-- Latest Decision: Phase 16 Mobile Service Request Contract & Scope Freeze (`D-065`)
+- Latest Implementation: Phase 16A Service Request Contract Foundation & Transport Types
+- Implementation Report: `reports/PHASE_16A_SERVICE_REQUEST_CONTRACT_FOUNDATION_REPORT.md`
+- Delivered Scope:
+  - Transport types & domain enums (`ServiceStatus`, `ServicePriority`, `KNOWN_SERVICE_REQUEST_ACTIONS`, `SERVICE_REQUEST_SORT_PROPERTIES`).
+  - Runtime type guards for all entities, summaries, details, comments, and paginated wrappers.
+  - Complete API adapter implementing all 11 REST client methods matching backend `ServiceRequestController` and `ServiceCategoryController`.
+  - Presentation-safe error mapper (`serviceRequestErrorMapper.ts`) handling all 15 business codes and optimistic lock conflicts.
+  - StatusBadge extension (`type="serviceRequest"`), canonicalizing all 7 service request statuses and `'ASSIGNED': 'Đã phân công'`.
+  - Typed route contracts added to `mobile/src/app/navigation/types.ts` (`ServiceRequestDetail`, `CreateServiceRequest`, `ServiceRequestComments`, `ServiceRating`).
+  - Validation: 85 test suites, 793 tests PASS (0 failures, 0 skipped); TypeScript 0 errors; ESLint 0 errors (48 pre-existing warnings); Android assembleDebug BUILD SUCCESSFUL.
+- Prior Decision: Phase 16 Mobile Service Request Contract & Scope Freeze (`D-065`)
 - Contract Freeze Report: `reports/PHASE_16_SERVICE_REQUEST_CONTRACT_FREEZE.md`
 - Scope Frozen:
   - Canonical Scope: Mobile Service Requests (`SCR-SRV-01` .. `SCR-SRV-06`). Asset Management (`SCR-AST-01` .. `SCR-AST-06`) decoupled to Phase 17.

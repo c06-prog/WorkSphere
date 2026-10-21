@@ -37,6 +37,11 @@ export type MainTabParamList = {
   EditTask: { taskId: string };
   SubtaskList: { parentTaskId: string; projectId: string; parentTaskTitle?: string };
   TaskComments: { taskId: string; taskTitle?: string };
+  // Phase 16 Service Request Stack Screens (Type contracts only - routes registered in later subphases)
+  ServiceRequestDetail: { requestId: string };
+  CreateServiceRequest: { assetId?: string } | undefined;
+  ServiceRequestComments: { requestId: string };
+  ServiceRating: { requestId: string };
 };
 
 export type RootStackParamList = {

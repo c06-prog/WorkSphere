@@ -23,6 +23,7 @@ const CANONICAL_STATUS_LABELS: Record<string, string> = {
   DRAFT: 'Bản nháp',
   PLANNED: 'Kế hoạch',
   OPEN: 'Mở',
+  ASSIGNED: 'Đã phân công',
   ACTIVE: 'Đang thực hiện',
   IN_PROGRESS: 'Đang xử lý',
   IN_REVIEW: 'Đang kiểm tra',
@@ -36,6 +37,16 @@ const CANONICAL_STATUS_LABELS: Record<string, string> = {
   CLOSED: 'Đã đóng',
   CANCELLED: 'Đã hủy',
   REJECTED: 'Từ chối',
+};
+
+const SERVICE_REQUEST_STATUS_LABELS: Record<string, string> = {
+  OPEN: 'Mở',
+  ASSIGNED: 'Đã phân công',
+  IN_PROGRESS: 'Đang xử lý',
+  WAITING_FOR_USER: 'Chờ phản hồi',
+  RESOLVED: 'Đã giải quyết',
+  CLOSED: 'Đã đóng',
+  CANCELLED: 'Đã hủy',
 };
 
 const TASK_STATUS_LABELS: Record<string, string> = {
@@ -65,6 +76,12 @@ export function StatusBadge({
           bg: theme.colors.infoContainer,
           text: theme.colors.info,
           border: theme.colors.info,
+        };
+      case 'ASSIGNED':
+        return {
+          bg: theme.colors.primaryContainer,
+          text: '#2563EB',
+          border: '#2563EB',
         };
       case 'ACTIVE':
       case 'IN_PROGRESS':
@@ -116,7 +133,8 @@ export function StatusBadge({
 
   const colors = getBadgeColors();
   const taskLabel = type === 'task' ? TASK_STATUS_LABELS[normalized] : undefined;
-  const displayLabel = label ?? taskLabel ?? CANONICAL_STATUS_LABELS[normalized] ?? status;
+  const srvLabel = type === 'serviceRequest' ? SERVICE_REQUEST_STATUS_LABELS[normalized] : undefined;
+  const displayLabel = label ?? taskLabel ?? srvLabel ?? CANONICAL_STATUS_LABELS[normalized] ?? status;
 
   return (
     <View
