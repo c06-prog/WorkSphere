@@ -4,18 +4,18 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: PHASE 15F TASK SUBTASKS & COMMENTS
-- Status: Phase 15 IN_PROGRESS (Subphases 15A, 15B, 15C IMPLEMENTED & AUDITED, Subphase 15D CLOSED / D-064 VERIFIED, Subphase 15E IMPLEMENTED & AUDITED, Subphase 15F IMPLEMENTED / READY FOR AUDIT). Phase 14 CLOSED (MEMORY_CHECKPOINT_CLOSED).
+- Current Task: PHASE 15F FINAL TEST-GAP CLOSURE (TASK DETAIL CONTINUOUS VERSION CHAIN)
+- Status: Phase 15 IN_PROGRESS (Subphases 15A..15E CLOSED / AUDITED, Subphase 15F CLOSED / AUDITED / HARDENED / VERSION-CHAIN GAP CLOSED). Subphase 15G NOT STARTED (READY_FOR_15G). Phase 14 CLOSED (MEMORY_CHECKPOINT_CLOSED).
   - Subphases 14A..14D: CLOSED / AUDITED / HARDENED
   - Subphases 14E-G1 & 14E-G2: CLOSED / AUDITED (User Directory Foundation & Picker)
   - Subphase 14E: CLOSED / HARDENED (Core Project Management SCR-PRJ-03..09)
   - Subphase 14F: CLOSED / VALIDATED (Full Integration & Regression)
 - Baseline Checkpoint: `763b877d1b3e7ecde94f288dd64dea902f193b96` (Decision D-064 checkpoint)
 - Reports: `reports/PHASE_15F_SUBTASKS_COMMENTS_REPORT.md`, `reports/PHASE_15E_TASK_MUTATIONS_REPORT.md`, `reports/PHASE_15_TASK_DUE_DATE_POLICY.md`, `reports/PHASE_15D_CREATE_EDIT_TASK_REPORT.md`, `reports/PHASE_15C_TASK_DETAIL_REPORT.md`, `reports/PHASE_15B_TASK_LIST_REPORT.md`, `reports/PHASE_15A_TASK_CONTRACT_FOUNDATION_REPORT.md`, `reports/PHASE_15_TASK_CONTRACT_FREEZE.md`, `reports/PRE_PHASE_15_TASK_MANAGEMENT_AUDIT.md`
-- Validation Baseline: Mobile 82/82 suites, 734/734 tests PASS; Backend 31/31 targeted integration tests PASS; Android assembleDebug BUILD SUCCESSFUL (203 actionable tasks); emulator-5554 smoke PASS.
-- Delivered Scope: Personal Dashboard (`SCR-MAIN-01`), Project Management (`SCR-PRJ-01` .. `SCR-PRJ-09`), Task List (`SCR-TSK-01`), Task Detail (`SCR-TSK-02`), Create Task (`SCR-TSK-03`), Edit Task (`SCR-TSK-04`), Subtasks List & Creation (`SCR-TSK-05`), Task Comments (`SCR-TSK-06`), Change Task Status Modal (`SCR-TSK-07`), Update Task Progress Modal (`SCR-TSK-08`), Existing Task Assign/Unassign.
-- Explicitly Deferred Outside Phase 15E:
-  - Task Screens SCR-TSK-05 (Subtasks) & SCR-TSK-06 (Comments) (`Phase 15F`).
+- Validation Baseline: Mobile 82/82 suites, 735/735 tests PASS; Backend 31/31 targeted integration tests PASS; Android assembleDebug BUILD SUCCESSFUL (203 actionable tasks); emulator-5554 smoke PASS.
+- Delivered Scope: Personal Dashboard (`SCR-MAIN-01`), Project Management (`SCR-PRJ-01` .. `SCR-PRJ-09`), Task List (`SCR-TSK-01`), Task Detail (`SCR-TSK-02`), Create Task (`SCR-TSK-03`), Edit Task (`SCR-TSK-04`), Subtasks List & Creation (`SCR-TSK-05`), Task Comments (`SCR-TSK-06`), Change Task Status Modal (`SCR-TSK-07`), Update Task Progress Modal (`SCR-TSK-08`), Existing Task Assign/Unassign, Continuous Version Chaining.
+- Explicitly Deferred Outside Phase 15F:
+  - Subphase 15G (Task Attachments & Activity History).
   - Service Requests (`Phase 16` / Roadmap Section 19).
   - Asset Management (`Phase 16` / Roadmap Section 19).
 - Active Deferred Items:
@@ -27,8 +27,8 @@
   - `PROJECT_MUTATION_DUPLICATE_SUBMIT_RISK`: 7 mutation flows use React state-only submit guards rather than synchronous useRef locks (Task mutation flows in 15D correctly use synchronous useRef locks).
 - Pre-Existing Toolchain Debt:
   - AGP deprecation notices, KSP 2.2.0-2.0.2 compiler warning, npm dev dependency advisories (55 vulnerabilities).
-- Phase 15 Status: IN_PROGRESS (15A, 15B, 15C IMPLEMENTED & AUDITED, 15D CLOSED / D-064 VERIFIED, 15E IMPLEMENTED / READY FOR AUDIT, 15F NOT STARTED).
-- Next Action: Phase 15 Independent Audit / Phase 16 Roadmap.
+- Phase 15 Status: IN_PROGRESS (15A, 15B, 15C, 15D, 15E, 15F CLOSED & VERIFIED, 15G NOT STARTED).
+- Next Action: Ready for Subphase 15G.
 - Phase 13 Final Scope & Delivered Invariants:
   - Mobile Auth state machine, in-memory access token, hardware Keychain refresh token.
   - All screens implemented: `Login` (`SCR-AUTH-02`), `ForgotPassword` (`SCR-AUTH-03`), `ResetPassword` (`SCR-AUTH-04`), `Profile` (`SCR-ACC-01`), `EditProfile`, `ChangePassword` (`SCR-ACC-02`), `Settings` (`SCR-ACC-03`), `Logout Confirmation` (`SCR-ACC-04`).

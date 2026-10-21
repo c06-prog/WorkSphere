@@ -22,7 +22,7 @@
  */
 
 import React from 'react';
-import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
+import { render, fireEvent, waitFor, act, cleanup } from '@testing-library/react-native';
 import { TaskDetailScreen } from '../../src/features/tasks/screens/TaskDetailScreen';
 import { useTaskDetail } from '../../src/features/tasks/hooks/useTaskDetail';
 import { AppProviders } from '../../src/app/providers';
@@ -205,6 +205,10 @@ describe('Phase 15C + 15E: TaskDetailScreen', () => {
       hasNext: false,
       hasPrevious: false,
     });
+  });
+
+  afterEach(async () => {
+    await cleanup();
   });
 
   it('1. renders loading indicator during initial load', async () => {
@@ -629,7 +633,7 @@ describe('Phase 15C + 15E: TaskDetailScreen', () => {
     };
     (taskApi.unassignUser as jest.Mock).mockResolvedValueOnce(updatedTask);
 
-    const { getByTestId, getByText } = await render(
+    const { getByTestId, getByText, queryByText } = await render(
       <AppProviders>
         <TaskDetailScreen />
       </AppProviders>
@@ -646,6 +650,9 @@ describe('Phase 15C + 15E: TaskDetailScreen', () => {
 
     // Cancel first
     fireEvent.press(getByText('Hủy'));
+    await waitFor(() => {
+      expect(queryByText('Bạn có chắc chắn muốn gỡ Lê Văn Lập Trình khỏi công việc không?')).toBeNull();
+    });
     expect(taskApi.unassignUser).not.toHaveBeenCalled();
 
     // Press unassign again and confirm
@@ -686,5 +693,113 @@ describe('Phase 15C + 15E: TaskDetailScreen', () => {
     expect(queryByTestId('btn-open-progress-modal')).toBeNull();
     expect(queryByTestId('btn-open-assign-modal')).toBeNull();
     expect(queryByTestId('btn-unassign-user-dev-1')).toBeNull();
+  });
+
+  it('15. continuous version chain across successive mutations in a single mounted screen lifecycle (v1 -> v2 -> v3)', async () => {
+    const { useTaskDetail: actualUseTaskDetail } = jest.requireActual('../../src/features/tasks/hooks/useTaskDetail');
+
+    const taskV1: TaskDetail = {
+      ...mockTask,
+      id: 'task-123',
+      version: 1,
+      status: 'IN_PROGRESS',
+      progressPercent: 10,
+      allowedActions: ['UPDATE', 'UPDATE_STATUS', 'UPDATE_PROGRESS', 'ASSIGN', 'UNASSIGN'],
+    };
+
+    const taskV2: TaskDetail = {
+      ...taskV1,
+      version: 2,
+      progressPercent: 25,
+    };
+
+    const taskV3: TaskDetail = {
+      ...taskV2,
+      version: 3,
+      progressPercent: 85.5,
+    };
+
+    (taskApi.getTaskDetail as jest.Mock).mockResolvedValue(taskV1);
+    (taskApi.updateTaskProgress as jest.Mock)
+      .mockResolvedValueOnce(taskV2)
+      .mockResolvedValueOnce(taskV3);
+
+    (useTaskDetail as jest.Mock).mockReset();
+    (useTaskDetail as jest.Mock).mockImplementation(actualUseTaskDetail);
+
+    const { getByTestId, queryByTestId, getByText } = await render(
+      <AppProviders>
+        <TaskDetailScreen />
+      </AppProviders>
+    );
+
+    // Initial state check after load: version 1, 10%
+    await waitFor(() => {
+      expect(getByTestId('task-detail-progress-percent').props.children).toEqual([10, '%']);
+    });
+
+    // --- Mutation 1: Progress Update (v1 -> v2: 10% -> 25%) ---
+    fireEvent.press(getByTestId('btn-open-progress-modal'));
+    await waitFor(() => {
+      expect(getByTestId('update-progress-modal')).toBeTruthy();
+      expect(getByText('Cập nhật tiến độ công việc')).toBeTruthy();
+      expect(getByTestId('input-task-progress').props.value).toBe('10');
+    });
+
+    fireEvent.changeText(getByTestId('input-task-progress'), '25');
+    await waitFor(() => {
+      expect(getByTestId('input-task-progress').props.value).toBe('25');
+    });
+
+    await act(async () => {
+      fireEvent.press(getByTestId('btn-confirm-progress'));
+    });
+
+    await waitFor(() => {
+      expect(taskApi.updateTaskProgress).toHaveBeenCalledTimes(1);
+      expect(taskApi.updateTaskProgress).toHaveBeenNthCalledWith(1, 'task-123', {
+        progressPercent: 25,
+        version: 1,
+      });
+    });
+
+    await waitFor(() => {
+      expect(queryByTestId('update-progress-modal')).toBeNull();
+      // Screen reflects updated progress from taskV2
+      expect(getByTestId('task-detail-progress-percent').props.children).toEqual([25, '%']);
+    });
+
+    // --- Mutation 2: Successive Progress Update (v2 -> v3: 25% -> 85.5%) on SAME mounted screen ---
+    fireEvent.press(getByTestId('btn-open-progress-modal'));
+    await waitFor(() => {
+      expect(getByTestId('update-progress-modal')).toBeTruthy();
+      expect(getByText('Cập nhật tiến độ công việc')).toBeTruthy();
+      // Modal pre-populates with taskV2 progress (25)
+      expect(getByTestId('input-task-progress').props.value).toBe('25');
+    });
+
+    fireEvent.changeText(getByTestId('input-task-progress'), '85.5');
+    await waitFor(() => {
+      expect(getByTestId('input-task-progress').props.value).toBe('85.5');
+    });
+
+    await act(async () => {
+      fireEvent.press(getByTestId('btn-confirm-progress'));
+    });
+
+    await waitFor(() => {
+      expect(taskApi.updateTaskProgress).toHaveBeenCalledTimes(2);
+      // CRITICAL: MUST pass version 2 from taskV2, proving continuous version chaining!
+      expect(taskApi.updateTaskProgress).toHaveBeenNthCalledWith(2, 'task-123', {
+        progressPercent: 85.5,
+        version: 2,
+      });
+    });
+
+    await waitFor(() => {
+      expect(queryByTestId('update-progress-modal')).toBeNull();
+      // Final screen state check: version 3 progress (85.5%) rendered
+      expect(getByTestId('task-detail-progress-percent').props.children).toEqual([85.5, '%']);
+    });
   });
 });

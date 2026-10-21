@@ -220,9 +220,9 @@ Exit code: 0
 Full test run output:
 ```text
 Test Suites: 82 passed, 82 total
-Tests:       728 passed, 728 total
+Tests:       735 passed, 735 total
 Snapshots:   0 total
-Time:        24.126 s
+Time:        24.496 s
 ```
 
 New/Updated Task Test Suites:
@@ -230,7 +230,7 @@ New/Updated Task Test Suites:
 - `mobile/__tests__/screens/TaskCommentsScreen.test.tsx`: 12 passed
 - `mobile/__tests__/tasks/useSubtasks.test.tsx`: 6 passed
 - `mobile/__tests__/tasks/useTaskComments.test.tsx`: 8 passed
-- `mobile/__tests__/screens/TaskDetailScreen.test.tsx`: 14 passed
+- `mobile/__tests__/screens/TaskDetailScreen.test.tsx`: 15 passed
 - `mobile/__tests__/tasks/useTaskDetail.test.tsx`: 11 passed
 
 ## 26. GRADLE_BUILD_VERIFICATION
@@ -273,16 +273,17 @@ Following the Phase 15F Independent Audit, narrow hardening was implemented and 
 
 ### 3. Comment Update Authorization Hardening
 - **Finding `TASK_COMMENT_UPDATE_AUTH_DRIFT`**:
-  - *Fix*: Ensured update permission checks fail closed and author validation strictly checks `currentUser?.id === comment.author.id` before presenting update controls or dispatching updates.
+  - *Fix*: Reconciled documentation and verified runtime authorization in `TaskCommentsScreen.tsx`. Update controls and operations strictly fail closed unless the current user is the comment author OR a system administrator (`isAuthor || isSystemAdmin`, where `isAuthor = currentUser?.id === comment.author.id` and `isSystemAdmin = currentUser?.roles?.includes('SYSTEM_ADMIN')`), exactly aligning with backend authorization rules in `TaskCommentApplicationService`.
 
 ### 4. Mutation Version Chaining Test Gap Closure
 - **Finding `TASK_MUTATION_VERSION_CHAIN_TEST_GAP`**:
-  - *Fix*: Verified and documented Test 11 in `mobile/__tests__/tasks/useTaskDetail.test.tsx` (`preserves version chain across successive applyTaskUpdate mutations (v2 -> v3 -> v4)`), ensuring successive mutations update the authoritative `version` lock without regression.
+  - *Fix*: Resolved and verified via a dedicated continuous version chaining test within a single mounted screen lifecycle (`mobile/__tests__/screens/TaskDetailScreen.test.tsx` Test 15: `continuous version chain across successive mutations in a single mounted screen lifecycle (v1 -> v2 -> v3)`).
+  - *Proof*: The test mounts `TaskDetailScreen` using the real `useTaskDetail` hook. Initial fetch loads `taskV1` (`version: 1, progressPercent: 10`). First progress mutation submits `{ progressPercent: 25, version: 1 }`, server returns `taskV2` (`version: 2, progressPercent: 25`), screen applies update via real `applyTaskUpdate` and re-renders to 25%. Without unmounting, a second progress mutation is triggered on the same mounted screen instance; it consumes `taskV2`'s version (`version: 2`), submits `{ progressPercent: 85.5, version: 2 }`, and receives `taskV3` (`version: 3, progressPercent: 85.5`), rendering final progress at 85.5%. Proves end-to-end optimistic lock version propagation across successive screen mutations without manual state re-injection.
 
 ### 5. Final Hardening Verification Metrics
 - **TypeScript**: `tsc --noEmit` -> 0 errors (Exit code: 0).
 - **ESLint**: `eslint .` -> 0 errors (48 pre-existing warnings in other features; Exit code: 0).
-- **Unit & Screen Tests**: 82 passed, 82 total (734 passed, 734 total) in 24.3s.
-- **Android Debug Compilation**: `cd mobile/android && .\gradlew.bat assembleDebug --no-daemon` -> `BUILD SUCCESSFUL in 26s` (203 actionable tasks: 16 executed, 187 up-to-date).
+- **Unit & Screen Tests**: 82 passed, 82 total (735 passed, 735 total) in 24.5s.
+- **Android Debug Compilation**: `cd mobile/android && .\gradlew.bat assembleDebug --no-daemon` -> `BUILD SUCCESSFUL in 26s` (203 actionable tasks: 16 executed, 187 up-to-date; preserved from verified run).
 - **Backend Cleanliness**: `git diff -- backend` -> 100% empty.
 
