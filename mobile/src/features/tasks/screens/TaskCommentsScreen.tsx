@@ -4,9 +4,8 @@
  *
  * Invariants & Correctness Guarantees:
  * - Direct navigation from TaskDetail.
- * - Add comment gated by task.allowedActions.includes('ADD_COMMENT') (via canAddComment param).
- * - Edit comment gated strictly to comment author.
- * - Delete comment gated to comment author OR users with ADMIN / ROLE_ADMIN role.
+ * - Add comment gated by task.allowedActions.includes('ADD_COMMENT') independently fetched from task detail.
+ * - Edit and delete comment gated to comment author OR users with canonical ADMIN role.
  * - Synchronous useRef locks protect create, update, and delete mutations against double-submission.
  * - Monotonic generation and pagination lock in useTaskComments ensure race-free list updates.
  * - Non-blocking refresh error banner preserves existing comments.
@@ -102,11 +101,8 @@ export function TaskCommentsScreen() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const deletingRef = useRef(false);
 
-  // Permissions check: aligns with backend TaskCommentApplicationService (author OR system admin)
-  const isSystemAdmin =
-    currentUser?.roles?.includes('ADMIN') ||
-    currentUser?.roles?.includes('ROLE_ADMIN') ||
-    false;
+  // Permissions check: aligns with backend TaskCommentApplicationService (author OR canonical system admin)
+  const isSystemAdmin = currentUser?.roles?.includes('ADMIN') || false;
 
   const isAuthor = (comment: TaskComment): boolean => {
     return !!currentUser?.id && comment.author?.id === currentUser.id;

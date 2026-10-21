@@ -291,6 +291,21 @@ describe('Phase 15F: TaskCommentsScreen (SCR-TSK-06)', () => {
 
     // Admin CAN edit comment-2 even though not author (aligned with backend TaskCommentApplicationService)
     expect(getByTestId('btn-edit-comment-comment-2')).toBeTruthy();
+
+    // Switch to ROLE_ADMIN-only synthetic user: controls MUST be hidden (alias rejected)
+    mockCurrentUser = {
+      id: 'synthetic-role-admin-user',
+      fullName: 'Synthetic User',
+      roles: ['ROLE_ADMIN'],
+    };
+
+    await rerender(
+      <AppProviders>
+        <TaskCommentsScreen />
+      </AppProviders>
+    );
+
+    expect(queryByTestId('btn-edit-comment-comment-2')).toBeNull();
   });
 
   test('permission gating: author and admin can delete; normal user cannot delete others', async () => {
@@ -321,6 +336,39 @@ describe('Phase 15F: TaskCommentsScreen (SCR-TSK-06)', () => {
 
     // Admin can delete comment-2 even though not author
     expect(getByTestId('btn-delete-comment-comment-2')).toBeTruthy();
+
+    // Switch to ROLE_ADMIN-only synthetic user: controls MUST be hidden (alias rejected)
+    mockCurrentUser = {
+      id: 'synthetic-role-admin-user',
+      fullName: 'Synthetic User',
+      roles: ['ROLE_ADMIN'],
+    };
+
+    await rerender(
+      <AppProviders>
+        <TaskCommentsScreen />
+      </AppProviders>
+    );
+
+    expect(queryByTestId('btn-delete-comment-comment-2')).toBeNull();
+  });
+
+  test('permission gating: rejects synthetic ROLE_ADMIN alias; strictly requires canonical ADMIN', async () => {
+    mockCurrentUser = {
+      id: 'role-admin-user',
+      fullName: 'Synthetic Role Admin',
+      roles: ['ROLE_ADMIN'],
+    };
+
+    const { queryByTestId } = await render(
+      <AppProviders>
+        <TaskCommentsScreen />
+      </AppProviders>
+    );
+
+    // Neither edit nor delete controls are rendered for non-authored comment-2
+    expect(queryByTestId('btn-edit-comment-comment-2')).toBeNull();
+    expect(queryByTestId('btn-delete-comment-comment-2')).toBeNull();
   });
 
   test('permission gating: authoritatively gates comment creation via task.allowedActions (fail-closed)', async () => {
