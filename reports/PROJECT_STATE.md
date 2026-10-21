@@ -9,23 +9,24 @@
 - Phase 13 Audit Conclusion: `PHASE_13_FINAL_AUDIT_PASS_WITH_E2E_DEFERRALS`
 - Phase 14 Baseline Checkpoint: `785c155b69309284066252701ec1554d35d4e795` (`docs(phase14): record architecture decision D-061 phase 14 contract freeze`)
 - Phase 14A Implementation Checkpoint: `55cc13e6372ba4374d3533fe3f82f7afcd84dcff` (`feat(mobile): add phase 14 dashboard project contracts`)
-- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 15 Mobile Task Management: IN_PROGRESS (Subphases 15A, 15B, 15C, 15D, 15E IMPLEMENTED & AUDITED, Subphase 15F IMPLEMENTED / READY FOR AUDIT).
+- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 15 Mobile Task Management: IN_PROGRESS (Subphases 15A, 15B, 15C, 15D, 15E IMPLEMENTED & AUDITED, Subphase 15F IMPLEMENTED & HARDENED / PASS).
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening
 
-- Latest Implementation: Subphase 15F Mobile Task Subtasks & Comments (`SCR-TSK-05` & `SCR-TSK-06`)
+- Latest Implementation & Hardening: Subphase 15F Mobile Task Subtasks & Comments (`SCR-TSK-05` & `SCR-TSK-06`) Hardening
 - Implementation Report: `reports/PHASE_15F_SUBTASKS_COMMENTS_REPORT.md`
-- Scope Implemented:
-  - Subtask List Screen (`SCR-TSK-05`): Implemented `SubtaskListScreen.tsx` with breadcrumb, parent task context, child tasks `FlatList` using `TaskCard`, navigation to `TaskDetail`, empty state, and pull-to-refresh error handling.
-  - Subtask Creation Modal (`CreateSubtaskModal.tsx`): Subtask creation modal gated by `canCreateSubtask`, project-member assignee picker, D-064 due-date serialization (`17:00:00Z`), and synchronous `submittingRef` lock.
-  - Task Comments Screen (`SCR-TSK-06`): Implemented `TaskCommentsScreen.tsx` with paginated comments list, author attribution, formatted timestamps, and `(đã chỉnh sửa)` edited indicators.
-  - Comment Actions: Create comment with bottom input bar and `addingRef` lock gated by `canAddComment`; edit comment strictly restricted to author; delete comment gated to author or users with `ADMIN` role via `ConfirmationDialog`.
-  - Concurrency & Freshness: Generation guards and pagination locks in `useSubtasks` and `useTaskComments`; fixed in-flight promise race in `useTaskDetail` to prevent stale GET overwrites.
-  - Navigation: Registered auxiliary hidden routes `SubtaskList` and `TaskComments` in `MainTabNavigator.tsx` (`tabBarButton: () => null`, `headerShown: false`); activated navigation pressables in `TaskDetailScreen.tsx`.
+- Scope Implemented & Hardened:
+  - Subtask List Screen (`SCR-TSK-05`): Implemented `SubtaskListScreen.tsx` with breadcrumb, parent task context, child tasks `FlatList` using `TaskCard`, navigation to `TaskDetail`, empty state, and pull-to-refresh error handling. Hardened with authoritative `useTaskDetail(parentTaskId)` check for `CREATE_SUBTASK` (eliminating `TASK_SUBTASK_CREATE_CAPABILITY_BYPASS`).
+  - Subtask Creation Modal (`CreateSubtaskModal.tsx`): Subtask creation modal gated by authoritative parent task capability, project-member assignee picker, D-064 due-date serialization (`17:00:00Z`), and synchronous `submittingRef` lock.
+  - Task Comments Screen (`SCR-TSK-06`): Implemented `TaskCommentsScreen.tsx` with paginated comments list, author attribution, formatted timestamps, and `(đã chỉnh sửa)` edited indicators. Hardened with authoritative `useTaskDetail(taskId)` check for `ADD_COMMENT` (eliminating `TASK_COMMENT_ADD_CAPABILITY_BYPASS` and `TASK_COMMENT_DIRECT_ROUTE_AUTH_GAP`).
+  - Comment Actions: Create comment with bottom input bar and `addingRef` lock; edit comment strictly restricted to author; delete comment gated to author or users with `ADMIN` role via `ConfirmationDialog`.
+  - Concurrency & Freshness Hardening: Synchronous generation increment on mutations in `useSubtasks` and `useTaskComments` eliminating `TASK_SUBTASK_MUTATION_STALE_OVERWRITE` and `TASK_COMMENT_MUTATION_STALE_OVERWRITE`; request promise ownership prevents older aborted fetches from clearing newer fetch pointers.
+  - Version Chaining: Documented and verified Test 11 in `useTaskDetail.test.tsx` verifying version chaining across multiple mutations (`v2 -> v3 -> v4`).
+  - Navigation: Auxiliary hidden routes `SubtaskList` and `TaskComments` in `MainTabNavigator.tsx` (`tabBarButton: () => null`, `headerShown: false`) without untrusted permission payload parameters.
   - Zero Policy Breaches: Zero backend modifications, zero new dependencies, zero file upload UI (deferred per D-063), zero raw UUIDs or unformatted enums.
-  - Validation: 82 test suites, 728 tests PASS (0 failures, 0 skipped); TypeScript 0 errors; ESLint 0 errors (48 preexisting warnings); Android assembleDebug BUILD SUCCESSFUL.
-  - Next Action: `INDEPENDENT AUDIT PHASE 15F`.
+  - Validation: 82 test suites, 734 tests PASS (0 failures, 0 skipped); TypeScript 0 errors; ESLint 0 errors (48 preexisting warnings); Android assembleDebug BUILD SUCCESSFUL.
+  - Hardening Verdict: `PHASE_15F_HARDENING_PASS_PUSHED`.
 - Prior Implementation: Subphase 15E Mobile Task Mutations (`SCR-TSK-07` + `SCR-TSK-08` + Existing-Task Assign/Unassign)
 - Prior Report: `reports/PHASE_15E_TASK_MUTATIONS_REPORT.md`
 - Scope Implemented:

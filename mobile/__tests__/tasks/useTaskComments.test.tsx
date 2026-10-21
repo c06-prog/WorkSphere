@@ -209,11 +209,11 @@ describe('Phase 15F: useTaskComments Hook', () => {
       resolveCall = res;
     });
 
-    (taskApi.getComments as jest.Mock).mockReturnValue(pending);
+    (taskApi.getComments as jest.Mock).mockReturnValueOnce(pending);
 
     const { unmount } = await renderHook(() => useTaskComments('task-100'));
 
-    unmount();
+    await unmount();
 
     await act(async () => {
       resolveCall(mockPage0);
@@ -221,5 +221,145 @@ describe('Phase 15F: useTaskComments Hook', () => {
 
     // Test finishes without errors or warnings
     expect(true).toBe(true);
+  });
+
+  it('9. comment GET vs create race: addComment invalidates older in-flight GET so old list does not erase new comment', async () => {
+    let resolveGetA!: (v: PagedData<TaskComment>) => void;
+    const pendingGetA = new Promise<PagedData<TaskComment>>(res => {
+      resolveGetA = res;
+    });
+
+    (taskApi.getComments as jest.Mock).mockReturnValueOnce(pendingGetA);
+
+    const { result } = await renderHook(() => useTaskComments('task-100'));
+
+    // Create comment B succeeds while GET A is still in flight
+    await act(async () => {
+      result.current.addComment(mockComment2);
+    });
+
+    expect(result.current.comments).toHaveLength(1);
+    expect(result.current.comments[0].id).toBe('comment-2');
+
+    // Now old GET A completes with old data (mockPage0 has comment-1, not comment-2)
+    await act(async () => {
+      resolveGetA(mockPage0);
+      await pendingGetA;
+    });
+
+    // Created comment B must NOT be erased by old GET A
+    expect(result.current.comments).toHaveLength(1);
+    expect(result.current.comments[0].id).toBe('comment-2');
+  });
+
+  it('10. comment GET vs update race: updateCommentInList invalidates older in-flight GET so old list does not overwrite update', async () => {
+    (taskApi.getComments as jest.Mock).mockResolvedValueOnce(mockPage0);
+
+    const { result } = await renderHook(() => useTaskComments('task-100'));
+
+    await waitFor(() => {
+      expect(result.current.comments).toHaveLength(1);
+    });
+
+    // Start a background refresh that stays pending
+    let resolveRefresh!: (v: PagedData<TaskComment>) => void;
+    const pendingRefresh = new Promise<PagedData<TaskComment>>(res => {
+      resolveRefresh = res;
+    });
+    (taskApi.getComments as jest.Mock).mockReturnValueOnce(pendingRefresh);
+
+    let refreshPromise!: Promise<void>;
+    await act(async () => {
+      refreshPromise = result.current.refresh();
+    });
+
+    // Update comment-1 while refresh is in flight
+    const updatedComment1: TaskComment = {
+      ...mockComment1,
+      content: 'Nội dung bình luận đã được chỉnh sửa mới.',
+      isEdited: true,
+    };
+    await act(async () => {
+      result.current.updateCommentInList('comment-1', updatedComment1);
+    });
+
+    expect(result.current.comments[0].content).toBe('Nội dung bình luận đã được chỉnh sửa mới.');
+
+    // Now old refresh completes with pre-edit content
+    await act(async () => {
+      resolveRefresh(mockPage0);
+      await pendingRefresh;
+      await refreshPromise;
+    });
+
+    // Updated content must remain authoritative
+    expect(result.current.comments[0].content).toBe('Nội dung bình luận đã được chỉnh sửa mới.');
+  });
+
+  it('11. comment GET vs delete race: removeCommentFromList invalidates older in-flight GET so old list does not restore deleted comment', async () => {
+    (taskApi.getComments as jest.Mock).mockResolvedValueOnce(mockPage0);
+
+    const { result } = await renderHook(() => useTaskComments('task-100'));
+
+    await waitFor(() => {
+      expect(result.current.comments).toHaveLength(1);
+    });
+
+    // Start a background refresh that stays pending
+    let resolveRefresh!: (v: PagedData<TaskComment>) => void;
+    const pendingRefresh = new Promise<PagedData<TaskComment>>(res => {
+      resolveRefresh = res;
+    });
+    (taskApi.getComments as jest.Mock).mockReturnValueOnce(pendingRefresh);
+
+    let refreshPromise!: Promise<void>;
+    await act(async () => {
+      refreshPromise = result.current.refresh();
+    });
+
+    // Delete comment-1 while refresh is in flight
+    await act(async () => {
+      result.current.removeCommentFromList('comment-1');
+    });
+
+    expect(result.current.comments).toHaveLength(0);
+
+    // Old refresh completes with comment-1 still present
+    await act(async () => {
+      resolveRefresh(mockPage0);
+      await pendingRefresh;
+      await refreshPromise;
+    });
+
+    // Comment must remain deleted
+    expect(result.current.comments).toHaveLength(0);
+  });
+
+  it('12. comment GET failure after mutation does not surface stale error', async () => {
+    let rejectGetA!: (err: unknown) => void;
+    const pendingGetA = new Promise<PagedData<TaskComment>>((_, reject) => {
+      rejectGetA = reject;
+    });
+
+    (taskApi.getComments as jest.Mock).mockReturnValueOnce(pendingGetA);
+
+    const { result } = await renderHook(() => useTaskComments('task-100'));
+
+    await act(async () => {
+      result.current.addComment(mockComment2);
+    });
+
+    // Old GET A fails
+    await act(async () => {
+      rejectGetA(new Error('Old network error'));
+      try {
+        await pendingGetA;
+      } catch {
+        // expected
+      }
+    });
+
+    expect(result.current.error).toBeNull();
+    expect(result.current.comments).toHaveLength(1);
   });
 });

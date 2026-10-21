@@ -172,11 +172,11 @@ describe('Phase 15F: useSubtasks Hook', () => {
       resolveCall = resolve;
     });
 
-    (taskApi.getSubtasks as jest.Mock).mockReturnValue(pending);
+    (taskApi.getSubtasks as jest.Mock).mockReturnValueOnce(pending);
 
     const { unmount } = await renderHook(() => useSubtasks('parent-task-1'));
 
-    unmount();
+    await unmount();
 
     await act(async () => {
       resolveCall!([mockSubtaskSummary]);
@@ -184,5 +184,64 @@ describe('Phase 15F: useSubtasks Hook', () => {
 
     // Test finishes without unhandled rejections
     expect(true).toBe(true);
+  });
+
+  it('7. subtask GET vs create race: addSubtask invalidates older in-flight GET so old list does not erase new subtask', async () => {
+    let resolveGetA!: (v: TaskSummary[]) => void;
+    const pendingGetA = new Promise<TaskSummary[]>(resolve => {
+      resolveGetA = resolve;
+    });
+
+    (taskApi.getSubtasks as jest.Mock).mockReturnValueOnce(pendingGetA);
+
+    const { result } = await renderHook(() => useSubtasks('parent-task-1'));
+
+    // Create subtask B succeeds while GET A is still in-flight
+    await act(async () => {
+      result.current.addSubtask(mockCreatedTaskDetail);
+    });
+
+    expect(result.current.subtasks).toHaveLength(1);
+    expect(result.current.subtasks[0].id).toBe('subtask-2');
+
+    // Now old GET A finishes with older list (does not include subtask-2)
+    await act(async () => {
+      resolveGetA([mockSubtaskSummary]);
+      await pendingGetA;
+    });
+
+    // Subtask B must NOT be erased by old GET A
+    expect(result.current.subtasks).toHaveLength(1);
+    expect(result.current.subtasks[0].id).toBe('subtask-2');
+  });
+
+  it('8. subtask GET vs create race: old in-flight GET failure does not surface stale error after addSubtask', async () => {
+    let rejectGetA!: (err: unknown) => void;
+    const pendingGetA = new Promise<TaskSummary[]>((_, reject) => {
+      rejectGetA = reject;
+    });
+
+    (taskApi.getSubtasks as jest.Mock).mockReturnValueOnce(pendingGetA);
+
+    const { result } = await renderHook(() => useSubtasks('parent-task-1'));
+
+    await act(async () => {
+      result.current.addSubtask(mockCreatedTaskDetail);
+    });
+
+    // Now old GET A fails
+    await act(async () => {
+      rejectGetA(new Error('Network failure from old fetch'));
+      try {
+        await pendingGetA;
+      } catch {
+        // expected rejection
+      }
+    });
+
+    // Error must NOT be surfaced
+    expect(result.current.error).toBeNull();
+    expect(result.current.subtasks).toHaveLength(1);
+    expect(result.current.subtasks[0].id).toBe('subtask-2');
   });
 });

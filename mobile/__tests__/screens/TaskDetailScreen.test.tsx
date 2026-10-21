@@ -265,7 +265,6 @@ describe('Phase 15C + 15E: TaskDetailScreen', () => {
       parentTaskId: 'task-uuid-123',
       projectId: 'proj-uuid-1',
       parentTaskTitle: 'Phát triển API thanh toán trực tuyến',
-      canCreateSubtask: false,
     });
 
     // Verify Comments row navigation (SCR-TSK-06)
@@ -274,7 +273,6 @@ describe('Phase 15C + 15E: TaskDetailScreen', () => {
     });
     expect(mockNavigate).toHaveBeenCalledWith('TaskComments', {
       taskId: 'task-uuid-123',
-      canAddComment: false,
       taskTitle: 'Phát triển API thanh toán trực tuyến',
     });
 

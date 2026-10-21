@@ -17,7 +17,7 @@ import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { SubtaskListScreen } from '../../src/features/tasks/screens/SubtaskListScreen';
 import { useSubtasks } from '../../src/features/tasks/hooks/useSubtasks';
 import { AppProviders } from '../../src/app/providers';
-import { TaskSummary } from '../../src/features/tasks/api/taskTypes';
+import { TaskDetail, TaskSummary } from '../../src/features/tasks/api/taskTypes';
 
 jest.mock('react-native-safe-area-context', () =>
   require('react-native-safe-area-context/jest/mock').default
@@ -28,14 +28,12 @@ const mockNavigate = jest.fn();
 
 let mockRouteParams: {
   parentTaskId: string;
-  projectId: string;
+  projectId?: string;
   parentTaskTitle?: string;
-  canCreateSubtask?: boolean;
 } = {
   parentTaskId: 'parent-task-1',
   projectId: 'proj-1',
   parentTaskTitle: 'Tính năng Đăng nhập SSO',
-  canCreateSubtask: true,
 };
 
 jest.mock('@react-navigation/native', () => {
@@ -51,6 +49,27 @@ jest.mock('@react-navigation/native', () => {
     }),
   };
 });
+
+let mockParentTask: Partial<TaskDetail> | null = {
+  id: 'parent-task-1',
+  title: 'Tính năng Đăng nhập SSO',
+  allowedActions: ['CREATE_SUBTASK'],
+  project: { id: 'proj-1', name: 'ERP System', code: 'ERP' },
+};
+let mockParentTaskLoading = false;
+
+jest.mock('../../src/features/tasks/hooks/useTaskDetail', () => ({
+  useTaskDetail: () => ({
+    task: mockParentTask,
+    initialLoading: mockParentTaskLoading,
+    loading: mockParentTaskLoading,
+    error: null,
+    refreshError: null,
+    load: jest.fn(),
+    refresh: jest.fn(),
+    applyTaskUpdate: jest.fn(),
+  }),
+}));
 
 jest.mock('../../src/features/tasks/hooks/useSubtasks');
 jest.mock('../../src/features/projects/api/projectApi', () => ({
@@ -95,8 +114,14 @@ describe('Phase 15F: SubtaskListScreen (SCR-TSK-05)', () => {
       parentTaskId: 'parent-task-1',
       projectId: 'proj-1',
       parentTaskTitle: 'Tính năng Đăng nhập SSO',
-      canCreateSubtask: true,
     };
+    mockParentTask = {
+      id: 'parent-task-1',
+      title: 'Tính năng Đăng nhập SSO',
+      allowedActions: ['CREATE_SUBTASK'],
+      project: { id: 'proj-1', name: 'ERP System', code: 'ERP' },
+    };
+    mockParentTaskLoading = false;
     (useSubtasks as jest.Mock).mockReturnValue({ ...defaultHookReturn });
   });
 
@@ -181,8 +206,8 @@ describe('Phase 15F: SubtaskListScreen (SCR-TSK-05)', () => {
     expect(getByText('Chưa có công việc con nào.')).toBeTruthy();
   });
 
-  it('6. gates subtask creation: shows + Thêm when canCreateSubtask=true, hides when false', async () => {
-    // When true:
+  it('6. gates subtask creation authoritatively via parentTask.allowedActions', async () => {
+    // When allowedActions includes CREATE_SUBTASK:
     const { getByTestId, rerender, queryByTestId } = await render(
       <AppProviders>
         <SubtaskListScreen />
@@ -191,11 +216,38 @@ describe('Phase 15F: SubtaskListScreen (SCR-TSK-05)', () => {
 
     expect(getByTestId('btn-open-create-subtask-modal')).toBeTruthy();
 
-    // When false:
-    mockRouteParams = {
-      ...mockRouteParams,
-      canCreateSubtask: false,
+    // When allowedActions does not include CREATE_SUBTASK:
+    mockParentTask = {
+      ...mockParentTask,
+      allowedActions: [],
     };
+
+    await rerender(
+      <AppProviders>
+        <SubtaskListScreen />
+      </AppProviders>
+    );
+
+    expect(queryByTestId('btn-open-create-subtask-modal')).toBeNull();
+
+    // When parentTask is still loading (fail-closed):
+    mockParentTask = {
+      ...mockParentTask,
+      allowedActions: ['CREATE_SUBTASK'],
+    };
+    mockParentTaskLoading = true;
+
+    await rerender(
+      <AppProviders>
+        <SubtaskListScreen />
+      </AppProviders>
+    );
+
+    expect(queryByTestId('btn-open-create-subtask-modal')).toBeNull();
+
+    // When parentTask failed to load (null):
+    mockParentTaskLoading = false;
+    mockParentTask = null;
 
     await rerender(
       <AppProviders>

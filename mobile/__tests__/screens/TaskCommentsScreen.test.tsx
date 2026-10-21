@@ -22,7 +22,7 @@ import { TaskCommentsScreen } from '../../src/features/tasks/screens/TaskComment
 import { useTaskComments } from '../../src/features/tasks/hooks/useTaskComments';
 import { taskApi } from '../../src/features/tasks/api/taskApi';
 import { AppProviders } from '../../src/app/providers';
-import { TaskComment } from '../../src/features/tasks/api/taskTypes';
+import { TaskComment, TaskDetail } from '../../src/features/tasks/api/taskTypes';
 
 jest.mock('react-native-safe-area-context', () =>
   require('react-native-safe-area-context/jest/mock').default
@@ -33,10 +33,8 @@ const mockNavigate = jest.fn();
 
 let mockRouteParams: {
   taskId: string;
-  canAddComment?: boolean;
 } = {
   taskId: 'task-100',
-  canAddComment: true,
 };
 
 jest.mock('@react-navigation/native', () => {
@@ -52,6 +50,26 @@ jest.mock('@react-navigation/native', () => {
     }),
   };
 });
+
+let mockTaskDetail: Partial<TaskDetail> | null = {
+  id: 'task-100',
+  title: 'Công việc test',
+  allowedActions: ['ADD_COMMENT'],
+};
+let mockTaskDetailLoading = false;
+
+jest.mock('../../src/features/tasks/hooks/useTaskDetail', () => ({
+  useTaskDetail: () => ({
+    task: mockTaskDetail,
+    initialLoading: mockTaskDetailLoading,
+    loading: mockTaskDetailLoading,
+    error: null,
+    refreshError: null,
+    load: jest.fn(),
+    refresh: jest.fn(),
+    applyTaskUpdate: jest.fn(),
+  }),
+}));
 
 let mockCurrentUser: {
   id: string;
@@ -128,8 +146,13 @@ describe('Phase 15F: TaskCommentsScreen (SCR-TSK-06)', () => {
     jest.clearAllMocks();
     mockRouteParams = {
       taskId: 'task-100',
-      canAddComment: true,
     };
+    mockTaskDetail = {
+      id: 'task-100',
+      title: 'Công việc test',
+      allowedActions: ['ADD_COMMENT'],
+    };
+    mockTaskDetailLoading = false;
     mockCurrentUser = {
       id: 'user-author-1',
       fullName: 'Nguyễn Văn Tác Giả',
@@ -240,9 +263,9 @@ describe('Phase 15F: TaskCommentsScreen (SCR-TSK-06)', () => {
     expect(getByText('Lỗi cập nhật bình luận mới nhất.')).toBeTruthy();
   });
 
-  test('permission gating: author can edit own comment; cannot edit others', async () => {
-    // Current user is user-author-1
-    const { getByTestId, queryByTestId } = await render(
+  test('permission gating: author and system admin can edit; normal user cannot edit others', async () => {
+    // Current user is user-author-1 (author of comment-1, not comment-2)
+    const { getByTestId, queryByTestId, rerender } = await render(
       <AppProviders>
         <TaskCommentsScreen />
       </AppProviders>
@@ -250,9 +273,24 @@ describe('Phase 15F: TaskCommentsScreen (SCR-TSK-06)', () => {
 
     // Can edit comment-1 (author)
     expect(getByTestId('btn-edit-comment-comment-1')).toBeTruthy();
-
-    // Cannot edit comment-2 (not author)
+    // Cannot edit comment-2 (not author, not admin)
     expect(queryByTestId('btn-edit-comment-comment-2')).toBeNull();
+
+    // Switch to ADMIN user
+    mockCurrentUser = {
+      id: 'admin-user-99',
+      fullName: 'Quản Trị Viên',
+      roles: ['ADMIN'],
+    };
+
+    await rerender(
+      <AppProviders>
+        <TaskCommentsScreen />
+      </AppProviders>
+    );
+
+    // Admin CAN edit comment-2 even though not author (aligned with backend TaskCommentApplicationService)
+    expect(getByTestId('btn-edit-comment-comment-2')).toBeTruthy();
   });
 
   test('permission gating: author and admin can delete; normal user cannot delete others', async () => {
@@ -283,17 +321,58 @@ describe('Phase 15F: TaskCommentsScreen (SCR-TSK-06)', () => {
 
     // Admin can delete comment-2 even though not author
     expect(getByTestId('btn-delete-comment-comment-2')).toBeTruthy();
-    // Admin CANNOT edit comment-2 (editing is author-only)
-    expect(queryByTestId('btn-edit-comment-comment-2')).toBeNull();
   });
 
-  test('permission gating: renders disabled notice when canAddComment=false', async () => {
-    mockRouteParams = {
-      taskId: 'task-100',
-      canAddComment: false,
+  test('permission gating: authoritatively gates comment creation via task.allowedActions (fail-closed)', async () => {
+    // When allowedActions includes ADD_COMMENT:
+    const { getByTestId, queryByTestId, rerender } = await render(
+      <AppProviders>
+        <TaskCommentsScreen />
+      </AppProviders>
+    );
+
+    expect(getByTestId('input-comment-content')).toBeTruthy();
+    expect(getByTestId('btn-send-comment')).toBeTruthy();
+    expect(queryByTestId('comments-add-disabled-notice')).toBeNull();
+
+    // When allowedActions does not include ADD_COMMENT:
+    mockTaskDetail = {
+      ...mockTaskDetail,
+      allowedActions: [],
     };
 
-    const { getByTestId, queryByTestId } = await render(
+    await rerender(
+      <AppProviders>
+        <TaskCommentsScreen />
+      </AppProviders>
+    );
+
+    expect(getByTestId('comments-add-disabled-notice')).toBeTruthy();
+    expect(queryByTestId('input-comment-content')).toBeNull();
+    expect(queryByTestId('btn-send-comment')).toBeNull();
+
+    // When task is still loading (fail-closed):
+    mockTaskDetail = {
+      ...mockTaskDetail,
+      allowedActions: ['ADD_COMMENT'],
+    };
+    mockTaskDetailLoading = true;
+
+    await rerender(
+      <AppProviders>
+        <TaskCommentsScreen />
+      </AppProviders>
+    );
+
+    expect(getByTestId('comments-add-disabled-notice')).toBeTruthy();
+    expect(queryByTestId('input-comment-content')).toBeNull();
+    expect(queryByTestId('btn-send-comment')).toBeNull();
+
+    // When task fails to load (null):
+    mockTaskDetailLoading = false;
+    mockTaskDetail = null;
+
+    await rerender(
       <AppProviders>
         <TaskCommentsScreen />
       </AppProviders>

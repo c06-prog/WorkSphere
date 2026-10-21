@@ -27,13 +27,20 @@ import { TaskDetail, TaskSummary } from '../api/taskTypes';
 import { CreateSubtaskModal } from '../components/CreateSubtaskModal';
 import { TaskCard } from '../components/TaskCard';
 import { useSubtasks } from '../hooks/useSubtasks';
+import { useTaskDetail } from '../hooks/useTaskDetail';
 
 export function SubtaskListScreen() {
   const theme = useAppTheme();
   const navigation = useNavigation<MainTabNavProp<'SubtaskList'>>();
   const route = useRoute<MainTabScreenRouteProp<'SubtaskList'>>();
 
-  const { parentTaskId, projectId, parentTaskTitle, canCreateSubtask = true } = route.params;
+  const { parentTaskId, projectId: routeProjectId, parentTaskTitle: routeParentTaskTitle } = route.params;
+
+  // Authoritatively derive parent task capabilities and context
+  const { task: parentTask, initialLoading: parentTaskLoading } = useTaskDetail(parentTaskId);
+  const canCreateSubtask = !parentTaskLoading && (parentTask?.allowedActions?.includes('CREATE_SUBTASK') === true);
+  const projectId = routeProjectId || parentTask?.project?.id || '';
+  const parentTaskTitle = routeParentTaskTitle || parentTask?.title;
 
   const {
     subtasks,

@@ -46,6 +46,7 @@ export function useTaskComments(taskId: string): UseTaskCommentsResult {
   const mountedRef = useRef<boolean>(true);
   const requestGenerationRef = useRef<number>(0);
   const paginationLockRef = useRef<boolean>(false);
+  const inFlightPromiseRef = useRef<{ page: number; promise: Promise<void> } | null>(null);
 
   const fetchPage = useCallback(
     async (targetTaskId: string, pageNum: number, mode: 'initial' | 'refresh' | 'append'): Promise<void> => {
@@ -70,46 +71,55 @@ export function useTaskComments(taskId: string): UseTaskCommentsResult {
         setLoadingMore(true);
       }
 
-      try {
-        const pageData = await taskApi.getComments(targetTaskId, pageNum, PAGE_SIZE);
+      let currentPromise: Promise<void> | null = null;
+      currentPromise = (async () => {
+        try {
+          const pageData = await taskApi.getComments(targetTaskId, pageNum, PAGE_SIZE);
 
-        if (!mountedRef.current || generation !== requestGenerationRef.current) {
-          return;
-        }
+          if (!mountedRef.current || generation !== requestGenerationRef.current) {
+            return;
+          }
 
-        if (mode === 'append') {
-          setComments(prev => {
-            const existingIds = new Set(prev.map(c => c.id));
-            const newItems = pageData.items.filter(c => !existingIds.has(c.id));
-            return [...prev, ...newItems];
-          });
-        } else {
-          setComments(pageData.items);
-        }
+          if (mode === 'append') {
+            setComments(prev => {
+              const existingIds = new Set(prev.map(c => c.id));
+              const newItems = pageData.items.filter(c => !existingIds.has(c.id));
+              return [...prev, ...newItems];
+            });
+          } else {
+            setComments(pageData.items);
+          }
 
-        setCurrentPage(pageData.page);
-        setHasNext(pageData.hasNext);
-        setError(null);
-        setRefreshError(null);
-      } catch (err: unknown) {
-        if (!mountedRef.current || generation !== requestGenerationRef.current) {
-          return;
-        }
+          setCurrentPage(pageData.page);
+          setHasNext(pageData.hasNext);
+          setError(null);
+          setRefreshError(null);
+        } catch (err: unknown) {
+          if (!mountedRef.current || generation !== requestGenerationRef.current) {
+            return;
+          }
 
-        const presentationErr = mapTaskError(err);
-        if (mode === 'refresh') {
-          setRefreshError(presentationErr.message);
-        } else if (mode === 'initial') {
-          setError(presentationErr);
+          const presentationErr = mapTaskError(err);
+          if (mode === 'refresh') {
+            setRefreshError(presentationErr.message);
+          } else if (mode === 'initial') {
+            setError(presentationErr);
+          }
+        } finally {
+          if (mountedRef.current && generation === requestGenerationRef.current) {
+            if (mode === 'initial') setLoading(false);
+            if (mode === 'refresh') setRefreshing(false);
+            if (mode === 'append') setLoadingMore(false);
+          }
+          if (inFlightPromiseRef.current?.promise === currentPromise) {
+            inFlightPromiseRef.current = null;
+          }
+          paginationLockRef.current = false;
         }
-      } finally {
-        if (mountedRef.current && generation === requestGenerationRef.current) {
-          if (mode === 'initial') setLoading(false);
-          if (mode === 'refresh') setRefreshing(false);
-          if (mode === 'append') setLoadingMore(false);
-        }
-        paginationLockRef.current = false;
-      }
+      })();
+
+      inFlightPromiseRef.current = { page: pageNum, promise: currentPromise };
+      return currentPromise;
     },
     []
   );
@@ -143,6 +153,13 @@ export function useTaskComments(taskId: string): UseTaskCommentsResult {
   }, [taskId, hasNext, loading, refreshing, loadingMore, currentPage, fetchPage]);
 
   const addComment = useCallback((newComment: TaskComment) => {
+    // Invalidate any older in-flight list fetches before committing created comment
+    requestGenerationRef.current++;
+    inFlightPromiseRef.current = null;
+    paginationLockRef.current = false;
+    setLoading(false);
+    setError(null);
+
     setComments(prev => {
       if (prev.some(c => c.id === newComment.id)) {
         return prev;
@@ -152,10 +169,18 @@ export function useTaskComments(taskId: string): UseTaskCommentsResult {
   }, []);
 
   const updateCommentInList = useCallback((commentId: string, updated: TaskComment) => {
+    // Invalidate any older in-flight list fetches before committing updated comment
+    requestGenerationRef.current++;
+    inFlightPromiseRef.current = null;
+
     setComments(prev => prev.map(c => (c.id === commentId ? updated : c)));
   }, []);
 
   const removeCommentFromList = useCallback((commentId: string) => {
+    // Invalidate any older in-flight list fetches before committing removal
+    requestGenerationRef.current++;
+    inFlightPromiseRef.current = null;
+
     setComments(prev => prev.filter(c => c.id !== commentId));
   }, []);
 

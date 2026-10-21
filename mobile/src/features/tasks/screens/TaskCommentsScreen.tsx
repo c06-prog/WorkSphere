@@ -34,6 +34,7 @@ import { taskApi } from '../api/taskApi';
 import { TaskComment } from '../api/taskTypes';
 import { mapTaskError } from '../errors/taskErrorMapper';
 import { useTaskComments } from '../hooks/useTaskComments';
+import { useTaskDetail } from '../hooks/useTaskDetail';
 
 function formatDateTime(isoString: string | null | undefined): string {
   if (!isoString) {
@@ -61,7 +62,11 @@ export function TaskCommentsScreen() {
   const route = useRoute<MainTabScreenRouteProp<'TaskComments'>>();
   const { currentUser } = useAuth();
 
-  const { taskId, canAddComment = true } = route.params;
+  const { taskId } = route.params;
+
+  // Authoritatively derive task capabilities
+  const { task, initialLoading: taskLoading } = useTaskDetail(taskId);
+  const canAddComment = !taskLoading && (task?.allowedActions?.includes('ADD_COMMENT') === true);
 
   const {
     comments,
@@ -97,8 +102,8 @@ export function TaskCommentsScreen() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const deletingRef = useRef(false);
 
-  // Permissions check
-  const isAdmin =
+  // Permissions check: aligns with backend TaskCommentApplicationService (author OR system admin)
+  const isSystemAdmin =
     currentUser?.roles?.includes('ADMIN') ||
     currentUser?.roles?.includes('ROLE_ADMIN') ||
     false;
@@ -107,8 +112,16 @@ export function TaskCommentsScreen() {
     return !!currentUser?.id && comment.author?.id === currentUser.id;
   };
 
+  const canManageComment = (comment: TaskComment): boolean => {
+    return isAuthor(comment) || isSystemAdmin;
+  };
+
+  const canEditComment = (comment: TaskComment): boolean => {
+    return canManageComment(comment);
+  };
+
   const canDeleteComment = (comment: TaskComment): boolean => {
-    return isAuthor(comment) || isAdmin;
+    return canManageComment(comment);
   };
 
   // Add Comment Handler
@@ -195,7 +208,7 @@ export function TaskCommentsScreen() {
 
   const renderCommentItem = ({ item }: { item: TaskComment }) => {
     const authorInitial = item.author?.fullName ? item.author.fullName.charAt(0).toUpperCase() : '?';
-    const canEdit = isAuthor(item);
+    const canEdit = canEditComment(item);
     const canDelete = canDeleteComment(item);
 
     return (

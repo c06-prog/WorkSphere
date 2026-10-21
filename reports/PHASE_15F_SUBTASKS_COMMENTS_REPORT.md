@@ -243,10 +243,46 @@ Android APK compiled cleanly with exit code 0.
 
 ## 27. CONCLUSION_AND_NEXT_PHASE
 
-Phase 15F is fully implemented, verified, and ready for audit.
-- Subtask List & Creation (`SCR-TSK-05`): COMPLETE.
-- Task Comments & Actions (`SCR-TSK-06`): COMPLETE.
+Phase 15F is fully implemented, verified, and hardened.
+- Subtask List & Creation (`SCR-TSK-05`): COMPLETE & HARDENED.
+- Task Comments & Actions (`SCR-TSK-06`): COMPLETE & HARDENED.
 - Phase 15E Regressions: RESOLVED.
 - All verification checks: PASS.
 
-Next: Phase 15 Independent Audit / Phase 16 Mobile Roadmap.
+## 28. INDEPENDENT_AUDIT_HARDENING
+
+Following the Phase 15F Independent Audit, narrow hardening was implemented and thoroughly verified across concurrency and direct-route security boundaries:
+
+### 1. Concurrency Hardening: Mutation Stale Overwrite Elimination
+- **Finding `TASK_SUBTASK_MUTATION_STALE_OVERWRITE`**:
+  - *Vulnerability*: An in-flight list fetch (e.g. initial fetch or pull-to-refresh) could resolve after a successful `createSubtask` mutation and overwrite state, dropping the newly created subtask.
+  - *Fix*: In `useSubtasks.ts`, `requestGenerationRef` is synchronously incremented immediately prior to committing the mutation result via `addSubtask`. Any prior in-flight GET requests that resolve later detect that their generation is stale (`thisGen !== requestGenerationRef.current`) and are discarded without overwriting state or surfacing stale errors.
+- **Finding `TASK_COMMENT_MUTATION_STALE_OVERWRITE`**:
+  - *Vulnerability*: An in-flight comment list fetch could resolve after an `addComment`, `updateComment`, or `deleteComment` mutation and revert authoritative state.
+  - *Fix*: In `useTaskComments.ts`, `requestGenerationRef` is synchronously incremented on every successful mutation (`addComment`, `updateComment`, `deleteComment`). Any prior in-flight GET requests (page 0 or paginated) are safely discarded if their generation is superseded. In addition, request promise ownership (`inFlightPromiseRef`) prevents older aborted fetches from clearing newer fetch pointers in `finally` blocks.
+
+### 2. Direct Route Authorization Hardening: Capability Bypass Prevention
+- **Findings `TASK_SUBTASK_CREATE_CAPABILITY_BYPASS` & `TASK_COMMENT_ADD_CAPABILITY_BYPASS` / `TASK_COMMENT_DIRECT_ROUTE_AUTH_GAP`**:
+  - *Vulnerability*: Navigation params `canCreateSubtask` and `canAddComment` could be spoofed or bypassed on direct route entry (deep link or direct navigator dispatch) without verifying the backend's authoritative capabilities.
+  - *Fix*:
+    1. Removed untrusted `canCreateSubtask` parameter from `SubtaskList` route params in `mobile/src/app/navigation/types.ts`.
+    2. Removed untrusted `canAddComment` parameter from `TaskComments` route params in `mobile/src/app/navigation/types.ts`.
+    3. `SubtaskListScreen.tsx` now loads authoritative parent task details via `useTaskDetail(parentTaskId)` and strictly evaluates `!parentTaskLoading && parentTask?.allowedActions?.includes('CREATE_SUBTASK')`.
+    4. `TaskCommentsScreen.tsx` now loads authoritative task details via `useTaskDetail(taskId)` and strictly evaluates `!taskLoading && task?.allowedActions?.includes('ADD_COMMENT')`.
+    5. Cleaned `TaskDetailScreen.tsx` navigation calls to drop the obsolete route param payload.
+
+### 3. Comment Update Authorization Hardening
+- **Finding `TASK_COMMENT_UPDATE_AUTH_DRIFT`**:
+  - *Fix*: Ensured update permission checks fail closed and author validation strictly checks `currentUser?.id === comment.author.id` before presenting update controls or dispatching updates.
+
+### 4. Mutation Version Chaining Test Gap Closure
+- **Finding `TASK_MUTATION_VERSION_CHAIN_TEST_GAP`**:
+  - *Fix*: Verified and documented Test 11 in `mobile/__tests__/tasks/useTaskDetail.test.tsx` (`preserves version chain across successive applyTaskUpdate mutations (v2 -> v3 -> v4)`), ensuring successive mutations update the authoritative `version` lock without regression.
+
+### 5. Final Hardening Verification Metrics
+- **TypeScript**: `tsc --noEmit` -> 0 errors (Exit code: 0).
+- **ESLint**: `eslint .` -> 0 errors (48 pre-existing warnings in other features; Exit code: 0).
+- **Unit & Screen Tests**: 82 passed, 82 total (734 passed, 734 total) in 24.3s.
+- **Android Debug Compilation**: `cd mobile/android && .\gradlew.bat assembleDebug --no-daemon` -> `BUILD SUCCESSFUL in 26s` (203 actionable tasks: 16 executed, 187 up-to-date).
+- **Backend Cleanliness**: `git diff -- backend` -> 100% empty.
+

@@ -129,6 +129,12 @@ export function useSubtasks(parentTaskId: string): UseSubtasksResult {
   }, [parentTaskId, executeFetch]);
 
   const addSubtask = useCallback((created: TaskSummary | TaskDetail) => {
+    // Invalidate any older in-flight GET request before committing mutation result
+    requestGenerationRef.current++;
+    inFlightPromiseRef.current = null;
+    setLoading(false);
+    setError(null);
+
     setSubtasks(prev => {
       // If already present, don't duplicate
       if (prev.some(t => t.id === created.id)) {

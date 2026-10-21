@@ -838,7 +838,6 @@ export function TaskDetailScreen() {
                 parentTaskId: task.id,
                 projectId: task.project.id,
                 parentTaskTitle: task.title,
-                canCreateSubtask: task.allowedActions?.includes('CREATE_SUBTASK'),
               })
             }
             style={({ pressed }) => [
@@ -869,7 +868,6 @@ export function TaskDetailScreen() {
             onPress={() =>
               navigation.navigate('TaskComments', {
                 taskId: task.id,
-                canAddComment: task.allowedActions?.includes('ADD_COMMENT'),
                 taskTitle: task.title,
               })
             }

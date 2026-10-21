@@ -12,7 +12,7 @@
   - Subphase 14F: CLOSED / VALIDATED (Full Integration & Regression)
 - Baseline Checkpoint: `763b877d1b3e7ecde94f288dd64dea902f193b96` (Decision D-064 checkpoint)
 - Reports: `reports/PHASE_15F_SUBTASKS_COMMENTS_REPORT.md`, `reports/PHASE_15E_TASK_MUTATIONS_REPORT.md`, `reports/PHASE_15_TASK_DUE_DATE_POLICY.md`, `reports/PHASE_15D_CREATE_EDIT_TASK_REPORT.md`, `reports/PHASE_15C_TASK_DETAIL_REPORT.md`, `reports/PHASE_15B_TASK_LIST_REPORT.md`, `reports/PHASE_15A_TASK_CONTRACT_FOUNDATION_REPORT.md`, `reports/PHASE_15_TASK_CONTRACT_FREEZE.md`, `reports/PRE_PHASE_15_TASK_MANAGEMENT_AUDIT.md`
-- Validation Baseline: Mobile 82/82 suites, 728/728 tests PASS; Backend 31/31 targeted integration tests PASS; Android assembleDebug BUILD SUCCESSFUL (203 actionable tasks); emulator-5554 smoke PASS.
+- Validation Baseline: Mobile 82/82 suites, 734/734 tests PASS; Backend 31/31 targeted integration tests PASS; Android assembleDebug BUILD SUCCESSFUL (203 actionable tasks); emulator-5554 smoke PASS.
 - Delivered Scope: Personal Dashboard (`SCR-MAIN-01`), Project Management (`SCR-PRJ-01` .. `SCR-PRJ-09`), Task List (`SCR-TSK-01`), Task Detail (`SCR-TSK-02`), Create Task (`SCR-TSK-03`), Edit Task (`SCR-TSK-04`), Subtasks List & Creation (`SCR-TSK-05`), Task Comments (`SCR-TSK-06`), Change Task Status Modal (`SCR-TSK-07`), Update Task Progress Modal (`SCR-TSK-08`), Existing Task Assign/Unassign.
 - Explicitly Deferred Outside Phase 15E:
   - Task Screens SCR-TSK-05 (Subtasks) & SCR-TSK-06 (Comments) (`Phase 15F`).
@@ -28,7 +28,7 @@
 - Pre-Existing Toolchain Debt:
   - AGP deprecation notices, KSP 2.2.0-2.0.2 compiler warning, npm dev dependency advisories (55 vulnerabilities).
 - Phase 15 Status: IN_PROGRESS (15A, 15B, 15C IMPLEMENTED & AUDITED, 15D CLOSED / D-064 VERIFIED, 15E IMPLEMENTED / READY FOR AUDIT, 15F NOT STARTED).
-- Next Action: `INDEPENDENT AUDIT PHASE 15F`.
+- Next Action: Phase 15 Independent Audit / Phase 16 Roadmap.
 - Phase 13 Final Scope & Delivered Invariants:
   - Mobile Auth state machine, in-memory access token, hardware Keychain refresh token.
   - All screens implemented: `Login` (`SCR-AUTH-02`), `ForgotPassword` (`SCR-AUTH-03`), `ResetPassword` (`SCR-AUTH-04`), `Profile` (`SCR-ACC-01`), `EditProfile`, `ChangePassword` (`SCR-ACC-02`), `Settings` (`SCR-ACC-03`), `Logout Confirmation` (`SCR-ACC-04`).
