@@ -11,7 +11,7 @@
  */
 
 import React from 'react';
-import { render } from '@testing-library/react-native';
+import { render, fireEvent } from '@testing-library/react-native';
 import { ServiceRequestCard } from '../../src/features/serviceRequests/components/ServiceRequestCard';
 import {
   ServicePriority,
@@ -134,10 +134,30 @@ describe('ServiceRequestCard Component', () => {
     expect(queryByText('assignee-uuid-3333')).toBeNull();
   });
 
-  it('is strictly presentation-only (not a button, no pressable interaction)', async () => {
+  it('renders presentation-only (not a button) when onPress is omitted', async () => {
     const { queryByRole } = await renderCard(baseMockRequest);
 
-    // In Phase 16B, cards are NOT buttons because Detail (16C) does not exist yet
+    // When onPress is omitted, cards are NOT buttons
     expect(queryByRole('button')).toBeNull();
+  });
+
+  it('renders pressable button and triggers onPress when provided (Phase 16C)', async () => {
+    const mockOnPress = jest.fn();
+    const { getByRole, getByTestId } = await render(
+      <AppProviders>
+        <ServiceRequestCard
+          request={baseMockRequest}
+          onPress={mockOnPress}
+          testID="interactive-srv-card"
+        />
+      </AppProviders>
+    );
+
+    const button = getByRole('button');
+    expect(button).toBeTruthy();
+    expect(getByTestId('interactive-srv-card')).toBeTruthy();
+
+    fireEvent.press(button);
+    expect(mockOnPress).toHaveBeenCalledTimes(1);
   });
 });

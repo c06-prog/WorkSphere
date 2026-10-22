@@ -32,7 +32,9 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { useAppTheme } from '../../../app/providers/ThemeProvider';
+import { MainTabNavProp } from '../../../app/navigation/types';
 import { EmptyState, ErrorState, LoadingIndicator } from '../../../shared/components';
 import { SearchBar } from '../../../shared/components/SearchBar';
 import {
@@ -74,6 +76,7 @@ const PRIORITY_FILTERS: PriorityFilterOption[] = [
 
 export function ServiceRequestsScreen() {
   const theme = useAppTheme();
+  const navigation = useNavigation<MainTabNavProp<'ServiceRequests'>>();
 
   const {
     requests,
@@ -419,7 +422,12 @@ export function ServiceRequestsScreen() {
       <FlatList<ServiceRequestSummaryResponse>
         data={requests}
         keyExtractor={item => item.id}
-        renderItem={({ item }) => <ServiceRequestCard request={item} />}
+        renderItem={({ item }) => (
+          <ServiceRequestCard
+            request={item}
+            onPress={() => navigation.navigate('ServiceRequestDetail', { requestId: item.id })}
+          />
+        )}
         ListHeaderComponent={renderHeader}
         ListFooterComponent={renderFooter}
         ListEmptyComponent={renderEmpty}

@@ -46,7 +46,7 @@ describe('RootNavigator Session Abstraction & Navigation Shell', () => {
   });
 
   test('D. Main tab order: all 5 canonical tabs are rendered in exact order', async () => {
-    const { getByLabelText } = await render(<AppRoot sessionState="AUTHENTICATED" />);
+    const { getByLabelText, queryByLabelText } = await render(<AppRoot sessionState="AUTHENTICATED" />);
 
     // Check all 5 canonical tab buttons exist
     const dashboardTab = getByLabelText('Tab 1: Dashboard');
@@ -60,6 +60,9 @@ describe('RootNavigator Session Abstraction & Navigation Shell', () => {
     expect(tasksTab).toBeTruthy();
     expect(serviceRequestsTab).toBeTruthy();
     expect(moreTab).toBeTruthy();
+
+    // Auxiliary routes like ServiceRequestDetail must remain hidden (no 6th tab)
+    expect(queryByLabelText('Tab 6')).toBeNull();
   });
 
   test('E. Typed navigation smoke: switching between tabs does not crash', async () => {

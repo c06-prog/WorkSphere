@@ -17,14 +17,24 @@
 - Pre-Phase 16 Audit Checkpoint: `reports/PRE_PHASE_16_AUDIT.md`
 - Phase 16 Contract Freeze Checkpoint: `reports/PHASE_16_SERVICE_REQUEST_CONTRACT_FREEZE.md` (Decision D-065)
 - Phase 16A Implementation Checkpoint: `reports/PHASE_16A_SERVICE_REQUEST_CONTRACT_FOUNDATION_REPORT.md` (CLOSED / AUDITED / HARDENED)
-- Phase 16B Implementation Checkpoint: `reports/PHASE_16B_SERVICE_REQUEST_LIST_REPORT.md`
-- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 15 Mobile Task Management: CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 15A..15G CLOSED). Phase 16 Mobile Service Requests: IN_PROGRESS (Subphase 16A CLOSED/AUDITED/HARDENED, 16B IMPLEMENTED, 16C NOT STARTED). Phase 17 Mobile Asset Management: NOT STARTED.
-- Next Action: INDEPENDENT AUDIT PHASE 16B
+- Phase 16B Implementation Checkpoint: `reports/PHASE_16B_SERVICE_REQUEST_LIST_REPORT.md` (CLOSED / AUDITED)
+- Phase 16C Implementation Checkpoint: `reports/PHASE_16C_SERVICE_REQUEST_DETAIL_REPORT.md`
+- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 15 Mobile Task Management: CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 15A..15G CLOSED). Phase 16 Mobile Service Requests: IN_PROGRESS (Subphase 16A CLOSED/AUDITED/HARDENED, 16B CLOSED/AUDITED, 16C IMPLEMENTED, 16D NOT STARTED). Phase 17 Mobile Asset Management: NOT STARTED.
+- Next Action: INDEPENDENT AUDIT PHASE 16C
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening
 
-- Latest Implementation: Phase 16B Service Request List (SCR-SRV-01)
+- Latest Implementation: Phase 16C Service Request Detail (SCR-SRV-02)
+- Implementation Report: `reports/PHASE_16C_SERVICE_REQUEST_DETAIL_REPORT.md`
+- Delivered Scope:
+  - Screen implementation: Implemented `ServiceRequestDetailScreen.tsx` (`SCR-SRV-02`) with comprehensive canonical fields (`requestNumber`, `title`, `description`, `category.name` & `code`, `requester.fullName` & `email`, `assignee.fullName` or `"Chưa phân công"` with `assignedAt`, `asset.name` & `assetCode` or `"Không có"`, lifecycle timestamps `createdAt`, `updatedAt`, `resolvedAt`, `closedAt`, `cancelledAt`), status history timeline (safely handling `fromStatus === null` as `"Khởi tạo"` and actor quote comments), comments preview, attachments metadata (`formatFileSize`), rating display or `"Chưa có đánh giá"`, and back button (`navigation.goBack()`).
+  - Concurrency & Detail Hook: Implemented `useServiceRequestDetail` following proven Phase 15 detail concurrency architecture (monotonic `requestGenerationRef`, same-tick `inFlightPromiseRef` deduplication with target ID ownership, synchronous clearing on ID change, unmount safety, non-blocking `refreshError` banner, and `applyServiceRequestUpdate` mutation foundation).
+  - Navigation Activation: Extended `ServiceRequestCard` with `onPress?: () => void` (minHeight 48, button role when provided; presentation-only View when omitted). Activated card press in `ServiceRequestsScreen.tsx` to navigate: `navigation.navigate('ServiceRequestDetail', { requestId: item.id })`.
+  - Route Registration: Registered hidden auxiliary route `ServiceRequestDetail` in `MainTabNavigator.tsx` (`tabBarButton: () => null`, `tabBarItemStyle: { display: 'none' }`, `headerShown: false`). Exactly 5 bottom tabs preserved.
+  - Staging Enforcement: Strictly ZERO active mutation controls rendered in 16C (no Create/Edit, Assign, Cancel, Start, Wait, Resolve, Resume, Reject Resolution, Confirm, Rate, Comment).
+  - Validation: 90 test suites (+2 suites), 857 tests (+25 tests) PASS (0 failures, 0 skipped); TypeScript 0 errors; ESLint 0 errors (48 pre-existing warnings in projects/organization, 0 warnings in serviceRequests); Android `assembleDebug` BUILD SUCCESSFUL in 38s (203 actionable tasks).
+- Prior Implementation: Phase 16B Service Request List (SCR-SRV-01)
 - Implementation Report: `reports/PHASE_16B_SERVICE_REQUEST_LIST_REPORT.md`
 - Delivered Scope:
   - Screen implementation: Replaced `ServiceRequestsScreen.tsx` tab placeholder with canonical `SCR-SRV-01` Service Request List.

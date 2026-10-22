@@ -17,7 +17,10 @@ import {
   SubtaskListScreen,
   TaskCommentsScreen,
 } from '../../features/tasks/screens';
-import { ServiceRequestsScreen } from '../../features/serviceRequests/screens';
+import {
+  ServiceRequestsScreen,
+  ServiceRequestDetailScreen,
+} from '../../features/serviceRequests/screens';
 import { MoreScreen, SettingsScreen } from '../../features/more/screens';
 import {
   ProfileScreen,
@@ -229,6 +232,15 @@ export function MainTabNavigator() {
           tabBarButton: () => null,
           tabBarItemStyle: { display: 'none' },
           headerTitle: 'Bình luận',
+          headerShown: false,
+        }}
+      />
+      <Tab.Screen
+        name="ServiceRequestDetail"
+        component={ServiceRequestDetailScreen}
+        options={{
+          tabBarButton: () => null,
+          tabBarItemStyle: { display: 'none' },
           headerShown: false,
         }}
       />

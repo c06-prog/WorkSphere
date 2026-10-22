@@ -24,13 +24,14 @@
  */
 
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useAppTheme } from '../../../app/providers/ThemeProvider';
 import { PriorityBadge, StatusBadge } from '../../../shared/components';
 import { ServiceRequestSummaryResponse } from '../types/serviceRequestTypes';
 
 export interface ServiceRequestCardProps {
   request: ServiceRequestSummaryResponse;
+  onPress?: () => void;
   testID?: string;
 }
 
@@ -61,7 +62,7 @@ function formatDateTime(isoString?: string | null): string {
   }
 }
 
-export function ServiceRequestCard({ request, testID }: ServiceRequestCardProps) {
+export function ServiceRequestCard({ request, onPress, testID }: ServiceRequestCardProps) {
   const theme = useAppTheme();
 
   const assigneeText = request.assigneeName ? request.assigneeName : 'Chưa phân công';
@@ -78,22 +79,19 @@ export function ServiceRequestCard({ request, testID }: ServiceRequestCardProps)
     `Ngày tạo: ${formattedCreatedAt}`,
   ].join(', ');
 
-  return (
-    <View
-      style={[
-        styles.card,
-        {
-          backgroundColor: theme.colors.surface,
-          borderColor: theme.colors.border,
-          borderRadius: theme.radii.medium,
-          padding: theme.spacing.md,
-          marginBottom: theme.spacing.sm,
-        },
-      ]}
-      accessible={true}
-      accessibilityLabel={accessibleLabel}
-      testID={testID ?? `service-request-card-${request.id}`}
-    >
+  const cardStyle = [
+    styles.card,
+    {
+      backgroundColor: theme.colors.surface,
+      borderColor: theme.colors.border,
+      borderRadius: theme.radii.medium,
+      padding: theme.spacing.md,
+      marginBottom: theme.spacing.sm,
+    },
+  ];
+
+  const content = (
+    <>
       {/* Top Row: Request Number & Category Badge / Category Name */}
       <View style={styles.headerRow}>
         <View style={styles.numberCategoryContainer}>
@@ -176,6 +174,35 @@ export function ServiceRequestCard({ request, testID }: ServiceRequestCardProps)
           </Text>
         </View>
       </View>
+    </>
+  );
+
+  if (onPress) {
+    return (
+      <Pressable
+        onPress={onPress}
+        style={({ pressed }) => [
+          ...cardStyle,
+          { opacity: pressed ? 0.75 : 1 },
+        ]}
+        accessible={true}
+        accessibilityRole="button"
+        accessibilityLabel={accessibleLabel}
+        testID={testID ?? `service-request-card-${request.id}`}
+      >
+        {content}
+      </Pressable>
+    );
+  }
+
+  return (
+    <View
+      style={cardStyle}
+      accessible={true}
+      accessibilityLabel={accessibleLabel}
+      testID={testID ?? `service-request-card-${request.id}`}
+    >
+      {content}
     </View>
   );
 }
@@ -183,6 +210,7 @@ export function ServiceRequestCard({ request, testID }: ServiceRequestCardProps)
 const styles = StyleSheet.create({
   card: {
     borderWidth: 1,
+    minHeight: 48,
   },
   headerRow: {
     flexDirection: 'row',

@@ -331,8 +331,8 @@ describe('ServiceRequestsScreen (SCR-SRV-01)', () => {
     });
   });
 
-  describe('5. Staging Invariants (Phase 16B)', () => {
-    it('does NOT render Create Request button or FAB in 16B', async () => {
+  describe('5. Navigation & Staging Invariants (Phase 16C)', () => {
+    it('does NOT render Create Request button or FAB in 16C', async () => {
       const { queryByText, queryByLabelText, queryByTestId } = await renderScreen();
 
       expect(queryByText('+ Tạo mới')).toBeNull();
@@ -341,13 +341,18 @@ describe('ServiceRequestsScreen (SCR-SRV-01)', () => {
       expect(queryByTestId('service-requests-create-button')).toBeNull();
     });
 
-    it('does NOT activate navigation to ServiceRequestDetail', async () => {
-      const { queryAllByRole } = await renderScreen();
+    it('navigates to ServiceRequestDetail with exact requestId when card is pressed', async () => {
+      const { getByTestId } = await renderScreen();
 
-      const buttons = queryAllByRole('button');
-      // All rendered buttons must be filter chips or retry actions, none should navigate to detail
-      expect(buttons.length).toBeGreaterThan(0);
-      expect(mockNavigate).not.toHaveBeenCalled();
+      const card1 = getByTestId('service-request-card-11111111-1111-1111-1111-111111111111');
+      expect(card1).toBeTruthy();
+
+      fireEvent.press(card1);
+
+      expect(mockNavigate).toHaveBeenCalledTimes(1);
+      expect(mockNavigate).toHaveBeenCalledWith('ServiceRequestDetail', {
+        requestId: '11111111-1111-1111-1111-111111111111',
+      });
     });
   });
 });
