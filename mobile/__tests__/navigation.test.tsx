@@ -61,7 +61,7 @@ describe('RootNavigator Session Abstraction & Navigation Shell', () => {
     expect(serviceRequestsTab).toBeTruthy();
     expect(moreTab).toBeTruthy();
 
-    // Auxiliary routes like ServiceRequestDetail must remain hidden (no 6th tab)
+    // Auxiliary routes like ServiceRequestDetail and CreateServiceRequest must remain hidden (no 6th tab)
     expect(queryByLabelText('Tab 6')).toBeNull();
   });
 

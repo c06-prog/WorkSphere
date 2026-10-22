@@ -15,6 +15,7 @@ import { render, fireEvent } from '@testing-library/react-native';
 import { ServiceRequestsScreen } from '../../src/features/serviceRequests/screens/ServiceRequestsScreen';
 import { useServiceRequests } from '../../src/features/serviceRequests/hooks/useServiceRequests';
 import { AppProviders } from '../../src/app/providers';
+import { AuthContext } from '../../src/app/auth/AuthProvider';
 import {
   ServiceCategoryResponse,
   ServiceRequestSummaryResponse,
@@ -136,10 +137,28 @@ describe('ServiceRequestsScreen (SCR-SRV-01)', () => {
     clearFilters: mockClearFilters,
   };
 
-  const renderScreen = async () => {
+  const renderScreen = async (permissions: string[] = []) => {
+    const authContextValue: any = {
+      currentUser: {
+        id: 'user-tester',
+        fullName: 'Tester',
+        email: 'tester@worksphere.local',
+        roles: ['STAFF'],
+        permissions,
+      },
+      sessionState: 'AUTHENTICATED',
+      initialized: true,
+      login: jest.fn(),
+      logout: jest.fn(),
+      refreshToken: jest.fn(),
+      refreshProfile: jest.fn(),
+    };
+
     return await render(
       <AppProviders>
-        <ServiceRequestsScreen />
+        <AuthContext.Provider value={authContextValue}>
+          <ServiceRequestsScreen />
+        </AuthContext.Provider>
       </AppProviders>
     );
   };
@@ -331,14 +350,25 @@ describe('ServiceRequestsScreen (SCR-SRV-01)', () => {
     });
   });
 
-  describe('5. Navigation & Staging Invariants (Phase 16C)', () => {
-    it('does NOT render Create Request button or FAB in 16C', async () => {
-      const { queryByText, queryByLabelText, queryByTestId } = await renderScreen();
+  describe('5. Navigation & Staging Invariants (Phase 16D)', () => {
+    it('does NOT render Create Request button when SERVICE_REQUEST_CREATE is absent', async () => {
+      const { queryByText, queryByLabelText, queryByTestId } = await renderScreen([]);
 
       expect(queryByText('+ Tạo mới')).toBeNull();
-      expect(queryByText('Tạo yêu cầu')).toBeNull();
       expect(queryByLabelText('Tạo yêu cầu mới')).toBeNull();
       expect(queryByTestId('service-requests-create-button')).toBeNull();
+    });
+
+    it('renders Create Request button and navigates to CreateServiceRequest when permission is present', async () => {
+      const { getByTestId, getByText } = await renderScreen(['SERVICE_REQUEST_CREATE']);
+
+      const createBtn = getByTestId('service-requests-create-button');
+      expect(createBtn).toBeTruthy();
+      expect(getByText('+ Tạo mới')).toBeTruthy();
+
+      fireEvent.press(createBtn);
+      expect(mockNavigate).toHaveBeenCalledTimes(1);
+      expect(mockNavigate).toHaveBeenCalledWith('CreateServiceRequest');
     });
 
     it('navigates to ServiceRequestDetail with exact requestId when card is pressed', async () => {

@@ -18,7 +18,7 @@
  */
 
 import React from 'react';
-import { render, fireEvent } from '@testing-library/react-native';
+import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { ServiceRequestDetailScreen } from '../../src/features/serviceRequests/screens/ServiceRequestDetailScreen';
 import { useServiceRequestDetail } from '../../src/features/serviceRequests/hooks/useServiceRequestDetail';
 import { AppProviders } from '../../src/app/providers';
@@ -379,13 +379,46 @@ describe('ServiceRequestDetailScreen (SCR-SRV-02)', () => {
     });
   });
 
-  describe('3. Staging Invariants (Strictly ZERO active mutation controls)', () => {
-    it('does NOT render active mutation controls in 16C', async () => {
-      const { queryByText, queryByTestId } = await renderScreen();
+  describe('3. Staging Invariants & Edit Capability (Phase 16D)', () => {
+    it('does NOT render edit button when UPDATE is absent from allowedActions', async () => {
+      const { queryByTestId } = await renderScreen();
 
-      // No edit button
-      expect(queryByText('Chỉnh sửa')).toBeNull();
       expect(queryByTestId('btn-edit-service-request')).toBeNull();
+    });
+
+    it('renders edit button and opens EditServiceRequestModal when UPDATE is allowed', async () => {
+      (useServiceRequestDetail as jest.Mock).mockReturnValue({
+        request: {
+          ...mockDetail,
+          status: 'OPEN',
+          allowedActions: ['UPDATE', 'CANCEL'],
+        },
+        initialLoading: false,
+        refreshing: false,
+        error: null,
+        refreshError: null,
+        load: mockLoad,
+        refresh: mockRefresh,
+        retry: mockRetry,
+        applyServiceRequestUpdate: mockApplyServiceRequestUpdate,
+      });
+
+      const { getByTestId, getByText } = await renderScreen();
+
+      const editBtn = getByTestId('btn-edit-service-request');
+      expect(editBtn).toBeTruthy();
+      expect(getByText('✎ Chỉnh sửa')).toBeTruthy();
+
+      fireEvent.press(editBtn);
+
+      await waitFor(() => {
+        expect(getByTestId('edit-service-request-modal')).toBeTruthy();
+        expect(getByText('Chỉnh sửa yêu cầu')).toBeTruthy();
+      });
+    });
+
+    it('does NOT render other active mutation controls (16E/16F staging)', async () => {
+      const { queryByText, queryByTestId } = await renderScreen();
 
       // No assign button / modal
       expect(queryByText('Phân công')).toBeNull();

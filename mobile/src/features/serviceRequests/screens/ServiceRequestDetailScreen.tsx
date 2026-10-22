@@ -20,7 +20,7 @@
  * - Staged mutations: Zero active mutation controls (16D/16E/16F own them).
  */
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Pressable,
   RefreshControl,
@@ -33,13 +33,19 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAppTheme } from '../../../app/providers/ThemeProvider';
 import { MainTabNavProp, MainTabScreenRouteProp } from '../../../app/navigation/types';
 import {
+  ConfirmationDialog,
   ErrorState,
   LoadingIndicator,
   PriorityBadge,
   StatusBadge,
 } from '../../../shared/components';
-import { ServiceStatus } from '../types/serviceRequestTypes';
+import {
+  hasServiceRequestAction,
+  ServiceRequestDetailResponse,
+  ServiceStatus,
+} from '../types/serviceRequestTypes';
 import { useServiceRequestDetail } from '../hooks/useServiceRequestDetail';
+import { EditServiceRequestModal } from '../components/EditServiceRequestModal';
 
 /**
  * Defensive date-time formatter for UTC ISO strings.
@@ -108,7 +114,27 @@ export function ServiceRequestDetailScreen() {
     refreshError,
     refresh,
     retry,
+    applyServiceRequestUpdate,
   } = useServiceRequestDetail(requestId);
+
+  // Edit & Conflict state
+  const [editModalVisible, setEditModalVisible] = useState<boolean>(false);
+  const [conflictModalVisible, setConflictModalVisible] = useState<boolean>(false);
+
+  const handleEditSuccess = (updated: ServiceRequestDetailResponse) => {
+    setEditModalVisible(false);
+    applyServiceRequestUpdate(updated);
+  };
+
+  const handleEditConflict = () => {
+    setEditModalVisible(false);
+    setConflictModalVisible(true);
+  };
+
+  const handleReloadOnConflict = async () => {
+    setConflictModalVisible(false);
+    await refresh();
+  };
 
   // Focus-aware refresh for return-from-child freshness without initial duplicate GET
   const isFirstMountRef = useRef<boolean>(true);
@@ -244,6 +270,33 @@ export function ServiceRequestDetailScreen() {
           </Pressable>
 
           <View style={styles.badgeRow}>
+            {hasServiceRequestAction(request.allowedActions, 'UPDATE') ? (
+              <Pressable
+                onPress={() => setEditModalVisible(true)}
+                style={({ pressed }) => [
+                  styles.editButton,
+                  {
+                    borderColor: theme.colors.primary,
+                    backgroundColor: theme.colors.surfaceVariant,
+                    borderRadius: theme.radii.small,
+                    opacity: pressed ? 0.7 : 1,
+                  },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel="Chỉnh sửa yêu cầu"
+                testID="btn-edit-service-request"
+              >
+                <Text
+                  style={[
+                    theme.typography.caption,
+                    styles.editBtnText,
+                    { color: theme.colors.primary },
+                  ]}
+                >
+                  ✎ Chỉnh sửa
+                </Text>
+              </Pressable>
+            ) : null}
             <PriorityBadge priority={request.priority} />
             <View style={styles.badgeSpacer} />
             <StatusBadge type="serviceRequest" status={request.status} />
@@ -657,6 +710,27 @@ export function ServiceRequestDetailScreen() {
           )}
         </View>
       </ScrollView>
+
+      {/* Edit Service Request Modal */}
+      <EditServiceRequestModal
+        visible={editModalVisible}
+        request={request}
+        onClose={() => setEditModalVisible(false)}
+        onSuccess={handleEditSuccess}
+        onConflict={handleEditConflict}
+      />
+
+      {/* Optimistic Lock Conflict Confirmation Dialog */}
+      <ConfirmationDialog
+        visible={conflictModalVisible}
+        title="Xung đột dữ liệu"
+        message="Dữ liệu yêu cầu dịch vụ đã được cập nhật bởi người dùng khác trong khi bạn đang thao tác. Bạn có muốn tải lại dữ liệu mới nhất không?"
+        confirmText="Tải lại dữ liệu"
+        cancelText="Hủy bỏ"
+        onConfirm={handleReloadOnConflict}
+        onCancel={() => setConflictModalVisible(false)}
+        testID="dialog-service-request-conflict"
+      />
     </View>
   );
 }
@@ -705,6 +779,18 @@ const styles = StyleSheet.create({
   badgeRow: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  editButton: {
+    minHeight: 36,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  editBtnText: {
+    fontWeight: '600',
   },
   badgeSpacer: {
     width: 6,

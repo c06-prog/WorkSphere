@@ -33,6 +33,7 @@ import {
   View,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useAuth } from '../../../app/auth/AuthProvider';
 import { useAppTheme } from '../../../app/providers/ThemeProvider';
 import { MainTabNavProp } from '../../../app/navigation/types';
 import { EmptyState, ErrorState, LoadingIndicator } from '../../../shared/components';
@@ -77,6 +78,8 @@ const PRIORITY_FILTERS: PriorityFilterOption[] = [
 export function ServiceRequestsScreen() {
   const theme = useAppTheme();
   const navigation = useNavigation<MainTabNavProp<'ServiceRequests'>>();
+  const { currentUser } = useAuth();
+  const canCreate = currentUser?.permissions?.includes('SERVICE_REQUEST_CREATE') ?? false;
 
   const {
     requests,
@@ -163,6 +166,33 @@ export function ServiceRequestsScreen() {
             SCR-SRV-01: Danh sách yêu cầu hỗ trợ và dịch vụ
           </Text>
         </View>
+
+        {canCreate ? (
+          <Pressable
+            onPress={() => navigation.navigate('CreateServiceRequest')}
+            style={({ pressed }) => [
+              styles.createButton,
+              {
+                backgroundColor: theme.colors.primary,
+                borderRadius: theme.radii.small,
+                opacity: pressed ? 0.8 : 1,
+              },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Tạo yêu cầu dịch vụ mới"
+            testID="service-requests-create-button"
+          >
+            <Text
+              style={[
+                theme.typography.caption,
+                styles.createButtonText,
+                { color: theme.colors.onPrimary },
+              ]}
+            >
+              + Tạo mới
+            </Text>
+          </Pressable>
+        ) : null}
       </View>
 
       {/* Search Bar */}
@@ -471,6 +501,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 8,
+  },
+  createButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    minHeight: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  createButtonText: {
+    fontWeight: '700',
   },
   titleContainer: {
     flex: 1,
