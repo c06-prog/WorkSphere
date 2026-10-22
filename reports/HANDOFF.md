@@ -4,20 +4,22 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: PHASE 16A SERVICE REQUEST CONTRACT FOUNDATION HARDENING
-- Status: Phase 15 Mobile Task Management CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 15A..15G CLOSED). Phase 14 CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 16 Mobile Service Requests: IN_PROGRESS (Subphase 16A IMPLEMENTED / HARDENED PENDING FINAL NARROW VERIFICATION, 16B NOT STARTED). Phase 17 Mobile Asset Management: NOT STARTED.
-  - Subphase 16A: IMPLEMENTED / HARDENED PENDING FINAL NARROW VERIFICATION (Contracts, Types, API Adapter, Error Mapper, StatusBadge)
+- Current Task: PHASE 16B SERVICE REQUEST LIST
+- Status: Phase 15 Mobile Task Management CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 15A..15G CLOSED). Phase 14 CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 16 Mobile Service Requests: IN_PROGRESS (Subphase 16A CLOSED/AUDITED/HARDENED, 16B IMPLEMENTED, 16C NOT STARTED). Phase 17 Mobile Asset Management: NOT STARTED.
+  - Subphase 16B: IMPLEMENTED (SCR-SRV-01 Service Request List, useServiceRequests hook, ServiceRequestCard presentation staging)
+  - Subphase 16A: CLOSED / AUDITED / HARDENED (Contracts, Types, API Adapter, Error Mapper, StatusBadge)
   - Subphases 15A..15F: CLOSED / AUDITED / HARDENED
   - Subphase 15G: CLOSED / VALIDATED (Full Integration & Regression)
   - Subphases 14A..14F: CLOSED (MEMORY_CHECKPOINT_CLOSED)
-- Baseline Checkpoint: `756c12db20e9aeee0732f37dd247747d73cc1194` (Decision D-065 checkpoint)
+- Baseline Checkpoint: `8292d13b5330279c6a3d4ab007eebbff9be4d894` (Phase 16A narrow hardening checkpoint)
 - Final Phase 15 Reconciliation Checkpoint: `eb0c973dfe44fc3a717925a87b8a48f313502575` (`fix(mobile): reconcile phase 15 final audit`)
-- Reports: `reports/PHASE_16A_SERVICE_REQUEST_CONTRACT_FOUNDATION_REPORT.md`, `reports/PHASE_16_SERVICE_REQUEST_CONTRACT_FREEZE.md`, `reports/PRE_PHASE_16_AUDIT.md`, `reports/PHASE_15_MEMORY_CHECKPOINT.md`, `reports/PHASE_15_FINAL_AUDIT_REPORT.md`, `reports/PHASE_15G_INTEGRATION_HARDENING_REPORT.md`, `reports/PHASE_15F_SUBTASKS_COMMENTS_REPORT.md`, `reports/PHASE_15E_TASK_MUTATIONS_REPORT.md`, `reports/PHASE_15_TASK_DUE_DATE_POLICY.md`, `reports/PHASE_15D_CREATE_EDIT_TASK_REPORT.md`, `reports/PHASE_15C_TASK_DETAIL_REPORT.md`, `reports/PHASE_15B_TASK_LIST_REPORT.md`, `reports/PHASE_15A_TASK_CONTRACT_FOUNDATION_REPORT.md`, `reports/PHASE_15_TASK_CONTRACT_FREEZE.md`, `reports/PRE_PHASE_15_TASK_MANAGEMENT_AUDIT.md`
-- Validation Baseline: Mobile 85/85 suites, 796/796 tests PASS (0 failures, 0 skipped, 0 snapshots); TypeScript 0 errors; ESLint 0 errors (48 pre-existing warnings); Android assembleDebug BUILD SUCCESSFUL (203 actionable tasks).
+- Reports: `reports/PHASE_16B_SERVICE_REQUEST_LIST_REPORT.md`, `reports/PHASE_16A_SERVICE_REQUEST_CONTRACT_FOUNDATION_REPORT.md`, `reports/PHASE_16_SERVICE_REQUEST_CONTRACT_FREEZE.md`, `reports/PRE_PHASE_16_AUDIT.md`, `reports/PHASE_15_MEMORY_CHECKPOINT.md`, `reports/PHASE_15_FINAL_AUDIT_REPORT.md`, `reports/PHASE_15G_INTEGRATION_HARDENING_REPORT.md`, `reports/PHASE_15F_SUBTASKS_COMMENTS_REPORT.md`, `reports/PHASE_15E_TASK_MUTATIONS_REPORT.md`, `reports/PHASE_15_TASK_DUE_DATE_POLICY.md`, `reports/PHASE_15D_CREATE_EDIT_TASK_REPORT.md`, `reports/PHASE_15C_TASK_DETAIL_REPORT.md`, `reports/PHASE_15B_TASK_LIST_REPORT.md`, `reports/PHASE_15A_TASK_CONTRACT_FOUNDATION_REPORT.md`, `reports/PHASE_15_TASK_CONTRACT_FREEZE.md`, `reports/PRE_PHASE_15_TASK_MANAGEMENT_AUDIT.md`
+- Validation Baseline: Mobile 88/88 suites, 832/832 tests PASS (0 failures, 0 skipped, 0 snapshots); TypeScript 0 errors; ESLint 0 errors (48 pre-existing warnings); Android assembleDebug BUILD SUCCESSFUL (203 actionable tasks).
 - Delivered Scope:
   - Personal Dashboard (`SCR-MAIN-01`), Project Management (`SCR-PRJ-01` .. `SCR-PRJ-09`), Task Management (`SCR-TSK-01` .. `SCR-TSK-08`).
-  - Phase 16A Service Request Foundation & Hardening: 11 API adapter endpoints, transport types, runtime guards, presentation-safe error mapper (`serviceRequestErrorMapper.ts`) handling all business codes, eliminating phantom `SERVICE_RESOLUTION_COMMENT_REQUIRED`, and correctly mapping `SERVICE_RESOLUTION_REQUIRED`, `SERVICE_ASSIGNEE_REQUIRED`, `INVALID_REQUEST_STATE`, and optimistic lock conflict flag, StatusBadge extension (`type="serviceRequest"`), typed route contracts (`ServiceRequestDetail`, `CreateServiceRequest`, `ServiceRequestComments`, `ServiceRating`).
-- Next Action: FINAL NARROW VERIFY PHASE 16A
+  - Phase 16A Service Request Foundation & Hardening: 11 API adapter endpoints, transport types, runtime guards, error mapper, StatusBadge extension, typed route contracts.
+  - Phase 16B Service Request List: `SCR-SRV-01` (`ServiceRequestsScreen`), `useServiceRequests` list concurrency hook, `ServiceRequestCard` presentation staging, search, status/priority/category filters, pagination, pull-to-refresh, empty & error states. Preserved 5 visible bottom tabs.
+- Next Action: INDEPENDENT AUDIT PHASE 16B
 - Explicitly Deferred Outside Phase 15:
   - Task Attachments & Upload (Excluded by D-063, deferred to File Management Module).
   - Task Delete (Deferred per roadmap).
@@ -34,8 +36,8 @@
   - `PROJECT_MUTATION_DUPLICATE_SUBMIT_RISK`: 7 project mutation flows use React state-only submit guards rather than synchronous useRef locks (all 10 Task mutation flows in Phase 15 strictly use synchronous useRef locks).
 - Pre-Existing Toolchain Debt:
   - AGP deprecation notices, KSP 2.2.0-2.0.2 compiler warning, npm dev dependency advisories (55 vulnerabilities).
-- Phase 15 Status: CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 16: CONTRACT_FROZEN / IMPLEMENTATION_NOT_STARTED.
-- Next Action: PHASE 16A CONTRACT FOUNDATION.
+- Phase 15 Status: CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 16: IN_PROGRESS (Subphase 16A CLOSED/AUDITED/HARDENED, 16B IMPLEMENTED, 16C NOT STARTED).
+- Next Action: INDEPENDENT AUDIT PHASE 16B.
 - Phase 13 Final Scope & Delivered Invariants:
   - Mobile Auth state machine, in-memory access token, hardware Keychain refresh token.
   - All screens implemented: `Login` (`SCR-AUTH-02`), `ForgotPassword` (`SCR-AUTH-03`), `ResetPassword` (`SCR-AUTH-04`), `Profile` (`SCR-ACC-01`), `EditProfile`, `ChangePassword` (`SCR-ACC-02`), `Settings` (`SCR-ACC-03`), `Logout Confirmation` (`SCR-ACC-04`).

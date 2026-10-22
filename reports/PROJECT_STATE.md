@@ -16,15 +16,25 @@
 - Phase 15 Memory Checkpoint: `reports/PHASE_15_MEMORY_CHECKPOINT.md`
 - Pre-Phase 16 Audit Checkpoint: `reports/PRE_PHASE_16_AUDIT.md`
 - Phase 16 Contract Freeze Checkpoint: `reports/PHASE_16_SERVICE_REQUEST_CONTRACT_FREEZE.md` (Decision D-065)
-- Phase 16A Implementation Checkpoint: `reports/PHASE_16A_SERVICE_REQUEST_CONTRACT_FOUNDATION_REPORT.md`
-- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 15 Mobile Task Management: CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 15A..15G CLOSED). Phase 16 Mobile Service Requests: IN_PROGRESS (16A IMPLEMENTED / HARDENED PENDING FINAL NARROW VERIFICATION, 16B NOT STARTED). Phase 17 Mobile Asset Management: NOT STARTED.
-- Next Action: FINAL NARROW VERIFY PHASE 16A
+- Phase 16A Implementation Checkpoint: `reports/PHASE_16A_SERVICE_REQUEST_CONTRACT_FOUNDATION_REPORT.md` (CLOSED / AUDITED / HARDENED)
+- Phase 16B Implementation Checkpoint: `reports/PHASE_16B_SERVICE_REQUEST_LIST_REPORT.md`
+- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 15 Mobile Task Management: CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 15A..15G CLOSED). Phase 16 Mobile Service Requests: IN_PROGRESS (Subphase 16A CLOSED/AUDITED/HARDENED, 16B IMPLEMENTED, 16C NOT STARTED). Phase 17 Mobile Asset Management: NOT STARTED.
+- Next Action: INDEPENDENT AUDIT PHASE 16B
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening
 
-- Latest Implementation: Phase 16A Service Request Contract Foundation & Transport Types Hardening
-- Implementation Report: `reports/PHASE_16A_SERVICE_REQUEST_CONTRACT_FOUNDATION_REPORT.md`
+- Latest Implementation: Phase 16B Service Request List (SCR-SRV-01)
+- Implementation Report: `reports/PHASE_16B_SERVICE_REQUEST_LIST_REPORT.md`
+- Delivered Scope:
+  - Screen implementation: Replaced `ServiceRequestsScreen.tsx` tab placeholder with canonical `SCR-SRV-01` Service Request List.
+  - Concurrency & List State: Implemented `useServiceRequests` hook adhering to proven Phase 15 list concurrency architecture (latest-query-wins via monotonic query generation ref, same-tick `paginationLockRef`, 300ms debounced search, item deduplication by `id`, safe unmount handling, and non-blocking background category prefetch).
+  - Presentation Staging: Implemented `ServiceRequestCard` as presentation-only staging (no button role, no `onPress` navigation to unbuilt Detail screen, no raw UUID display, no internal version/actions exposure).
+  - Canonical Controls: Search input, status filter chip list, priority filter chip list, category filter selector, pull-to-refresh (`RefreshControl`), pagination spinner / end-of-list indicator, empty state with retry / clear filters, error banner with retry.
+  - Navigation Invariants: Exactly 5 visible bottom tabs preserved (`PersonalDashboard`, `Projects`, `Tasks`, `ServiceRequests`, `Settings`). Detail navigation and Create FAB intentionally not activated until Phase 16C and Phase 16D.
+  - Validation: 88 test suites (+3 suites), 832 tests (+36 tests) PASS (0 failures, 0 skipped); TypeScript 0 errors; ESLint 0 errors (48 pre-existing warnings); Android `assembleDebug` BUILD SUCCESSFUL in 41s (203 actionable tasks).
+- Prior Implementation: Phase 16A Service Request Contract Foundation & Transport Types Hardening
+- Prior Report: `reports/PHASE_16A_SERVICE_REQUEST_CONTRACT_FOUNDATION_REPORT.md`
 - Delivered Scope:
   - Transport types & domain enums (`ServiceStatus`, `ServicePriority`, `KNOWN_SERVICE_REQUEST_ACTIONS`, `SERVICE_REQUEST_SORT_PROPERTIES`).
   - Runtime type guards for all entities, summaries, details, comments, and paginated wrappers.
