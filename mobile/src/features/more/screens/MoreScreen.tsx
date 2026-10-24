@@ -1,12 +1,23 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useAuth } from '../../../app/auth/AuthProvider';
 import { PlaceholderScreen } from '../../../shared/components/PlaceholderScreen';
 import { AppButton } from '../../../shared/components/AppButton';
 import type { MainTabNavProp } from '../../../app/navigation/types';
 
 export function MoreScreen() {
   const navigation = useNavigation<MainTabNavProp<'More'>>();
+  const { currentUser } = useAuth();
+
+  const hasAssetManageOrRead =
+    (currentUser?.permissions?.includes('ASSET_READ') ?? false) ||
+    (currentUser?.permissions?.includes('ASSET_MANAGE') ?? false) ||
+    (currentUser?.roles?.some(r => r.toUpperCase() === 'ADMIN') ?? false);
+
+  const assetButtonTitle = hasAssetManageOrRead
+    ? 'Quản lý tài sản'
+    : 'Tài sản của tôi';
 
   return (
     <PlaceholderScreen
@@ -16,6 +27,14 @@ export function MoreScreen() {
       testID="screen-more"
     >
       <View style={styles.actionContainer}>
+        <AppButton
+          title={assetButtonTitle}
+          variant="outline"
+          onPress={() => navigation.navigate('AssetList')}
+          accessibilityLabel={`Xem ${assetButtonTitle.toLowerCase()}`}
+          testID="btn-navigate-assets"
+          style={styles.buttonSpacing}
+        />
         <AppButton
           title="Hồ sơ cá nhân"
           variant="outline"
@@ -44,5 +63,3 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
 });
-
-
