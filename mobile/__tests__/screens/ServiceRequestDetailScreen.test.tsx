@@ -563,21 +563,8 @@ describe('ServiceRequestDetailScreen (SCR-SRV-02)', () => {
       });
     });
 
-    it('does NOT render other active mutation controls (16E/16F staging)', async () => {
+    it('does NOT render active Comment or Rating controls (16F staging)', async () => {
       const { queryByText, queryByTestId } = await renderScreen();
-
-      // No assign button / modal
-      expect(queryByText('Phân công')).toBeNull();
-      expect(queryByTestId('btn-assign-service-request')).toBeNull();
-
-      // No status action buttons
-      expect(queryByText('Hủy yêu cầu')).toBeNull();
-      expect(queryByText('Bắt đầu xử lý')).toBeNull();
-      expect(queryByText('Chờ phản hồi')).toBeNull();
-      expect(queryByText('Giải quyết')).toBeNull();
-      expect(queryByText('Tiếp tục xử lý')).toBeNull();
-      expect(queryByText('Từ chối giải quyết')).toBeNull();
-      expect(queryByText('Xác nhận & Đóng')).toBeNull();
 
       // No comment input / button
       expect(queryByText('Gửi bình luận')).toBeNull();

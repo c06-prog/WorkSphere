@@ -20,13 +20,23 @@
 - Phase 16B Implementation Checkpoint: `reports/PHASE_16B_SERVICE_REQUEST_LIST_REPORT.md` (CLOSED / AUDITED)
 - Phase 16C Implementation Checkpoint: `reports/PHASE_16C_SERVICE_REQUEST_DETAIL_REPORT.md` (CLOSED / AUDITED)
 - Phase 16D Implementation Checkpoint: `reports/PHASE_16D_CREATE_EDIT_SERVICE_REQUEST_REPORT.md` (HARDENED / VERIFIED)
-- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 15 Mobile Task Management: CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 15A..15G CLOSED). Phase 16 Mobile Service Requests: IN_PROGRESS (Subphase 16A CLOSED/AUDITED/HARDENED, 16B CLOSED/AUDITED, 16C CLOSED/AUDITED, 16D IMPLEMENTED/HARDENED, 16E NOT STARTED). Phase 17 Mobile Asset Management: NOT STARTED.
-- Next Action: PHASE 16E (WORKFLOW MUTATIONS & ASSIGNMENT)
+- Phase 16E Implementation Checkpoint: `reports/PHASE_16E_WORKFLOW_ASSIGNMENT_REPORT.md` (IMPLEMENTED / VERIFIED)
+- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 15 Mobile Task Management: CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 15A..15G CLOSED). Phase 16 Mobile Service Requests: IN_PROGRESS (Subphase 16A CLOSED/AUDITED/HARDENED, 16B CLOSED/AUDITED, 16C CLOSED/AUDITED, 16D CLOSED/AUDITED/HARDENED, 16E IMPLEMENTED/VERIFIED, 16F NOT STARTED). Phase 17 Mobile Asset Management: NOT STARTED.
+- Next Action: PHASE 16E AUDIT / PHASE 16F (COMMENTS & RATING)
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening
 
-- Latest Implementation: Phase 16D Create & Edit Service Request (SCR-SRV-04 + Edit Flow)
+- Latest Implementation: Phase 16E Service Request Workflow & Assignment (SCR-SRV-03 + Detail Workflow Mutations)
+- Implementation Report: `reports/PHASE_16E_WORKFLOW_ASSIGNMENT_REPORT.md`
+- Delivered Scope:
+  - Domain transitions: Created `serviceRequestStatusTransitions.ts` implementing `canTransitionServiceStatus`, `getValidServiceStatusTransitions`, `isTerminalServiceStatus`, `isResolutionCommentRequired`, and Vietnamese status labels.
+  - Modals & dialogs: Implemented `RejectResolutionModal.tsx` (`SCR-SRV-03`) with mandatory reason check (max 1000 chars), version propagation, synchronous lock, and conflict handling. Implemented `ResolveServiceRequestModal.tsx` requiring non-blank solution comment (max 1000 chars), version propagation, synchronous lock, and conflict handling.
+  - Detail screen integration: Integrated workflow actions on `ServiceRequestDetailScreen.tsx` gated by authoritative `allowedActions` (`ASSIGN`, `START`, `WAIT_FOR_USER`, `RESOLVE`, `RESUME`, `REJECT_RESOLUTION`, `CONFIRM`, `CANCEL`). Integrated Directory `UserPickerModal` single selection for assignment.
+  - Concurrency & query invalidation: Added `invalidateAndRefresh` to `useServiceRequestDetail` to invalidate in-flight promises and execute a fresh query after status/assignment mutations. Synchronous mutation correctness locks (`assignLockRef`, `statusLockRef`, `submittingRef`).
+  - Staging Enforcement: Strictly staged Comments and Rating for Phase 16F. Zero backend modifications or new dependencies.
+  - Validation: 95 test suites (+2 suites), 909 tests (+29 tests) PASS (0 failures, 0 skipped); TypeScript 0 errors; ESLint 0 errors (48 pre-existing warnings in projects/organization, 0 warnings in serviceRequests); Android `assembleDebug` BUILD SUCCESSFUL in 1m 8s (203 actionable tasks).
+- Prior Implementation: Phase 16D Create & Edit Service Request (SCR-SRV-04 + Edit Flow)
 - Implementation Report: `reports/PHASE_16D_CREATE_EDIT_SERVICE_REQUEST_REPORT.md`
 - Delivered Scope:
   - Screen implementation: Implemented `CreateServiceRequestScreen.tsx` (`SCR-SRV-04`) with route permission gate (`SERVICE_REQUEST_CREATE`), human-readable category selector auto-populating default priority, priority radio selector, optional route context `{ assetId?: string }` without raw UUID exposure, synchronous `submittingRef` submit lock, and post-creation navigation to `ServiceRequestDetail`.

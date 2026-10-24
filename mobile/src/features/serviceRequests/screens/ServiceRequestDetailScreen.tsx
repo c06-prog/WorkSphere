@@ -46,6 +46,12 @@ import {
 } from '../types/serviceRequestTypes';
 import { useServiceRequestDetail } from '../hooks/useServiceRequestDetail';
 import { EditServiceRequestModal } from '../components/EditServiceRequestModal';
+import { RejectResolutionModal } from '../components/RejectResolutionModal';
+import { ResolveServiceRequestModal } from '../components/ResolveServiceRequestModal';
+import { UserPickerModal } from '../../directory/components/UserPickerModal';
+import { UserDirectoryItem } from '../../directory/api/directoryTypes';
+import { serviceRequestApi } from '../api/serviceRequestApi';
+import { mapServiceRequestError } from '../errors/serviceRequestErrorMapper';
 
 /**
  * Defensive date-time formatter for UTC ISO strings.
@@ -100,6 +106,22 @@ const STATUS_LABELS: Record<ServiceStatus, string> = {
   CANCELLED: 'Đã hủy',
 };
 
+const WORKFLOW_ACTIONS = [
+  'ASSIGN',
+  'START',
+  'WAIT_FOR_USER',
+  'RESOLVE',
+  'RESUME',
+  'REJECT_RESOLUTION',
+  'CONFIRM',
+  'CANCEL',
+] as const;
+
+function hasAnyWorkflowAction(allowedActions: string[] | undefined): boolean {
+  if (!allowedActions || !Array.isArray(allowedActions)) return false;
+  return WORKFLOW_ACTIONS.some(action => allowedActions.includes(action));
+}
+
 export function ServiceRequestDetailScreen() {
   const theme = useAppTheme();
   const navigation = useNavigation<MainTabNavProp<'ServiceRequestDetail'>>();
@@ -114,12 +136,25 @@ export function ServiceRequestDetailScreen() {
     refreshError,
     refresh,
     retry,
+    invalidateAndRefresh,
     applyServiceRequestUpdate,
   } = useServiceRequestDetail(requestId);
 
   // Edit & Conflict state
   const [editModalVisible, setEditModalVisible] = useState<boolean>(false);
   const [conflictModalVisible, setConflictModalVisible] = useState<boolean>(false);
+
+  // Workflow modals & dialogs state (Phase 16E)
+  const [assignPickerVisible, setAssignPickerVisible] = useState<boolean>(false);
+  const [resolveModalVisible, setResolveModalVisible] = useState<boolean>(false);
+  const [rejectModalVisible, setRejectModalVisible] = useState<boolean>(false);
+  const [cancelDialogVisible, setCancelDialogVisible] = useState<boolean>(false);
+  const [confirmDialogVisible, setConfirmDialogVisible] = useState<boolean>(false);
+  const [actionErrorMessage, setActionErrorMessage] = useState<string | null>(null);
+
+  // Synchronous mutation correctness locks
+  const assignLockRef = useRef<boolean>(false);
+  const statusLockRef = useRef<boolean>(false);
 
   const handleEditSuccess = (updated: ServiceRequestDetailResponse) => {
     setEditModalVisible(false);
@@ -133,7 +168,80 @@ export function ServiceRequestDetailScreen() {
 
   const handleReloadOnConflict = async () => {
     setConflictModalVisible(false);
-    await refresh();
+    await invalidateAndRefresh();
+  };
+
+  // ASSIGN mutation handler
+  const handleAssignConfirm = async (selectedUsers: UserDirectoryItem[]) => {
+    if (assignLockRef.current || selectedUsers.length === 0 || !request) {
+      return;
+    }
+
+    const targetUser = selectedUsers[0];
+    assignLockRef.current = true;
+    setActionErrorMessage(null);
+
+    try {
+      await serviceRequestApi.assignServiceRequest(request.id, {
+        assigneeId: targetUser.id,
+      });
+      setAssignPickerVisible(false);
+      await invalidateAndRefresh();
+    } catch (err: unknown) {
+      const mapped = mapServiceRequestError(err);
+      if (mapped.isConflict) {
+        setAssignPickerVisible(false);
+        setConflictModalVisible(true);
+      } else {
+        setActionErrorMessage(mapped.message);
+      }
+    } finally {
+      assignLockRef.current = false;
+    }
+  };
+
+  // Generic direct status transition handler (CANCEL, START, WAIT_FOR_USER, RESUME, CONFIRM)
+  const executeStatusTransition = async (targetStatus: ServiceStatus, comment?: string) => {
+    if (statusLockRef.current || !request) {
+      return;
+    }
+
+    statusLockRef.current = true;
+    setActionErrorMessage(null);
+
+    try {
+      await serviceRequestApi.updateServiceRequestStatus(request.id, {
+        status: targetStatus,
+        comment,
+        version: request.version,
+      });
+      setCancelDialogVisible(false);
+      setConfirmDialogVisible(false);
+      await invalidateAndRefresh();
+    } catch (err: unknown) {
+      setCancelDialogVisible(false);
+      setConfirmDialogVisible(false);
+      const mapped = mapServiceRequestError(err);
+      if (mapped.isConflict) {
+        setConflictModalVisible(true);
+      } else {
+        setActionErrorMessage(mapped.message);
+      }
+    } finally {
+      statusLockRef.current = false;
+    }
+  };
+
+  // RESOLVE success handler
+  const handleResolveSuccess = async () => {
+    setResolveModalVisible(false);
+    await invalidateAndRefresh();
+  };
+
+  // REJECT_RESOLUTION success handler
+  const handleRejectSuccess = (updated: ServiceRequestDetailResponse) => {
+    setRejectModalVisible(false);
+    applyServiceRequestUpdate(updated);
   };
 
   // Focus-aware refresh for return-from-child freshness without initial duplicate GET
@@ -236,6 +344,27 @@ export function ServiceRequestDetailScreen() {
         </View>
       ) : null}
 
+      {/* Workflow Action Error Banner */}
+      {actionErrorMessage ? (
+        <View
+          style={[
+            styles.banner,
+            {
+              backgroundColor: theme.colors.errorContainer,
+              borderColor: theme.colors.error,
+              borderRadius: theme.radii.small,
+              padding: theme.spacing.sm,
+            },
+          ]}
+          testID="service-request-action-error-banner"
+          accessibilityRole="alert"
+        >
+          <Text style={[theme.typography.caption, { color: theme.colors.error }]}>
+            {actionErrorMessage}
+          </Text>
+        </View>
+      ) : null}
+
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         refreshControl={
@@ -318,6 +447,194 @@ export function ServiceRequestDetailScreen() {
             {request.title}
           </Text>
         </View>
+
+        {/* Workflow Action Bar (Phase 16E) */}
+        {hasAnyWorkflowAction(request.allowedActions) ? (
+          <View style={styles.workflowActionBar} testID="workflow-action-bar">
+            {/* ASSIGN: Phân công */}
+            {hasServiceRequestAction(request.allowedActions, 'ASSIGN') ? (
+              <Pressable
+                onPress={() => setAssignPickerVisible(true)}
+                style={({ pressed }) => [
+                  styles.actionButton,
+                  styles.assignButton,
+                  {
+                    backgroundColor: theme.colors.primary,
+                    borderRadius: theme.radii.small,
+                    opacity: pressed ? 0.8 : 1,
+                  },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel="Phân công người xử lý"
+                testID="btn-assign-service-request"
+              >
+                <Text style={[theme.typography.bodyMedium, styles.actionButtonText, { color: theme.colors.onPrimary }]}>
+                  Phân công
+                </Text>
+              </Pressable>
+            ) : null}
+
+            {/* START: Bắt đầu xử lý */}
+            {hasServiceRequestAction(request.allowedActions, 'START') ? (
+              <Pressable
+                onPress={() => executeStatusTransition('IN_PROGRESS')}
+                style={({ pressed }) => [
+                  styles.actionButton,
+                  {
+                    backgroundColor: theme.colors.primary,
+                    borderRadius: theme.radii.small,
+                    opacity: pressed ? 0.8 : 1,
+                  },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel="Bắt đầu xử lý yêu cầu"
+                testID="btn-start-service-request"
+              >
+                <Text style={[theme.typography.bodyMedium, styles.actionButtonText, { color: theme.colors.onPrimary }]}>
+                  Bắt đầu xử lý
+                </Text>
+              </Pressable>
+            ) : null}
+
+            {/* WAIT_FOR_USER: Chờ phản hồi */}
+            {hasServiceRequestAction(request.allowedActions, 'WAIT_FOR_USER') ? (
+              <Pressable
+                onPress={() => executeStatusTransition('WAITING_FOR_USER')}
+                style={({ pressed }) => [
+                  styles.actionButton,
+                  {
+                    backgroundColor: theme.colors.surfaceVariant,
+                    borderColor: theme.colors.border,
+                    borderWidth: 1,
+                    borderRadius: theme.radii.small,
+                    opacity: pressed ? 0.8 : 1,
+                  },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel="Chờ phản hồi từ người yêu cầu"
+                testID="btn-wait-user-service-request"
+              >
+                <Text style={[theme.typography.bodyMedium, styles.actionButtonText, { color: theme.colors.textPrimary }]}>
+                  Chờ phản hồi
+                </Text>
+              </Pressable>
+            ) : null}
+
+            {/* RESOLVE: Hoàn tất xử lý / Giải quyết */}
+            {hasServiceRequestAction(request.allowedActions, 'RESOLVE') ? (
+              <Pressable
+                onPress={() => setResolveModalVisible(true)}
+                style={({ pressed }) => [
+                  styles.actionButton,
+                  {
+                    backgroundColor: theme.colors.success,
+                    borderRadius: theme.radii.small,
+                    opacity: pressed ? 0.8 : 1,
+                  },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel="Giải quyết yêu cầu"
+                testID="btn-resolve-service-request"
+              >
+                <Text style={[theme.typography.bodyMedium, styles.actionButtonText, styles.whiteText]}>
+                  Giải quyết
+                </Text>
+              </Pressable>
+            ) : null}
+
+            {/* RESUME: Tiếp tục xử lý */}
+            {hasServiceRequestAction(request.allowedActions, 'RESUME') ? (
+              <Pressable
+                onPress={() => executeStatusTransition('IN_PROGRESS')}
+                style={({ pressed }) => [
+                  styles.actionButton,
+                  {
+                    backgroundColor: theme.colors.primary,
+                    borderRadius: theme.radii.small,
+                    opacity: pressed ? 0.8 : 1,
+                  },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel="Tiếp tục xử lý yêu cầu"
+                testID="btn-resume-service-request"
+              >
+                <Text style={[theme.typography.bodyMedium, styles.actionButtonText, { color: theme.colors.onPrimary }]}>
+                  Tiếp tục xử lý
+                </Text>
+              </Pressable>
+            ) : null}
+
+            {/* REJECT_RESOLUTION: Từ chối kết quả (SCR-SRV-03) */}
+            {hasServiceRequestAction(request.allowedActions, 'REJECT_RESOLUTION') ? (
+              <Pressable
+                onPress={() => setRejectModalVisible(true)}
+                style={({ pressed }) => [
+                  styles.actionButton,
+                  {
+                    backgroundColor: theme.colors.errorContainer,
+                    borderColor: theme.colors.error,
+                    borderWidth: 1,
+                    borderRadius: theme.radii.small,
+                    opacity: pressed ? 0.8 : 1,
+                  },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel="Từ chối kết quả xử lý"
+                testID="btn-reject-resolution-service-request"
+              >
+                <Text style={[theme.typography.bodyMedium, styles.actionButtonText, { color: theme.colors.error }]}>
+                  Từ chối kết quả
+                </Text>
+              </Pressable>
+            ) : null}
+
+            {/* CONFIRM: Xác nhận hoàn tất (đóng yêu cầu) */}
+            {hasServiceRequestAction(request.allowedActions, 'CONFIRM') ? (
+              <Pressable
+                onPress={() => setConfirmDialogVisible(true)}
+                style={({ pressed }) => [
+                  styles.actionButton,
+                  {
+                    backgroundColor: theme.colors.success,
+                    borderRadius: theme.radii.small,
+                    opacity: pressed ? 0.8 : 1,
+                  },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel="Xác nhận hoàn tất và đóng yêu cầu"
+                testID="btn-confirm-service-request"
+              >
+                <Text style={[theme.typography.bodyMedium, styles.actionButtonText, styles.whiteText]}>
+                  Xác nhận hoàn tất
+                </Text>
+              </Pressable>
+            ) : null}
+
+            {/* CANCEL: Hủy yêu cầu */}
+            {hasServiceRequestAction(request.allowedActions, 'CANCEL') ? (
+              <Pressable
+                onPress={() => setCancelDialogVisible(true)}
+                style={({ pressed }) => [
+                  styles.actionButton,
+                  {
+                    backgroundColor: theme.colors.surfaceVariant,
+                    borderColor: theme.colors.error,
+                    borderWidth: 1,
+                    borderRadius: theme.radii.small,
+                    opacity: pressed ? 0.8 : 1,
+                  },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel="Hủy yêu cầu dịch vụ"
+                testID="btn-cancel-service-request"
+              >
+                <Text style={[theme.typography.bodyMedium, styles.actionButtonText, { color: theme.colors.error }]}>
+                  Hủy yêu cầu
+                </Text>
+              </Pressable>
+            ) : null}
+          </View>
+        ) : null}
 
         {/* Description Section */}
         <View
@@ -731,6 +1048,62 @@ export function ServiceRequestDetailScreen() {
         onCancel={() => setConflictModalVisible(false)}
         testID="dialog-service-request-conflict"
       />
+
+      {/* User Directory Assignee Picker Modal (Phase 16E) */}
+      <UserPickerModal
+        visible={assignPickerVisible}
+        mode="single"
+        title="Phân công người xử lý"
+        selectedIds={request.assignee ? [request.assignee.id] : []}
+        onConfirm={handleAssignConfirm}
+        onCancel={() => setAssignPickerVisible(false)}
+        testID="modal-assign-service-request"
+      />
+
+      {/* Resolve Service Request Modal (Phase 16E) */}
+      <ResolveServiceRequestModal
+        visible={resolveModalVisible}
+        request={request}
+        onClose={() => setResolveModalVisible(false)}
+        onSuccess={handleResolveSuccess}
+        onConflict={handleEditConflict}
+        testID="modal-resolve-service-request"
+      />
+
+      {/* Reject Resolution Sheet (SCR-SRV-03 / Phase 16E) */}
+      <RejectResolutionModal
+        visible={rejectModalVisible}
+        request={request}
+        onClose={() => setRejectModalVisible(false)}
+        onSuccess={handleRejectSuccess}
+        onConflict={handleEditConflict}
+        testID="modal-reject-resolution"
+      />
+
+      {/* Cancel Confirmation Dialog (Phase 16E) */}
+      <ConfirmationDialog
+        visible={cancelDialogVisible}
+        title="Hủy yêu cầu dịch vụ"
+        message="Bạn có chắc chắn muốn hủy yêu cầu dịch vụ này không? Thao tác này không thể hoàn tác."
+        confirmText="Hủy yêu cầu"
+        cancelText="Đóng"
+        isDanger={true}
+        onConfirm={() => executeStatusTransition('CANCELLED')}
+        onCancel={() => setCancelDialogVisible(false)}
+        testID="dialog-cancel-service-request"
+      />
+
+      {/* Confirm (Close) Confirmation Dialog (Phase 16E) */}
+      <ConfirmationDialog
+        visible={confirmDialogVisible}
+        title="Xác nhận hoàn tất"
+        message="Bạn có đồng ý kết quả xử lý và đóng yêu cầu dịch vụ này không?"
+        confirmText="Đồng ý & Đóng"
+        cancelText="Hủy bỏ"
+        onConfirm={() => executeStatusTransition('CLOSED')}
+        onCancel={() => setConfirmDialogVisible(false)}
+        testID="dialog-confirm-service-request"
+      />
     </View>
   );
 }
@@ -804,6 +1177,28 @@ const styles = StyleSheet.create({
   },
   titleText: {
     fontWeight: '700',
+  },
+  workflowActionBar: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 16,
+    alignItems: 'center',
+  },
+  actionButton: {
+    minHeight: 48,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  assignButton: {},
+  actionButtonText: {
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  whiteText: {
+    color: '#ffffff',
   },
   sectionCard: {
     borderWidth: 1,

@@ -35,6 +35,7 @@ export interface UseServiceRequestDetailResult {
   load: () => Promise<void>;
   refresh: () => Promise<void>;
   retry: () => Promise<void>;
+  invalidateAndRefresh: () => Promise<void>;
   applyServiceRequestUpdate: (updated: ServiceRequestDetailResponse) => void;
 }
 
@@ -147,6 +148,12 @@ export function useServiceRequestDetail(requestId: string): UseServiceRequestDet
     return executeFetch(requestId, false);
   }, [requestId, executeFetch]);
 
+  const invalidateAndRefresh = useCallback(() => {
+    // Monotonically invalidate any in-flight GET requests and clear ownership before triggering fresh GET
+    inFlightPromiseRef.current = null;
+    return executeFetch(requestId, true);
+  }, [requestId, executeFetch]);
+
   const applyServiceRequestUpdate = useCallback((updated: ServiceRequestDetailResponse) => {
     // Supersede any pending in-flight GET requests so stale responses cannot overwrite
     requestGenerationRef.current++;
@@ -168,6 +175,7 @@ export function useServiceRequestDetail(requestId: string): UseServiceRequestDet
     load,
     refresh,
     retry,
+    invalidateAndRefresh,
     applyServiceRequestUpdate,
   };
 }
