@@ -21,8 +21,8 @@
 - Phase 16C Implementation Checkpoint: `reports/PHASE_16C_SERVICE_REQUEST_DETAIL_REPORT.md` (CLOSED / AUDITED)
 - Phase 16D Implementation Checkpoint: `reports/PHASE_16D_CREATE_EDIT_SERVICE_REQUEST_REPORT.md` (HARDENED / VERIFIED)
 - Phase 16E Implementation Checkpoint: `reports/PHASE_16E_WORKFLOW_ASSIGNMENT_REPORT.md` (IMPLEMENTED / VERIFIED)
-- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 15 Mobile Task Management: CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 15A..15G CLOSED). Phase 16 Mobile Service Requests: CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 16A..16G CLOSED). Phase 17 Mobile Asset Management: AUDITED / IMPLEMENTATION_NOT_STARTED.
-- Next Action: PHASE 17 DECISION / CONTRACT FREEZE
+- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 15 Mobile Task Management: CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 15A..15G CLOSED). Phase 16 Mobile Service Requests: CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 16A..16G CLOSED). Phase 17 Mobile Asset Management: CONTRACT_FROZEN / IMPLEMENTATION_NOT_STARTED.
+- Next Action: PHASE 17A ASSET CONTRACT FOUNDATION
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening

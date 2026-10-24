@@ -1331,3 +1331,36 @@ Current operating mode:
      - Tham số điều hướng chỉ truyền ID duy nhất (`requestId`, `assetId`). Tuyệt đối không truyền object thực thể, quyền hạn, `allowedActions`, hay số `version` qua route params.
   8. **Mở Rộng StatusBadge (StatusBadge Extension)**:
      - Bổ sung ngữ cảnh `type="serviceRequest"` trong `StatusBadge.tsx` với ánh xạ đầy đủ 7 trạng thái canonical (`OPEN`, `ASSIGNED`, `IN_PROGRESS`, `WAITING_FOR_USER`, `RESOLVED`, `CLOSED`, `CANCELLED`), đặc biệt bổ sung `'ASSIGNED': 'Đã phân công'`.
+
+## D-066: Phase 17 Mobile Asset Management Contract & Scope Freeze
+
+- **Ngày quyết định**: 2026-10-24.
+- **Phạm vi**: Khóa kiến trúc, hợp đồng API, phân rã phạm vi và quy chuẩn tích hợp Mobile Asset Management (Phase 17, màn hình `SCR-AST-01` .. `SCR-AST-06`).
+- **Tình trạng**: APPROVED / FROZEN.
+- **Tài liệu tham chiếu**: `reports/PHASE_17_ASSET_CONTRACT_FREEZE.md`, `reports/PRE_PHASE_17_AUDIT.md`.
+- **Nội dung quyết định**:
+  1. **Điểm Vào Điều Hướng (Navigation Root Entry)**:
+     - Giữ nguyên cấu trúc chuẩn 5 bottom tab (`Dashboard`, `Projects`, `Tasks`, `ServiceRequests`, `More`).
+     - Tuyệt đối không tạo bottom tab thứ 6. Phân hệ Quản lý Tài sản được kích hoạt từ menu màn hình `More` ("Tài sản của tôi" / "Quản lý tài sản"), điều hướng vào stack screen `AssetList` (`SCR-AST-01`).
+  2. **Chế Độ Hiển Thị Danh Sách Tài Sản (List Mode Decision)**:
+     - Màn hình `SCR-AST-01` hiển thị mặc định danh sách tài sản được cấp phát cho nhân viên hiện tại (`GET /api/v1/assets/my-assets`).
+     - Khi người dùng có quyền `ASSET_READ` hoặc vai trò `ADMIN`, màn hình hiển thị thêm tab chuyển đổi sang danh mục tài sản toàn công ty (`GET /api/v1/assets`). Nhân viên thông thường không có quyền quản lý sẽ chỉ xem tài sản của chính mình.
+  3. **Quy Chuẩn Định Danh và Versioning (Identity & Versioning Model)**:
+     - Định danh tài sản `assetId` (UUID) hoàn toàn độc lập với mã hiển thị `assetCode` (ví dụ: `LAP-2026-001`).
+     - Khóa lạc quan của Tài sản (`Asset.version`) phục vụ cập nhật thông tin chung (`PUT /assets/{assetId}`).
+     - Khóa lạc quan của Phân công (`AssetAssignment.version`) phục vụ thu hồi tài sản (`PUT /assets/{assetId}/assignments/{assignmentId}/return`). Cấm nhầm lẫn hai loại version này.
+     - Cấp phát tài sản (`POST /assets/{assetId}/assignments`) sử dụng khóa bi quan backend, payload không truyền version.
+  4. **Liên Kết Đa Phân Hệ (Cross-Module Fault Reporting)**:
+     - Từ màn hình Chi tiết Tài sản (`SCR-AST-02`), nhân viên đang được bàn giao tài sản có nút bấm "Báo hỏng / Yêu cầu dịch vụ" điều hướng sang `CreateServiceRequest` với param `{ assetId: asset.id }`.
+  5. **Quy Chuẩn Khóa Đột Biến (Synchronous Mutation Locks)**:
+     - Toàn bộ 5 luồng đột biến (Tạo tài sản, Sửa tài sản, Cấp phát, Thu hồi, Thêm lịch sử sửa chữa) bắt buộc sử dụng khóa đồng bộ `useRef` trước khi gọi API bất đồng bộ.
+  6. **Ranh Giới Phần Cứng và Đính Kèm (Hardware & File Boundary)**:
+     - Tra cứu barcode/QR code thực hiện qua ô tìm kiếm text (`assetCode`, `serialNumber`). Không cài đặt thư viện quét camera native khi chưa có quyết định cấp phép riêng.
+     - Đính kèm và ảnh tài sản tiếp tục hoãn lại theo tiền lệ D-063 và D-065.
+  7. **Kế Hoạch Phân Kỳ Phase 17**:
+     - `17A`: Hợp đồng, Types, API Adapter, StatusBadge, Error Mapper, Route Types.
+     - `17B`: Danh sách tài sản & Tài sản của tôi (`SCR-AST-01`).
+     - `17C`: Chi tiết tài sản & Liên kết Service Request (`SCR-AST-02`).
+     - `17D`: Tạo & Sửa tài sản (`SCR-AST-03`, `SCR-AST-04`).
+     - `17E`: Cấp phát & Thu hồi tài sản (`SCR-AST-05`, `SCR-AST-06`).
+     - `17F`: Tích hợp toàn diện, kiểm thử hồi quy và Android native verification.
