@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { useAppTheme } from '../../app/providers/ThemeProvider';
 
-export type StatusCategory = 'project' | 'task' | 'serviceRequest' | 'generic';
+export type StatusCategory = 'project' | 'task' | 'serviceRequest' | 'asset' | 'generic';
 
 /**
  * StatusBadge is a cross-domain presentational display component.
@@ -55,6 +55,14 @@ const TASK_STATUS_LABELS: Record<string, string> = {
   IN_REVIEW: 'Đang kiểm tra',
   COMPLETED: 'Hoàn thành',
   CANCELLED: 'Đã hủy',
+};
+
+const ASSET_STATUS_LABELS: Record<string, string> = {
+  AVAILABLE: 'Sẵn sàng',
+  ASSIGNED: 'Đang cấp phát',
+  MAINTENANCE: 'Bảo dưỡng',
+  BROKEN: 'Hỏng',
+  RETIRED: 'Thanh lý',
 };
 
 export function StatusBadge({
@@ -117,10 +125,29 @@ export function StatusBadge({
           border: theme.colors.error,
         };
       case 'TODO':
+      case 'RETIRED':
         return {
           bg: theme.colors.surfaceVariant,
           text: theme.colors.textSecondary,
           border: theme.colors.border,
+        };
+      case 'AVAILABLE':
+        return {
+          bg: theme.colors.successContainer,
+          text: theme.colors.success,
+          border: theme.colors.success,
+        };
+      case 'MAINTENANCE':
+        return {
+          bg: theme.colors.warningContainer,
+          text: theme.colors.warning,
+          border: theme.colors.warning,
+        };
+      case 'BROKEN':
+        return {
+          bg: theme.colors.errorContainer,
+          text: theme.colors.error,
+          border: theme.colors.error,
         };
       default:
         return {
@@ -134,7 +161,8 @@ export function StatusBadge({
   const colors = getBadgeColors();
   const taskLabel = type === 'task' ? TASK_STATUS_LABELS[normalized] : undefined;
   const srvLabel = type === 'serviceRequest' ? SERVICE_REQUEST_STATUS_LABELS[normalized] : undefined;
-  const displayLabel = label ?? taskLabel ?? srvLabel ?? CANONICAL_STATUS_LABELS[normalized] ?? status;
+  const assetLabel = type === 'asset' ? ASSET_STATUS_LABELS[normalized] : undefined;
+  const displayLabel = label ?? taskLabel ?? srvLabel ?? assetLabel ?? CANONICAL_STATUS_LABELS[normalized] ?? status;
 
   return (
     <View

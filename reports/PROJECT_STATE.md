@@ -21,13 +21,22 @@
 - Phase 16C Implementation Checkpoint: `reports/PHASE_16C_SERVICE_REQUEST_DETAIL_REPORT.md` (CLOSED / AUDITED)
 - Phase 16D Implementation Checkpoint: `reports/PHASE_16D_CREATE_EDIT_SERVICE_REQUEST_REPORT.md` (HARDENED / VERIFIED)
 - Phase 16E Implementation Checkpoint: `reports/PHASE_16E_WORKFLOW_ASSIGNMENT_REPORT.md` (IMPLEMENTED / VERIFIED)
-- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 15 Mobile Task Management: CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 15A..15G CLOSED). Phase 16 Mobile Service Requests: CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 16A..16G CLOSED). Phase 17 Mobile Asset Management: CONTRACT_FROZEN / IMPLEMENTATION_NOT_STARTED.
-- Next Action: PHASE 17A ASSET CONTRACT FOUNDATION
+- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 15 Mobile Task Management: CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 15A..15G CLOSED). Phase 16 Mobile Service Requests: CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 16A..16G CLOSED). Phase 17 Mobile Asset Management: IN_PROGRESS (Subphase 17A IMPLEMENTED / VALIDATED, 17B NOT STARTED).
+- Next Action: PHASE 17B ASSET LIST & MY ASSETS
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening
 
-- Latest Implementation: Phase 16G Service Request Integration & Hardening
+- Latest Implementation: Phase 17A Asset Contract Foundation
+- Implementation Report: `reports/PHASE_17A_ASSET_FOUNDATION.md`
+- Delivered Scope:
+  - Asset domain types, request/response DTOs, enum models (`AssetStatus`, `AssetAssignmentStatus`, `AssetRepairType`, `AssetSortProperty`), and comprehensive runtime type guards (`isAssetStatus`, `isAssetDetailResponse`, etc.) in `mobile/src/features/assets/types/assetTypes.ts`.
+  - Asset API client transport adapter (`assetApi`) implementing all 10 frozen backend endpoints from `06_API_CONTRACT.md` Section 14, with deterministic query serialization in `mobile/src/features/assets/api/assetApi.ts`.
+  - Presentation-safe Asset Error Mapper (`mapAssetError`) handling HTTP 400, 401, 403, 404, 409 (`OPTIMISTIC_LOCK_CONFLICT`), domain errors, and fallback categories with Vietnamese user-friendly messages in `mobile/src/features/assets/errors/assetErrorMapper.ts`.
+  - UI Component Extension: Extended `StatusBadge.tsx` with `type="asset"` mapped to `AVAILABLE`, `ASSIGNED`, `MAINTENANCE`, `BROKEN`, `RETIRED`.
+  - Navigation Route Contracts: Extended `MainTabParamList` in `mobile/src/app/navigation/types.ts` with `AssetList`, `AssetDetail: { assetId: string }`, and `CreateAsset`.
+  - Validation Evidence: 101 test suites (+3 new suites in `__tests__/assets/`), 970 tests (+44 new tests) PASS (0 failures, 0 skipped, 0 snapshots). TypeScript 0 errors. ESLint 0 errors (48 historical warnings retained, 0 in assets).
+- Prior Implementation: Phase 16G Service Request Integration & Hardening
 - Implementation Report: `reports/PHASE_16G_INTEGRATION_HARDENING_REPORT.md`
 - Delivered Scope:
   - Resolved Role Alias Drift (`SERVICE_REQUEST_INTERNAL_COMMENT_AUTH_DRIFT`): Reconciled `ServiceRequestCommentsScreen.tsx` internal comment authorization predicate to strictly require canonical `'ADMIN'` (removed synthetic `ROLE_ADMIN` check). Added deterministic tests verifying canonical `ADMIN` and active assignee pass, while `ROLE_ADMIN`-only, missing roles, and missing user fail closed.

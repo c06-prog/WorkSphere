@@ -42,6 +42,10 @@ export type MainTabParamList = {
   CreateServiceRequest: { assetId?: string } | undefined;
   ServiceRequestComments: { requestId: string };
   ServiceRating: { requestId: string };
+  // Phase 17 Asset Stack Screens (Type contracts only - routes registered in later subphases)
+  AssetList: undefined;
+  AssetDetail: { assetId: string };
+  CreateAsset: undefined;
 };
 
 export type RootStackParamList = {
