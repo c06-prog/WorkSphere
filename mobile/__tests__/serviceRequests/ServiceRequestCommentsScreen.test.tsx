@@ -199,6 +199,88 @@ describe('ServiceRequestCommentsScreen Component', () => {
     });
   });
 
+  it('4b. shows internal toggle for canonical ADMIN, but hides it for synthetic ROLE_ADMIN or missing roles', async () => {
+    // A. Canonical ADMIN: visible
+    mockCurrentUser = {
+      id: 'user-admin-1',
+      username: 'admin',
+      roles: ['ADMIN'],
+      permissions: ['SERVICE_REQUEST_READ'],
+    };
+
+    (serviceRequestApi.getServiceRequestDetail as jest.Mock).mockResolvedValueOnce(mockDetail);
+    (serviceRequestApi.getComments as jest.Mock).mockResolvedValueOnce(mockCommentPage);
+
+    const adminRender = await render(
+      <ThemeProvider>
+        <ServiceRequestCommentsScreen />
+      </ThemeProvider>
+    );
+
+    await waitFor(() => {
+      expect(adminRender.getByTestId('switch-internal-comment')).toBeTruthy();
+    });
+
+    // B. Synthetic ROLE_ADMIN alias only: must be hidden (fails closed)
+    mockCurrentUser = {
+      id: 'user-role-admin-only',
+      username: 'fake_admin',
+      roles: ['ROLE_ADMIN'],
+      permissions: ['SERVICE_REQUEST_READ'],
+    };
+
+    (serviceRequestApi.getServiceRequestDetail as jest.Mock).mockResolvedValueOnce(mockDetail);
+    (serviceRequestApi.getComments as jest.Mock).mockResolvedValueOnce(mockCommentPage);
+
+    const roleAdminRender = await render(
+      <ThemeProvider>
+        <ServiceRequestCommentsScreen />
+      </ThemeProvider>
+    );
+
+    await waitFor(() => {
+      expect(roleAdminRender.getByTestId('input-service-comment-content')).toBeTruthy();
+      expect(roleAdminRender.queryByTestId('switch-internal-comment')).toBeNull();
+    });
+
+    // C. Missing roles: hidden
+    mockCurrentUser = {
+      id: 'user-no-roles',
+      username: 'noroles',
+      roles: [],
+      permissions: ['SERVICE_REQUEST_READ'],
+    };
+
+    (serviceRequestApi.getServiceRequestDetail as jest.Mock).mockResolvedValueOnce(mockDetail);
+    (serviceRequestApi.getComments as jest.Mock).mockResolvedValueOnce(mockCommentPage);
+
+    const noRolesRender = await render(
+      <ThemeProvider>
+        <ServiceRequestCommentsScreen />
+      </ThemeProvider>
+    );
+
+    await waitFor(() => {
+      expect(noRolesRender.queryByTestId('switch-internal-comment')).toBeNull();
+    });
+
+    // D. Missing current user: hidden
+    mockCurrentUser = null;
+
+    (serviceRequestApi.getServiceRequestDetail as jest.Mock).mockResolvedValueOnce(mockDetail);
+    (serviceRequestApi.getComments as jest.Mock).mockResolvedValueOnce(mockCommentPage);
+
+    const noUserRender = await render(
+      <ThemeProvider>
+        <ServiceRequestCommentsScreen />
+      </ThemeProvider>
+    );
+
+    await waitFor(() => {
+      expect(noUserRender.queryByTestId('switch-internal-comment')).toBeNull();
+    });
+  });
+
   it('5. submits a new comment and appends it to the list', async () => {
     (serviceRequestApi.getServiceRequestDetail as jest.Mock).mockResolvedValueOnce(mockDetail);
     (serviceRequestApi.getComments as jest.Mock).mockResolvedValueOnce(mockCommentPage);

@@ -909,7 +909,7 @@ export function ServiceRequestDetailScreen() {
               accessibilityLabel="Xem tất cả bình luận"
               testID="btn-view-all-comments"
             >
-              <Text style={[theme.typography.bodySmall, { color: theme.colors.primary, fontWeight: '600' }]}>
+              <Text style={[theme.typography.bodySmall, styles.viewAllButtonText, { color: theme.colors.primary }]}>
                 Xem tất cả ›
               </Text>
             </Pressable>
@@ -1041,7 +1041,7 @@ export function ServiceRequestDetailScreen() {
                 accessibilityLabel="Đánh giá chất lượng dịch vụ"
                 testID="btn-open-rate-service-request"
               >
-                <Text style={[theme.typography.bodySmall, { color: '#FFFFFF', fontWeight: '700' }]}>
+                <Text style={[theme.typography.bodySmall, styles.rateActionButtonText]}>
                   Đánh giá ngay
                 </Text>
               </Pressable>
@@ -1341,12 +1341,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 8,
   },
+  viewAllButtonText: {
+    fontWeight: '600',
+  },
   rateActionButton: {
     minHeight: 40,
     paddingHorizontal: 12,
     borderRadius: 6,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  rateActionButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
   errorBackBtn: {
     minHeight: 48,

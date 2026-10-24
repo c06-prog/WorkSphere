@@ -63,8 +63,11 @@ Phase 16F completes the client-side engagement lifecycle for Service Requests ac
 - **ESLint**:
   ```
   npm --prefix mobile run lint
-  Exit code: 0 (0 errors, 55 pre-existing warnings)
+  Exit code: 0 (0 errors, 55 warnings: 48 pre-existing in projects/organization, 7 newly introduced in Phase 16F)
   ```
+  > Note on Lint Ownership: The original Phase 16F implementation introduced 7 inline-style warnings across `ServiceRatingModal.tsx` (1), `ServiceRequestCommentsScreen.tsx` (4), and `ServiceRequestDetailScreen.tsx` (2). These warnings were identified during the Phase 16F audit (`PHASE_16F_NEW_LINT_WARNING_DEBT`, `PHASE_16F_REPORT_LINT_DRIFT`) and resolved in Phase 16G (`RESOLVED_IN_16G`).
+  >
+  > Note on Role Authorization: The original Phase 16F implementation contained a synthetic `ROLE_ADMIN` check in `ServiceRequestCommentsScreen.tsx` (`SERVICE_REQUEST_INTERNAL_COMMENT_AUTH_DRIFT`), which was reconciled to canonical `'ADMIN'` in Phase 16G (`RESOLVED_IN_16G`).
 
 ### 4.2 Jest Test Suites
 - **Targeted Unit & Integration Suites**:

@@ -21,13 +21,22 @@
 - Phase 16C Implementation Checkpoint: `reports/PHASE_16C_SERVICE_REQUEST_DETAIL_REPORT.md` (CLOSED / AUDITED)
 - Phase 16D Implementation Checkpoint: `reports/PHASE_16D_CREATE_EDIT_SERVICE_REQUEST_REPORT.md` (HARDENED / VERIFIED)
 - Phase 16E Implementation Checkpoint: `reports/PHASE_16E_WORKFLOW_ASSIGNMENT_REPORT.md` (IMPLEMENTED / VERIFIED)
-- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 15 Mobile Task Management: CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 15A..15G CLOSED). Phase 16 Mobile Service Requests: IN_PROGRESS (Subphase 16A CLOSED/AUDITED/HARDENED, 16B CLOSED/AUDITED, 16C CLOSED/AUDITED, 16D CLOSED/AUDITED/HARDENED, 16E CLOSED/AUDITED, 16F IMPLEMENTED/VERIFIED, 16G NOT STARTED). Phase 17 Mobile Asset Management: NOT STARTED.
-- Next Action: INDEPENDENT AUDIT PHASE 16F / PHASE 16G (END-TO-END INTEGRATION & HARDENING)
+- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 15 Mobile Task Management: CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 15A..15G CLOSED). Phase 16 Mobile Service Requests: IMPLEMENTATION_COMPLETE (Subphases 16A..16F CLOSED/AUDITED, 16G IMPLEMENTED/VALIDATED). Phase 17 Mobile Asset Management: NOT STARTED.
+- Next Action: FINAL INDEPENDENT AUDIT PHASE 16
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening
 
-- Latest Implementation: Phase 16F Service Request Comments & Rating (SCR-SRV-05 + SCR-SRV-06)
+- Latest Implementation: Phase 16G Service Request Integration & Hardening
+- Implementation Report: `reports/PHASE_16G_INTEGRATION_HARDENING_REPORT.md`
+- Delivered Scope:
+  - Resolved Role Alias Drift (`SERVICE_REQUEST_INTERNAL_COMMENT_AUTH_DRIFT`): Reconciled `ServiceRequestCommentsScreen.tsx` internal comment authorization predicate to strictly require canonical `'ADMIN'` (removed synthetic `ROLE_ADMIN` check). Added deterministic tests verifying canonical `ADMIN` and active assignee pass, while `ROLE_ADMIN`-only, missing roles, and missing user fail closed.
+  - Resolved Inline-Style Lint Debt (`PHASE_16F_NEW_LINT_WARNING_DEBT`): Extracted all 7 static inline styles introduced in Phase 16F across `ServiceRatingModal.tsx` (1), `ServiceRequestCommentsScreen.tsx` (4), and `ServiceRequestDetailScreen.tsx` (2) into `StyleSheet.create`. Result: 0 errors, exactly 48 pre-existing warnings in projects/organization, exactly 0 warnings in serviceRequests.
+  - Resolved Report Drift (`PHASE_16F_REPORT_LINT_DRIFT`): Reconciled `reports/PHASE_16F_COMMENTS_RATING_REPORT.md` to document the 7 inline-style warnings introduced in 16F and resolved in 16G.
+  - Test Suite Validation: 98 test suites, 926 tests (+1 new role matrix test) PASS (0 failures, 0 skipped, 0 snapshots). TypeScript 0 errors.
+  - Backend Validation: `.\mvnw.cmd test-compile` BUILD SUCCESS (0 Checkstyle violations).
+  - All 12 mutation flows verified to use synchronous `useRef` locks. Zero Phase-16-specific open debt.
+- Prior Implementation: Phase 16F Service Request Comments & Rating (SCR-SRV-05 + SCR-SRV-06)
 - Implementation Report: `reports/PHASE_16F_COMMENTS_RATING_REPORT.md`
 - Delivered Scope:
   - Screen implementation: Implemented `ServiceRequestCommentsScreen.tsx` (`SCR-SRV-05`) with back navigation, request subtitle, paginated FlatList, refresh/pagination error banners, empty state, bottom Add Comment section gated by `allowedActions.includes('COMMENT')`, and internal note toggle restricted to `ADMIN` or active assignee.

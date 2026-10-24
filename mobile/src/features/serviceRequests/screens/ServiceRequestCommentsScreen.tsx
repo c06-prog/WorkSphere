@@ -130,7 +130,7 @@ export function ServiceRequestCommentsScreen() {
 
   // Authorization checks
   const canComment = Boolean(detail?.allowedActions?.includes('COMMENT'));
-  const isAdmin = currentUser?.roles?.some(r => r.toUpperCase() === 'ADMIN' || r.toUpperCase() === 'ROLE_ADMIN') ?? false;
+  const isAdmin = currentUser?.roles?.some(r => r.toUpperCase() === 'ADMIN') ?? false;
   const isActiveAssignee = Boolean(
     currentUser?.id && detail?.assignee?.id && currentUser.id === detail.assignee.id
   );
@@ -220,7 +220,7 @@ export function ServiceRequestCommentsScreen() {
               <Text
                 style={[
                   theme.typography.caption,
-                  { color: '#FFFFFF', fontWeight: '700', fontSize: 10 },
+                  styles.internalBadgeText,
                 ]}
               >
                 Nội bộ
@@ -293,7 +293,7 @@ export function ServiceRequestCommentsScreen() {
           accessibilityLabel="Quay lại chi tiết yêu cầu"
           testID="btn-back-service-comments"
         >
-          <Text style={{ fontSize: 24, color: theme.colors.textPrimary }}>
+          <Text style={[styles.backIcon, { color: theme.colors.textPrimary }]}>
             ‹
           </Text>
         </Pressable>
@@ -434,7 +434,8 @@ export function ServiceRequestCommentsScreen() {
                 <Text
                   style={[
                     theme.typography.caption,
-                    { color: theme.colors.textPrimary, fontWeight: '600' },
+                    styles.internalToggleLabel,
+                    { color: theme.colors.textPrimary },
                   ]}
                 >
                   Ghi chú nội bộ (chỉ kỹ thuật viên xem)
@@ -456,7 +457,8 @@ export function ServiceRequestCommentsScreen() {
               <Text
                 style={[
                   theme.typography.caption,
-                  { color: theme.colors.error, marginBottom: 4 },
+                  styles.submitErrorText,
+                  { color: theme.colors.error },
                 ]}
                 testID="comment-submit-error"
               >
@@ -529,6 +531,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: 4,
   },
+  backIcon: {
+    fontSize: 24,
+  },
   headerTitleContainer: {
     flex: 1,
   },
@@ -565,6 +570,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 2,
   },
+  internalBadgeText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 10,
+  },
   editedText: {
     fontStyle: 'italic',
   },
@@ -593,6 +603,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingBottom: 4,
+  },
+  internalToggleLabel: {
+    fontWeight: '600',
+  },
+  submitErrorText: {
+    marginBottom: 4,
   },
   inputRow: {
     flexDirection: 'row',

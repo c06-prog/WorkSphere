@@ -4,9 +4,10 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: PHASE 16F - SERVICE REQUEST COMMENTS & RATING
-- Status: Phase 15 Mobile Task Management CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 15A..15G CLOSED). Phase 14 CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 16 Mobile Service Requests: IN_PROGRESS (Subphase 16A CLOSED/AUDITED/HARDENED, 16B CLOSED/AUDITED, 16C CLOSED/AUDITED, 16D HARDENED / VERIFIED, 16E CLOSED / VERIFIED, 16F IMPLEMENTED / VERIFIED, 16G NOT STARTED). Phase 17 Mobile Asset Management: NOT STARTED.
-  - Subphase 16F: IMPLEMENTED / VERIFIED (SCR-SRV-05 ServiceRequestCommentsScreen, useServiceRequestComments paginated comments hook with monotonic query generation and synchronous locks, SCR-SRV-06 ServiceRatingModal with unversioned payload contract parity, internal note permission gating restricted to ADMIN or active assignee, allowedActions gating, 98 suites / 925 tests pass, Android assembleDebug pass)
+- Current Task: PHASE 16G - SERVICE REQUEST INTEGRATION & HARDENING
+- Status: Phase 15 Mobile Task Management CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 15A..15G CLOSED). Phase 14 CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 16 Mobile Service Requests: IMPLEMENTATION_COMPLETE (Subphases 16A..16F CLOSED/AUDITED, 16G IMPLEMENTED / VALIDATED). Phase 17 Mobile Asset Management: NOT STARTED.
+  - Subphase 16G: IMPLEMENTED / VALIDATED (Resolved role alias drift SERVICE_REQUEST_INTERNAL_COMMENT_AUTH_DRIFT to canonical ADMIN, resolved all 7 Phase 16F inline style warnings PHASE_16F_NEW_LINT_WARNING_DEBT, reconciled PHASE_16F_REPORT_LINT_DRIFT, 98 suites / 926 tests PASS, 0 errors / 48 pre-existing warnings, backend test-compile pass, zero Phase-16 debt)
+  - Subphase 16F: CLOSED / AUDITED (SCR-SRV-05 ServiceRequestCommentsScreen, useServiceRequestComments paginated comments hook with monotonic query generation and synchronous locks, SCR-SRV-06 ServiceRatingModal with unversioned payload contract parity, internal note permission gating restricted to ADMIN or active assignee, allowedActions gating)
   - Subphase 16E: CLOSED / VERIFIED (Assignment via UserPickerModal & Directory API, SCR-SRV-03 RejectResolutionModal, ResolveServiceRequestModal, full workflow transitions START/WAIT_FOR_USER/RESOLVE/RESUME/REJECT_RESOLUTION/CONFIRM/CANCEL, allowedActions gating, synchronous useRef submit locks, optimistic locking conflict handling, invalidateAndRefresh cache invalidation)
   - Subphase 16D: HARDENED / VERIFIED (SCR-SRV-04 Create Service Request, EditServiceRequestModal requester edit flow, ServiceCategorySelectModal category picker with generation tracking & unmount safety, route permission gate, optimistic locking dialog with authoritative v2 reload proof, synchronous submit locks)
   - Subphase 16C: CLOSED / AUDITED (SCR-SRV-02 Service Request Detail, useServiceRequestDetail hook, hidden route registration, card navigation activation)
@@ -15,10 +16,10 @@
   - Subphases 15A..15F: CLOSED / AUDITED / HARDENED
   - Subphase 15G: CLOSED / VALIDATED (Full Integration & Regression)
   - Subphases 14A..14F: CLOSED (MEMORY_CHECKPOINT_CLOSED)
-- Baseline Checkpoint: `bf2f90251d4b0cbeff51cde0a8b22649e2593c11` (Phase 16E commit)
+- Baseline Checkpoint: `6876fed1470cf7f4565046a54ff4ef18038ee3d4` (Phase 16F commit)
 - Final Phase 15 Reconciliation Checkpoint: `eb0c973dfe44fc3a717925a87b8a48f313502575` (`fix(mobile): reconcile phase 15 final audit`)
-- Reports: `reports/PHASE_16F_COMMENTS_RATING_REPORT.md`, `reports/PHASE_16E_WORKFLOW_ASSIGNMENT_REPORT.md`, `reports/PHASE_16D_CREATE_EDIT_SERVICE_REQUEST_REPORT.md`, `reports/PHASE_16C_SERVICE_REQUEST_DETAIL_REPORT.md`, `reports/PHASE_16B_SERVICE_REQUEST_LIST_REPORT.md`, `reports/PHASE_16A_SERVICE_REQUEST_CONTRACT_FOUNDATION_REPORT.md`, `reports/PHASE_16_SERVICE_REQUEST_CONTRACT_FREEZE.md`, `reports/PRE_PHASE_16_AUDIT.md`, `reports/PHASE_15_MEMORY_CHECKPOINT.md`, `reports/PHASE_15_FINAL_AUDIT_REPORT.md`, `reports/PHASE_15G_INTEGRATION_HARDENING_REPORT.md`, `reports/PHASE_15F_SUBTASKS_COMMENTS_REPORT.md`, `reports/PHASE_15E_TASK_MUTATIONS_REPORT.md`, `reports/PHASE_15_TASK_DUE_DATE_POLICY.md`, `reports/PHASE_15D_CREATE_EDIT_TASK_REPORT.md`, `reports/PHASE_15C_TASK_DETAIL_REPORT.md`, `reports/PHASE_15B_TASK_LIST_REPORT.md`, `reports/PHASE_15A_TASK_CONTRACT_FOUNDATION_REPORT.md`, `reports/PHASE_15_TASK_CONTRACT_FREEZE.md`, `reports/PRE_PHASE_15_TASK_MANAGEMENT_AUDIT.md`
-- Validation Baseline: Mobile 98/98 suites, 925/925 tests PASS (0 failures, 0 skipped, 0 snapshots); TypeScript 0 errors; ESLint 0 errors (55 warnings in style, 0 blocking errors); Android assembleDebug BUILD SUCCESSFUL (203 actionable tasks).
+- Reports: `reports/PHASE_16G_INTEGRATION_HARDENING_REPORT.md`, `reports/PHASE_16F_COMMENTS_RATING_REPORT.md`, `reports/PHASE_16E_WORKFLOW_ASSIGNMENT_REPORT.md`, `reports/PHASE_16D_CREATE_EDIT_SERVICE_REQUEST_REPORT.md`, `reports/PHASE_16C_SERVICE_REQUEST_DETAIL_REPORT.md`, `reports/PHASE_16B_SERVICE_REQUEST_LIST_REPORT.md`, `reports/PHASE_16A_SERVICE_REQUEST_CONTRACT_FOUNDATION_REPORT.md`, `reports/PHASE_16_SERVICE_REQUEST_CONTRACT_FREEZE.md`, `reports/PRE_PHASE_16_AUDIT.md`, `reports/PHASE_15_MEMORY_CHECKPOINT.md`, `reports/PHASE_15_FINAL_AUDIT_REPORT.md`, `reports/PHASE_15G_INTEGRATION_HARDENING_REPORT.md`, `reports/PHASE_15F_SUBTASKS_COMMENTS_REPORT.md`, `reports/PHASE_15E_TASK_MUTATIONS_REPORT.md`, `reports/PHASE_15_TASK_DUE_DATE_POLICY.md`, `reports/PHASE_15D_CREATE_EDIT_TASK_REPORT.md`, `reports/PHASE_15C_TASK_DETAIL_REPORT.md`, `reports/PHASE_15B_TASK_LIST_REPORT.md`, `reports/PHASE_15A_TASK_CONTRACT_FOUNDATION_REPORT.md`, `reports/PHASE_15_TASK_CONTRACT_FREEZE.md`, `reports/PRE_PHASE_15_TASK_MANAGEMENT_AUDIT.md`
+- Validation Baseline: Mobile 98/98 suites, 926/926 tests PASS (0 failures, 0 skipped, 0 snapshots); TypeScript 0 errors; ESLint 0 errors (48 pre-existing warnings in projects/organization, 0 warnings in serviceRequests); Android assembleDebug BUILD SUCCESSFUL (203 actionable tasks).
 - Delivered Scope:
   - Personal Dashboard (`SCR-MAIN-01`), Project Management (`SCR-PRJ-01` .. `SCR-PRJ-09`), Task Management (`SCR-TSK-01` .. `SCR-TSK-08`).
   - Phase 16A Service Request Foundation & Hardening: 11 API adapter endpoints, transport types, runtime guards, error mapper, StatusBadge extension, typed route contracts.
@@ -27,7 +28,32 @@
   - Phase 16D Service Request Create & Edit: `SCR-SRV-04` (`CreateServiceRequestScreen`), `ServiceCategorySelectModal` category picker (hardened with monotonic generation tracking and unmount cancellation), `EditServiceRequestModal` requester edit flow, permission gate `SERVICE_REQUEST_CREATE`, `allowedActions` gate `UPDATE`, optimistic locking conflict handling with verified authoritative v2 reload proof, and synchronous `submittingRef` submit locks.
   - Phase 16E Service Request Workflow & Assignment: Assignment via Directory `UserPickerModal` (`assignServiceRequest`), `SCR-SRV-03` `RejectResolutionModal` with mandatory reason & character count, `ResolveServiceRequestModal` with mandatory resolution notes, workflow transitions (`START`, `WAIT_FOR_USER`, `RESOLVE`, `RESUME`, `REJECT_RESOLUTION`, `CONFIRM`, `CANCEL`), authoritative `allowedActions` gating, optimistic locking conflict handling, synchronous submit locks, and `invalidateAndRefresh` query invalidation.
   - Phase 16F Service Request Comments & Rating: SCR-SRV-05 comments feed (`ServiceRequestCommentsScreen`), source-backed comment creation with internal notes toggle gated to ADMIN or active assignee, `useServiceRequestComments` hook with monotonic generation tracking and synchronous locks, SCR-SRV-06 `ServiceRatingModal` with unversioned payload contract parity and error mapping for `SERVICE_RATING_ALREADY_EXISTS`.
-- Next Action: INDEPENDENT AUDIT PHASE 16F / PHASE 16G (END-TO-END INTEGRATION & HARDENING)
+  - Phase 16G Integration & Hardening: Canonical ADMIN role reconciliation, 0 serviceRequest lint warnings (extracted 7 inline styles), 12 mutation locks verified, 98 suites / 926 tests passing.
+- Next Action: FINAL INDEPENDENT AUDIT PHASE 16
+- Explicitly Deferred Outside Phase 15:
+  - Task Attachments & Upload (Excluded by D-063, deferred to File Management Module).
+  - Task Delete (Deferred per roadmap).
+  - Service Requests (`Phase 16` / Roadmap Section 19).
+  - Asset Management (`Phase 16` / Roadmap Section 19).
+- Active Deferred Items:
+  - `PHASE_15_AUTH_E2E_CREDENTIALS_NOT_AVAILABLE_SAFE_SKIP`: Missing local environment test credentials.
+  - `PHASE_15_MUTATION_E2E_DEFERRED`: Deferred until isolated disposable test fixture provisioning exists.
+  - `PHASE_15_OFFLINE_DEVICE_E2E_DEFERRED`: Device network manipulation deferred; offline covered by Jest tests.
+  - `PHASE_16_AUTH_E2E_CREDENTIALS_NOT_AVAILABLE_SAFE_SKIP`: Missing local environment test credentials.
+  - `PHASE_16_MUTATION_E2E_DEFERRED`: Deferred until isolated disposable test fixture provisioning exists.
+  - `PHASE_16_OFFLINE_DEVICE_E2E_DEFERRED`: Device network manipulation deferred; offline covered by Jest tests.
+- Reconciled Audit Debt:
+  - `COMMENT_ADMIN_ROLE_ALIAS_DRIFT`: RESOLVED_DURING_FINAL_RECONCILIATION. Removed synthetic `ROLE_ADMIN` fallback in `TaskCommentsScreen.tsx`. Strictly canonical `'ADMIN'` enforced.
+  - `SERVICE_REQUEST_INTERNAL_COMMENT_AUTH_DRIFT`: RESOLVED_IN_16G. Removed synthetic `ROLE_ADMIN` fallback in `ServiceRequestCommentsScreen.tsx`. Strictly canonical `'ADMIN'` enforced.
+  - `PHASE_16F_NEW_LINT_WARNING_DEBT`: RESOLVED_IN_16G. Resolved 7 inline style warnings across `ServiceRatingModal`, `ServiceRequestCommentsScreen`, and `ServiceRequestDetailScreen`.
+  - `PHASE_16F_REPORT_LINT_DRIFT`: RESOLVED_IN_16G. Documented 16F lint warning ownership and resolution.
+- Accepted Non-Blocking Debt:
+  - `PHASE_14E_LINT_WARNING_DEBT`: 48 warnings for react-native/no-inline-styles (47 from 14E screens/modals, 1 pre-existing in 14C; exit code 0, 0 errors). Zero warnings in Phase 16.
+  - `PROJECT_MUTATION_DUPLICATE_SUBMIT_RISK`: 7 project mutation flows use React state-only submit guards rather than synchronous useRef locks (all 12 Service Request mutation flows in Phase 16 strictly use synchronous useRef locks).
+- Pre-Existing Toolchain Debt:
+  - AGP deprecation notices, KSP 2.2.0-2.0.2 compiler warning, npm dev dependency advisories (55 vulnerabilities).
+- Phase 15 Status: CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 16: IMPLEMENTATION_COMPLETE (Subphases 16A..16F CLOSED/AUDITED, 16G IMPLEMENTED/VALIDATED).
+- Next Action: FINAL INDEPENDENT AUDIT PHASE 16.
 - Explicitly Deferred Outside Phase 15:
   - Task Attachments & Upload (Excluded by D-063, deferred to File Management Module).
   - Task Delete (Deferred per roadmap).

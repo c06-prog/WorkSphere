@@ -166,10 +166,10 @@ export function ServiceRatingModal({
                   testID="btn-close-rating-modal"
                 >
                   <Text
-                    style={{
-                      fontSize: 20,
-                      color: theme.colors.textSecondary,
-                    }}
+                    style={[
+                      styles.closeButtonText,
+                      { color: theme.colors.textSecondary },
+                    ]}
                   >
                     ✕
                   </Text>
@@ -377,6 +377,9 @@ const styles = StyleSheet.create({
     minHeight: 48,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  closeButtonText: {
+    fontSize: 20,
   },
   requestTitle: {
     marginTop: -8,
