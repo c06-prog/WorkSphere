@@ -21,6 +21,7 @@ import {
   ServiceRequestsScreen,
   ServiceRequestDetailScreen,
   CreateServiceRequestScreen,
+  ServiceRequestCommentsScreen,
 } from '../../features/serviceRequests/screens';
 import { MoreScreen, SettingsScreen } from '../../features/more/screens';
 import {
@@ -248,6 +249,15 @@ export function MainTabNavigator() {
       <Tab.Screen
         name="CreateServiceRequest"
         component={CreateServiceRequestScreen}
+        options={{
+          tabBarButton: () => null,
+          tabBarItemStyle: { display: 'none' },
+          headerShown: false,
+        }}
+      />
+      <Tab.Screen
+        name="ServiceRequestComments"
+        component={ServiceRequestCommentsScreen}
         options={{
           tabBarButton: () => null,
           tabBarItemStyle: { display: 'none' },

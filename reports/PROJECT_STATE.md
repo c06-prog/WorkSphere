@@ -21,13 +21,23 @@
 - Phase 16C Implementation Checkpoint: `reports/PHASE_16C_SERVICE_REQUEST_DETAIL_REPORT.md` (CLOSED / AUDITED)
 - Phase 16D Implementation Checkpoint: `reports/PHASE_16D_CREATE_EDIT_SERVICE_REQUEST_REPORT.md` (HARDENED / VERIFIED)
 - Phase 16E Implementation Checkpoint: `reports/PHASE_16E_WORKFLOW_ASSIGNMENT_REPORT.md` (IMPLEMENTED / VERIFIED)
-- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 15 Mobile Task Management: CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 15A..15G CLOSED). Phase 16 Mobile Service Requests: IN_PROGRESS (Subphase 16A CLOSED/AUDITED/HARDENED, 16B CLOSED/AUDITED, 16C CLOSED/AUDITED, 16D CLOSED/AUDITED/HARDENED, 16E IMPLEMENTED/VERIFIED, 16F NOT STARTED). Phase 17 Mobile Asset Management: NOT STARTED.
-- Next Action: PHASE 16E AUDIT / PHASE 16F (COMMENTS & RATING)
+- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 15 Mobile Task Management: CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 15A..15G CLOSED). Phase 16 Mobile Service Requests: IN_PROGRESS (Subphase 16A CLOSED/AUDITED/HARDENED, 16B CLOSED/AUDITED, 16C CLOSED/AUDITED, 16D CLOSED/AUDITED/HARDENED, 16E CLOSED/AUDITED, 16F IMPLEMENTED/VERIFIED, 16G NOT STARTED). Phase 17 Mobile Asset Management: NOT STARTED.
+- Next Action: INDEPENDENT AUDIT PHASE 16F / PHASE 16G (END-TO-END INTEGRATION & HARDENING)
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening
 
-- Latest Implementation: Phase 16E Service Request Workflow & Assignment (SCR-SRV-03 + Detail Workflow Mutations)
+- Latest Implementation: Phase 16F Service Request Comments & Rating (SCR-SRV-05 + SCR-SRV-06)
+- Implementation Report: `reports/PHASE_16F_COMMENTS_RATING_REPORT.md`
+- Delivered Scope:
+  - Screen implementation: Implemented `ServiceRequestCommentsScreen.tsx` (`SCR-SRV-05`) with back navigation, request subtitle, paginated FlatList, refresh/pagination error banners, empty state, bottom Add Comment section gated by `allowedActions.includes('COMMENT')`, and internal note toggle restricted to `ADMIN` or active assignee.
+  - Hook implementation: Implemented `useServiceRequestComments.ts` with monotonic query generation tracking (`queryGenRef`), synchronous `paginationLockRef`, synchronous `addingRef`, comment deduplication by ID, and error mapping.
+  - Component implementation: Implemented `ServiceRatingModal.tsx` (`SCR-SRV-06`) for closed request evaluation, featuring 1..5 star selector, optional comment (max 2000 chars) with character counter, synchronous `submittingRef`, unversioned payload contract parity, and error mapping for `SERVICE_RATING_ALREADY_EXISTS`.
+  - Detail screen integration: Integrated comments preview entry point ("Xem tất cả ›" button navigating to `ServiceRequestComments`) and rating CTA button ("Đánh giá ngay" gated by `RATE` in `allowedActions`) on `ServiceRequestDetailScreen.tsx`.
+  - Route Registration: Registered hidden auxiliary route `ServiceRequestComments` in `MainTabNavigator.tsx` (`tabBarButton: () => null`, `tabBarItemStyle: { display: 'none' }`, `headerShown: false`). Exactly 5 bottom tabs preserved.
+  - Staging Enforcement: Comment edit/delete omitted; attachment upload remains deferred; asset picker/navigation remains staged for Phase 17; zero backend modifications or new dependencies.
+  - Validation: 98 test suites (+3 suites), 925 tests (+16 tests) PASS (0 failures, 0 skipped); TypeScript 0 errors; ESLint 0 errors (55 pre-existing warnings in projects/organization/sr, 0 blocking errors); Android `assembleDebug` BUILD SUCCESSFUL in 38s (203 actionable tasks).
+- Prior Implementation: Phase 16E Service Request Workflow & Assignment (SCR-SRV-03 + Detail Workflow Mutations)
 - Implementation Report: `reports/PHASE_16E_WORKFLOW_ASSIGNMENT_REPORT.md`
 - Delivered Scope:
   - Domain transitions: Created `serviceRequestStatusTransitions.ts` implementing `canTransitionServiceStatus`, `getValidServiceStatusTransitions`, `isTerminalServiceStatus`, `isResolutionCommentRequired`, and Vietnamese status labels.

@@ -48,6 +48,8 @@ import { useServiceRequestDetail } from '../hooks/useServiceRequestDetail';
 import { EditServiceRequestModal } from '../components/EditServiceRequestModal';
 import { RejectResolutionModal } from '../components/RejectResolutionModal';
 import { ResolveServiceRequestModal } from '../components/ResolveServiceRequestModal';
+import { ServiceRatingModal } from '../components/ServiceRatingModal';
+import { ServiceRatingResponse } from '../types/serviceRequestTypes';
 import { UserPickerModal } from '../../directory/components/UserPickerModal';
 import { UserDirectoryItem } from '../../directory/api/directoryTypes';
 import { serviceRequestApi } from '../api/serviceRequestApi';
@@ -150,6 +152,7 @@ export function ServiceRequestDetailScreen() {
   const [rejectModalVisible, setRejectModalVisible] = useState<boolean>(false);
   const [cancelDialogVisible, setCancelDialogVisible] = useState<boolean>(false);
   const [confirmDialogVisible, setConfirmDialogVisible] = useState<boolean>(false);
+  const [ratingModalVisible, setRatingModalVisible] = useState<boolean>(false);
   const [actionErrorMessage, setActionErrorMessage] = useState<string | null>(null);
 
   // Synchronous mutation correctness locks
@@ -242,6 +245,12 @@ export function ServiceRequestDetailScreen() {
   const handleRejectSuccess = (updated: ServiceRequestDetailResponse) => {
     setRejectModalVisible(false);
     applyServiceRequestUpdate(updated);
+  };
+
+  // RATE success handler (Phase 16F)
+  const handleRatingSuccess = async (_rating: ServiceRatingResponse) => {
+    setRatingModalVisible(false);
+    await invalidateAndRefresh();
   };
 
   // Focus-aware refresh for return-from-child freshness without initial duplicate GET
@@ -886,9 +895,25 @@ export function ServiceRequestDetailScreen() {
           ]}
           testID="detail-comments-section"
         >
-          <Text style={[theme.typography.heading3, styles.sectionHeader, { color: theme.colors.textPrimary }]}>
-            Bình luận ({request.comments.length})
-          </Text>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={[theme.typography.heading3, styles.sectionHeader, { color: theme.colors.textPrimary }]}>
+              Bình luận ({request.comments.length})
+            </Text>
+            <Pressable
+              onPress={() => navigation.navigate('ServiceRequestComments', { requestId: request.id })}
+              style={({ pressed }) => [
+                styles.viewAllButton,
+                { opacity: pressed ? 0.6 : 1 },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Xem tất cả bình luận"
+              testID="btn-view-all-comments"
+            >
+              <Text style={[theme.typography.bodySmall, { color: theme.colors.primary, fontWeight: '600' }]}>
+                Xem tất cả ›
+              </Text>
+            </Pressable>
+          </View>
 
           {request.comments.length === 0 ? (
             <Text style={[theme.typography.caption, { color: theme.colors.textSecondary }]} testID="comments-empty">
@@ -998,9 +1023,30 @@ export function ServiceRequestDetailScreen() {
           ]}
           testID="detail-rating-section"
         >
-          <Text style={[theme.typography.heading3, styles.sectionHeader, { color: theme.colors.textPrimary }]}>
-            Đánh giá dịch vụ
-          </Text>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={[theme.typography.heading3, styles.sectionHeader, { color: theme.colors.textPrimary }]}>
+              Đánh giá dịch vụ
+            </Text>
+            {hasServiceRequestAction(request.allowedActions, 'RATE') ? (
+              <Pressable
+                onPress={() => setRatingModalVisible(true)}
+                style={({ pressed }) => [
+                  styles.rateActionButton,
+                  {
+                    backgroundColor: theme.colors.primary,
+                    opacity: pressed ? 0.8 : 1,
+                  },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel="Đánh giá chất lượng dịch vụ"
+                testID="btn-open-rate-service-request"
+              >
+                <Text style={[theme.typography.bodySmall, { color: '#FFFFFF', fontWeight: '700' }]}>
+                  Đánh giá ngay
+                </Text>
+              </Pressable>
+            ) : null}
+          </View>
 
           {request.rating ? (
             <View testID="rating-content">
@@ -1103,6 +1149,15 @@ export function ServiceRequestDetailScreen() {
         onConfirm={() => executeStatusTransition('CLOSED')}
         onCancel={() => setConfirmDialogVisible(false)}
         testID="dialog-confirm-service-request"
+      />
+
+      {/* Service Rating Modal (SCR-SRV-06 / Phase 16F) */}
+      <ServiceRatingModal
+        visible={ratingModalVisible}
+        request={request}
+        onClose={() => setRatingModalVisible(false)}
+        onSuccess={handleRatingSuccess}
+        testID="modal-service-rating"
       />
     </View>
   );
@@ -1274,6 +1329,24 @@ const styles = StyleSheet.create({
   ratingComment: {
     fontStyle: 'italic',
     marginBottom: 4,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  viewAllButton: {
+    minHeight: 48,
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+  },
+  rateActionButton: {
+    minHeight: 40,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   errorBackBtn: {
     minHeight: 48,

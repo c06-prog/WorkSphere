@@ -33,10 +33,11 @@ jest.mock('react-native-safe-area-context', () =>
 
 let mockCurrentRequestId = 'req-uuid-test';
 const mockGoBack = jest.fn();
+const mockNavigate = jest.fn();
 jest.mock('@react-navigation/native', () => ({
   ...jest.requireActual('@react-navigation/native'),
   useNavigation: () => ({
-    navigate: jest.fn(),
+    navigate: mockNavigate,
     goBack: mockGoBack,
     addListener: jest.fn(() => jest.fn()),
   }),
@@ -687,8 +688,8 @@ describe('Phase 16E: Service Request Workflow and Assignment', () => {
     });
   });
 
-  describe('5. Staging Invariants (16E / 16F Staging)', () => {
-    it('does NOT render active Comment or Rating controls even if present in allowedActions', async () => {
+  describe('5. Detail Comments & Rating Activation (Phase 16F)', () => {
+    it('navigates to ServiceRequestComments with { requestId } and opens rating modal when RATE is present', async () => {
       const closedDetail: ServiceRequestDetailResponse = {
         ...mockBaseDetail,
         status: 'CLOSED',
@@ -697,20 +698,36 @@ describe('Phase 16E: Service Request Workflow and Assignment', () => {
 
       (serviceRequestApi.getServiceRequestDetail as jest.Mock).mockResolvedValue(closedDetail);
 
-      const { queryByText, queryByTestId } = await render(
+      const { getByTestId, queryByTestId, queryByText } = await render(
         <ThemeProvider>
           <ServiceRequestDetailScreen />
         </ThemeProvider>
       );
 
       await waitFor(() => {
-        expect(queryByText('Gửi bình luận')).toBeNull();
-        expect(queryByTestId('btn-add-comment')).toBeNull();
-        expect(queryByText('Gửi đánh giá')).toBeNull();
-        expect(queryByTestId('btn-submit-rating')).toBeNull();
-        expect(queryByText('Tải lên tệp đính kèm')).toBeNull();
-        expect(queryByTestId('btn-upload-attachment')).toBeNull();
+        expect(getByTestId('btn-view-all-comments')).toBeTruthy();
+        expect(getByTestId('btn-open-rate-service-request')).toBeTruthy();
       });
+
+      // Navigate to comments with exact param { requestId }
+      await act(async () => {
+        pressElement(getByTestId('btn-view-all-comments'));
+      });
+      expect(mockNavigate).toHaveBeenCalledWith('ServiceRequestComments', {
+        requestId: 'req-uuid-test',
+      });
+
+      // Opens rating modal when RATE is pressed
+      await act(async () => {
+        pressElement(getByTestId('btn-open-rate-service-request'));
+      });
+      expect(getByTestId('modal-service-rating')).toBeTruthy();
+
+      // No inline comment input on Detail or upload controls
+      expect(queryByText('Gửi bình luận')).toBeNull();
+      expect(queryByTestId('btn-add-comment')).toBeNull();
+      expect(queryByText('Tải lên tệp đính kèm')).toBeNull();
+      expect(queryByTestId('btn-upload-attachment')).toBeNull();
     });
   });
 });

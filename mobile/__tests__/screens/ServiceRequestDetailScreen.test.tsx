@@ -563,18 +563,14 @@ describe('ServiceRequestDetailScreen (SCR-SRV-02)', () => {
       });
     });
 
-    it('does NOT render active Comment or Rating controls (16F staging)', async () => {
+    it('does NOT render inline comment input or attachment upload controls on detail', async () => {
       const { queryByText, queryByTestId } = await renderScreen();
 
-      // No comment input / button
+      // No inline comment input on Detail screen (navigates to dedicated screen)
       expect(queryByText('Gửi bình luận')).toBeNull();
       expect(queryByTestId('btn-add-comment')).toBeNull();
 
-      // No rating submission button
-      expect(queryByText('Gửi đánh giá')).toBeNull();
-      expect(queryByTestId('btn-submit-rating')).toBeNull();
-
-      // No attachment upload button
+      // No attachment upload button (deferred)
       expect(queryByText('Tải lên tệp đính kèm')).toBeNull();
       expect(queryByTestId('btn-upload-attachment')).toBeNull();
     });
