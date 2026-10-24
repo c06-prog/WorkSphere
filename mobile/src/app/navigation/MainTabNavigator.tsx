@@ -29,7 +29,6 @@ import {
   EditProfileScreen,
   ChangePasswordScreen,
 } from '../../features/profile/screens';
-import { AssetListScreen, AssetDetailScreen } from '../../features/assets/screens';
 import { useAppTheme } from '../providers/ThemeProvider';
 import type { MainTabParamList } from './types';
 
@@ -259,24 +258,6 @@ export function MainTabNavigator() {
       <Tab.Screen
         name="ServiceRequestComments"
         component={ServiceRequestCommentsScreen}
-        options={{
-          tabBarButton: () => null,
-          tabBarItemStyle: { display: 'none' },
-          headerShown: false,
-        }}
-      />
-      <Tab.Screen
-        name="AssetList"
-        component={AssetListScreen}
-        options={{
-          tabBarButton: () => null,
-          tabBarItemStyle: { display: 'none' },
-          headerTitle: 'Tài sản',
-        }}
-      />
-      <Tab.Screen
-        name="AssetDetail"
-        component={AssetDetailScreen}
         options={{
           tabBarButton: () => null,
           tabBarItemStyle: { display: 'none' },

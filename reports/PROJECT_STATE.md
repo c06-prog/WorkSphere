@@ -21,13 +21,22 @@
 - Phase 16C Implementation Checkpoint: `reports/PHASE_16C_SERVICE_REQUEST_DETAIL_REPORT.md` (CLOSED / AUDITED)
 - Phase 16D Implementation Checkpoint: `reports/PHASE_16D_CREATE_EDIT_SERVICE_REQUEST_REPORT.md` (HARDENED / VERIFIED)
 - Phase 16E Implementation Checkpoint: `reports/PHASE_16E_WORKFLOW_ASSIGNMENT_REPORT.md` (IMPLEMENTED / VERIFIED)
-- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 15 Mobile Task Management: CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 15A..15G CLOSED). Phase 16 Mobile Service Requests: CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 16A..16G CLOSED). Phase 17 Mobile Asset Management: IN_PROGRESS (Subphases 17A, 17B, 17C IMPLEMENTED / VALIDATED, 17D NOT STARTED).
+- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 15 Mobile Task Management: CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 15A..15G CLOSED). Phase 16 Mobile Service Requests: CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 16A..16G CLOSED). Phase 17 Mobile Asset Management: IN_PROGRESS (Subphases 17A, 17B, 17C, 17C-NAV IMPLEMENTED / VALIDATED, 17D NOT STARTED).
 - Next Action: PHASE 17D CREATE & EDIT ASSET
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening
 
-- Latest Implementation: Phase 17C Asset Detail & Service Request Linking
+- Latest Implementation: Phase 17C-NAV Asset Stack Navigation Contract Correction
+- Implementation Report: eports/PHASE_17C_NAVIGATION_CORRECTION.md\r
+- Delivered Scope:
+  - Realigned asset navigation architecture to strictly comply with Decision D-066.
+  - Created AppNavigator (createNativeStackNavigator<AppStackParamList>) registering MainTabs (5 tabs), AssetList, AssetDetail, and CreateAsset (placeholder for 17D).
+  - Cleaned MainTabNavigator to strictly host bottom tabs without any hidden Asset routes.
+  - Fixed 26 inline styles across RepairHistoryPreview.tsx and AssetDetailScreen.tsx, restoring lint warnings to exactly 48 historical warnings (0 asset warnings, 0 errors).
+  - Verified serializeAssetListQuery parameters match backend AssetController exactly.
+  - Validation Evidence: 107 test suites, 1003 tests PASS (0 failures, 0 skipped, 0 snapshots). TypeScript 0 errors. ESLint 0 errors, 48 historical warnings.
+- Prior Implementation: Phase 17C Asset Detail & Service Request Linking
 - Implementation Report: `reports/PHASE_17C_ASSET_DETAIL.md`
 - Delivered Scope:
   - Custom hook `useAssetDetail` (calling `GET /assets/{assetId}`) with monotonic query generation tracking, in-flight promise deduplication, and non-blocking refresh error handling.

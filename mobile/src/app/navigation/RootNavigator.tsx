@@ -2,7 +2,7 @@ import { ActivityIndicator, StyleSheet, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AuthNavigator } from './AuthNavigator';
-import { MainTabNavigator } from './MainTabNavigator';
+import { AppNavigator } from './AppNavigator';
 import { useAppTheme } from '../providers/ThemeProvider';
 import { useAuth } from '../auth';
 import type { RootStackParamList, SessionState } from './types';
@@ -99,7 +99,7 @@ export function RootNavigator({ sessionState: explicitSessionState }: RootNaviga
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {sessionState === 'AUTHENTICATED' ? (
-        <Stack.Screen name="Main" component={MainTabNavigator} />
+        <Stack.Screen name="Main" component={AppNavigator} />
       ) : (
         <Stack.Screen name="Auth" component={AuthNavigator} />
       )}

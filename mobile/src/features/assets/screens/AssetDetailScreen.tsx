@@ -31,7 +31,7 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAppTheme } from '../../../app/providers/ThemeProvider';
 import { useAuth } from '../../../app/auth/AuthProvider';
-import { MainTabNavProp, MainTabScreenRouteProp } from '../../../app/navigation/types';
+import { AppStackScreenRouteProp, AssetDetailNavigationProp } from '../../../app/navigation/types';
 import {
   AppButton,
   ErrorState,
@@ -43,8 +43,8 @@ import { RepairHistoryPreview } from '../components/RepairHistoryPreview';
 
 export function AssetDetailScreen() {
   const theme = useAppTheme();
-  const navigation = useNavigation<MainTabNavProp<'AssetDetail'>>();
-  const route = useRoute<MainTabScreenRouteProp<'AssetDetail'>>();
+  const navigation = useNavigation<AssetDetailNavigationProp>();
+  const route = useRoute<AppStackScreenRouteProp<'AssetDetail'>>();
   const { currentUser } = useAuth();
 
   const assetId = route.params?.assetId;
@@ -100,7 +100,7 @@ export function AssetDetailScreen() {
         testID="asset-detail-loading"
       >
         <LoadingIndicator />
-        <Text style={[theme.typography.body, { color: theme.colors.textSecondary, marginTop: 12 }]}>
+        <Text style={[theme.typography.body, styles.loadingSubText, { color: theme.colors.textSecondary }]}>
           Đang tải thông tin tài sản...
         </Text>
       </View>
@@ -149,13 +149,13 @@ export function AssetDetailScreen() {
           accessibilityLabel="Quay lại"
           testID="btn-asset-detail-back"
         >
-          <Text style={[theme.typography.bodyMedium, { color: theme.colors.primary, fontWeight: '600' }]}>
+          <Text style={[theme.typography.bodyMedium, styles.backButtonText, { color: theme.colors.primary }]}>
             ‹ Quay lại
           </Text>
         </Pressable>
         <Text
           numberOfLines={1}
-          style={[theme.typography.heading3, { color: theme.colors.textPrimary, flex: 1, textAlign: 'center' }]}
+          style={[theme.typography.heading3, styles.headerTitleText, { color: theme.colors.textPrimary }]}
         >
           {asset.assetCode}
         </Text>
@@ -207,7 +207,7 @@ export function AssetDetailScreen() {
               <Text
                 style={[
                   theme.typography.heading2,
-                  { color: theme.colors.primary, marginTop: 2 },
+                  styles.heroCodeText, { color: theme.colors.primary },
                 ]}
                 testID="asset-detail-code"
               >
@@ -224,7 +224,7 @@ export function AssetDetailScreen() {
           <Text
             style={[
               theme.typography.heading2,
-              { color: theme.colors.textPrimary, marginTop: 12 },
+              styles.heroNameText, { color: theme.colors.textPrimary },
             ]}
             testID="asset-detail-name"
           >
@@ -248,7 +248,7 @@ export function AssetDetailScreen() {
             <Text
               style={[
                 theme.typography.body,
-                { color: theme.colors.textSecondary, marginTop: 12 },
+                styles.heroDescText, { color: theme.colors.textSecondary },
               ]}
               testID="asset-detail-description"
             >
@@ -268,7 +268,7 @@ export function AssetDetailScreen() {
           ]}
           testID="asset-detail-specs"
         >
-          <Text style={[theme.typography.heading3, { color: theme.colors.textPrimary, marginBottom: 12 }]}>
+          <Text style={[theme.typography.heading3, styles.cardHeading, { color: theme.colors.textPrimary }]}>
             Thông số kỹ thuật & Thông tin
           </Text>
 
@@ -277,7 +277,7 @@ export function AssetDetailScreen() {
               <Text style={[theme.typography.caption, { color: theme.colors.textSecondary }]}>
                 Số serial
               </Text>
-              <Text style={[theme.typography.bodyMedium, { color: theme.colors.textPrimary, marginTop: 2 }]}>
+              <Text style={[theme.typography.bodyMedium, styles.notesText, { color: theme.colors.textPrimary }]}>
                 {asset.serialNumber || '—'}
               </Text>
             </View>
@@ -286,7 +286,7 @@ export function AssetDetailScreen() {
               <Text style={[theme.typography.caption, { color: theme.colors.textSecondary }]}>
                 Nhà sản xuất
               </Text>
-              <Text style={[theme.typography.bodyMedium, { color: theme.colors.textPrimary, marginTop: 2 }]}>
+              <Text style={[theme.typography.bodyMedium, styles.gridValueText, { color: theme.colors.textPrimary }]}>
                 {asset.manufacturer || '—'}
               </Text>
             </View>
@@ -295,7 +295,7 @@ export function AssetDetailScreen() {
               <Text style={[theme.typography.caption, { color: theme.colors.textSecondary }]}>
                 Model
               </Text>
-              <Text style={[theme.typography.bodyMedium, { color: theme.colors.textPrimary, marginTop: 2 }]}>
+              <Text style={[theme.typography.bodyMedium, styles.gridValueText, { color: theme.colors.textPrimary }]}>
                 {asset.model || '—'}
               </Text>
             </View>
@@ -304,7 +304,7 @@ export function AssetDetailScreen() {
               <Text style={[theme.typography.caption, { color: theme.colors.textSecondary }]}>
                 Vị trí lưu trữ
               </Text>
-              <Text style={[theme.typography.bodyMedium, { color: theme.colors.textPrimary, marginTop: 2 }]}>
+              <Text style={[theme.typography.bodyMedium, styles.gridValueText, { color: theme.colors.textPrimary }]}>
                 {asset.location || '—'}
               </Text>
             </View>
@@ -313,7 +313,7 @@ export function AssetDetailScreen() {
               <Text style={[theme.typography.caption, { color: theme.colors.textSecondary }]}>
                 Ngày mua
               </Text>
-              <Text style={[theme.typography.bodyMedium, { color: theme.colors.textPrimary, marginTop: 2 }]}>
+              <Text style={[theme.typography.bodyMedium, styles.gridValueText, { color: theme.colors.textPrimary }]}>
                 {formatDate(asset.purchaseDate)}
               </Text>
             </View>
@@ -322,7 +322,7 @@ export function AssetDetailScreen() {
               <Text style={[theme.typography.caption, { color: theme.colors.textSecondary }]}>
                 Giá mua
               </Text>
-              <Text style={[theme.typography.bodyMedium, { color: theme.colors.textPrimary, marginTop: 2 }]}>
+              <Text style={[theme.typography.bodyMedium, styles.gridValueText, { color: theme.colors.textPrimary }]}>
                 {formatCurrency(asset.purchasePrice)}
               </Text>
             </View>
@@ -331,7 +331,7 @@ export function AssetDetailScreen() {
               <Text style={[theme.typography.caption, { color: theme.colors.textSecondary }]}>
                 Hạn bảo hành
               </Text>
-              <Text style={[theme.typography.bodyMedium, { color: theme.colors.textPrimary, marginTop: 2 }]}>
+              <Text style={[theme.typography.bodyMedium, styles.gridValueText, { color: theme.colors.textPrimary }]}>
                 {formatDate(asset.warrantyEndDate)}
               </Text>
             </View>
@@ -349,7 +349,7 @@ export function AssetDetailScreen() {
           ]}
           testID="asset-detail-assignment"
         >
-          <Text style={[theme.typography.heading3, { color: theme.colors.textPrimary, marginBottom: 12 }]}>
+          <Text style={[theme.typography.heading3, styles.cardHeading, { color: theme.colors.textPrimary }]}>
             Thông tin cấp phát hiện tại
           </Text>
 
@@ -362,7 +362,7 @@ export function AssetDetailScreen() {
                 <Text
                   style={[
                     theme.typography.bodyMedium,
-                    { color: theme.colors.textPrimary, fontWeight: '600' },
+                    styles.assigneeNameText, { color: theme.colors.textPrimary },
                   ]}
                   testID="asset-detail-assignee"
                 >
@@ -406,7 +406,7 @@ export function AssetDetailScreen() {
                   <Text style={[theme.typography.caption, { color: theme.colors.textSecondary }]}>
                     Ghi chú bàn giao:
                   </Text>
-                  <Text style={[theme.typography.body, { color: theme.colors.textPrimary, marginTop: 2 }]}>
+                  <Text style={[theme.typography.body, styles.gridValueText, { color: theme.colors.textPrimary }]}>
                     {asset.currentAssignment.notes}
                   </Text>
                 </View>
@@ -443,7 +443,7 @@ export function AssetDetailScreen() {
             ]}
             testID="asset-detail-related-requests"
           >
-            <Text style={[theme.typography.heading3, { color: theme.colors.textPrimary, marginBottom: 12 }]}>
+            <Text style={[theme.typography.heading3, styles.cardHeading, { color: theme.colors.textPrimary }]}>
               Yêu cầu dịch vụ liên quan
             </Text>
 
@@ -464,7 +464,7 @@ export function AssetDetailScreen() {
                   testID={`related-request-item-${idx}`}
                 >
                   <View style={styles.requestItemHeader}>
-                    <Text style={[theme.typography.caption, { color: theme.colors.primary, fontWeight: '600' }]}>
+                    <Text style={[theme.typography.caption, styles.requestNumberText, { color: theme.colors.primary }]}>
                       {req.requestNumber}
                     </Text>
                     <Text style={[theme.typography.caption, { color: theme.colors.textSecondary }]}>
@@ -473,7 +473,7 @@ export function AssetDetailScreen() {
                   </View>
                   <Text
                     numberOfLines={2}
-                    style={[theme.typography.bodyMedium, { color: theme.colors.textPrimary, marginTop: 4 }]}
+                    style={[theme.typography.bodyMedium, styles.requestTitleText, { color: theme.colors.textPrimary }]}
                   >
                     {req.title}
                   </Text>
@@ -607,5 +607,42 @@ const styles = StyleSheet.create({
   },
   backButtonFallback: {
     marginTop: 16,
+  },
+  loadingSubText: {
+    marginTop: 12,
+  },
+  backButtonText: {
+    fontWeight: '600',
+  },
+  headerTitleText: {
+    flex: 1,
+    textAlign: 'center',
+  },
+  heroCodeText: {
+    marginTop: 2,
+  },
+  heroNameText: {
+    marginTop: 12,
+  },
+  heroDescText: {
+    marginTop: 12,
+  },
+  cardHeading: {
+    marginBottom: 12,
+  },
+  gridValueText: {
+    marginTop: 2,
+  },
+  assigneeNameText: {
+    fontWeight: '600',
+  },
+  notesText: {
+    marginTop: 2,
+  },
+  requestNumberText: {
+    fontWeight: '600',
+  },
+  requestTitleText: {
+    marginTop: 4,
   },
 });

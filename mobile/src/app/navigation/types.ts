@@ -5,7 +5,7 @@
 
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
-import type { RouteProp } from '@react-navigation/native';
+import type { CompositeNavigationProp, RouteProp } from '@react-navigation/native';
 
 export type SessionState = 'INITIALIZING' | 'UNAUTHENTICATED' | 'AUTHENTICATED';
 
@@ -31,18 +31,21 @@ export type MainTabParamList = {
   EditProject: { projectId: string };
   ProjectMembers: { projectId: string };
   ProjectMilestones: { projectId: string };
-  // Phase 15 Task Stack Screens (Type contracts only - routes registered in later subphases)
+  // Phase 15 Task Stack Screens
   TaskDetail: { taskId: string };
   CreateTask: { projectId?: string; parentTaskId?: string } | undefined;
   EditTask: { taskId: string };
   SubtaskList: { parentTaskId: string; projectId: string; parentTaskTitle?: string };
   TaskComments: { taskId: string; taskTitle?: string };
-  // Phase 16 Service Request Stack Screens (Type contracts only - routes registered in later subphases)
+  // Phase 16 Service Request Stack Screens
   ServiceRequestDetail: { requestId: string };
   CreateServiceRequest: { assetId?: string } | undefined;
   ServiceRequestComments: { requestId: string };
   ServiceRating: { requestId: string };
-  // Phase 17 Asset Stack Screens (Type contracts only - routes registered in later subphases)
+};
+
+export type AppStackParamList = {
+  MainTabs: undefined;
   AssetList: undefined;
   AssetDetail: { assetId: string };
   CreateAsset: undefined;
@@ -59,11 +62,25 @@ export type AuthNavigationProp<RouteName extends keyof AuthStackParamList> =
 export type AuthRouteProp<RouteName extends keyof AuthStackParamList> =
   RouteProp<AuthStackParamList, RouteName>;
 
+export type AppStackNavProp<RouteName extends keyof AppStackParamList> =
+  NativeStackNavigationProp<AppStackParamList, RouteName>;
+
+export type AppStackScreenRouteProp<RouteName extends keyof AppStackParamList> =
+  RouteProp<AppStackParamList, RouteName>;
+
 export type MainTabNavProp<RouteName extends keyof MainTabParamList> =
-  BottomTabNavigationProp<MainTabParamList, RouteName>;
+  CompositeNavigationProp<
+    BottomTabNavigationProp<MainTabParamList, RouteName>,
+    NativeStackNavigationProp<AppStackParamList>
+  >;
 
 export type MainTabScreenRouteProp<RouteName extends keyof MainTabParamList> =
   RouteProp<MainTabParamList, RouteName>;
 
 export type ProfileNavigationProp<RouteName extends keyof MainTabParamList> =
   NativeStackNavigationProp<MainTabParamList, RouteName>;
+
+export type AssetDetailNavigationProp = CompositeNavigationProp<
+  NativeStackNavigationProp<AppStackParamList, 'AssetDetail'>,
+  BottomTabNavigationProp<MainTabParamList>
+>;

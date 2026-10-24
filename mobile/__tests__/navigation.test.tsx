@@ -186,4 +186,46 @@ describe('RootNavigator Session Abstraction & Navigation Shell', () => {
       expect(getByText('SCR-AUTH-02: Hệ thống quản lý công việc và dự án WorkSphere')).toBeTruthy();
     });
   });
+
+  test('F. D-066 Architecture: Asset routes are Stack screens, NOT registered in Tab.Navigator', async () => {
+    // Dynamically require fs to avoid ts node definitions conflict in react-native tsconfig
+    const nodeFs = require('fs');
+    const mainTabPath = nodeFs.existsSync('src/app/navigation/MainTabNavigator.tsx')
+      ? 'src/app/navigation/MainTabNavigator.tsx'
+      : 'mobile/src/app/navigation/MainTabNavigator.tsx';
+    const mainTabContent = nodeFs.readFileSync(mainTabPath, 'utf8');
+    expect(mainTabContent).not.toContain('name="AssetList"');
+    expect(mainTabContent).not.toContain('name="AssetDetail"');
+    expect(mainTabContent).not.toContain('name="CreateAsset"');
+
+    const appNavPath = nodeFs.existsSync('src/app/navigation/AppNavigator.tsx')
+      ? 'src/app/navigation/AppNavigator.tsx'
+      : 'mobile/src/app/navigation/AppNavigator.tsx';
+    const appNavContent = nodeFs.readFileSync(appNavPath, 'utf8');
+    expect(appNavContent).toContain('name="MainTabs"');
+    expect(appNavContent).toContain('name="AssetList"');
+    expect(appNavContent).toContain('name="AssetDetail"');
+    expect(appNavContent).toContain('name="CreateAsset"');
+  });
+
+  test('G. D-066 Navigation flow: More -> AssetList navigates successfully via AppStack', async () => {
+    const { getByTestId, getByLabelText, findByTestId } = await render(
+      <AppRoot sessionState="AUTHENTICATED" />
+    );
+
+    // Switch to More tab
+    fireEvent.press(getByLabelText('Tab 5: Thêm'));
+    await waitFor(() => {
+      expect(getByTestId('screen-more')).toBeTruthy();
+      expect(getByTestId('btn-navigate-assets')).toBeTruthy();
+    });
+
+    // Press Asset Navigation button
+    fireEvent.press(getByTestId('btn-navigate-assets'));
+
+    // Reaches AssetListScreen
+    const assetListScreen = await findByTestId('asset-list-screen');
+    expect(assetListScreen).toBeTruthy();
+  });
+
 });

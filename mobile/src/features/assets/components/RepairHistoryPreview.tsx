@@ -104,7 +104,7 @@ export function RepairHistoryPreview({
       {loading && (
         <View style={styles.loadingBox} testID={`${testID}-loading`}>
           <ActivityIndicator size="small" color={theme.colors.primary} />
-          <Text style={[theme.typography.caption, { color: theme.colors.textSecondary, marginTop: 6 }]}>
+          <Text style={[theme.typography.caption, styles.loadingText, { color: theme.colors.textSecondary }]}>
             Đang tải lịch sử...
           </Text>
         </View>
@@ -126,7 +126,7 @@ export function RepairHistoryPreview({
             style={[styles.retryBtn, { borderColor: theme.colors.error }]}
             testID={`${testID}-retry`}
           >
-            <Text style={[theme.typography.caption, { color: theme.colors.error, fontWeight: '600' }]}>
+            <Text style={[theme.typography.caption, styles.retryText, { color: theme.colors.error }]}>
               Thử lại
             </Text>
           </Pressable>
@@ -168,7 +168,8 @@ export function RepairHistoryPreview({
                   <Text
                     style={[
                       theme.typography.caption,
-                      { color: theme.colors.primary, fontWeight: '600' },
+                      styles.badgeText,
+                      { color: theme.colors.primary },
                     ]}
                   >
                     {getRepairTypeLabel(item.repairType)}
@@ -182,7 +183,8 @@ export function RepairHistoryPreview({
               <Text
                 style={[
                   theme.typography.bodyMedium,
-                  { color: theme.colors.textPrimary, marginTop: 8 },
+                  styles.descText,
+                  { color: theme.colors.textPrimary },
                 ]}
               >
                 {item.description}
@@ -198,7 +200,8 @@ export function RepairHistoryPreview({
                   <Text
                     style={[
                       theme.typography.caption,
-                      { color: theme.colors.textPrimary, fontWeight: '600' },
+                      styles.costText,
+                      { color: theme.colors.textPrimary },
                     ]}
                   >
                     Chi phí: {formatCurrency(item.cost)}
@@ -210,7 +213,8 @@ export function RepairHistoryPreview({
                 <Text
                   style={[
                     theme.typography.caption,
-                    { color: theme.colors.textSecondary, marginTop: 4 },
+                    styles.resultText,
+                    { color: theme.colors.textSecondary },
                   ]}
                 >
                   Kết quả: {item.result}
@@ -280,5 +284,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 8,
+  },
+  loadingText: {
+    marginTop: 6,
+  },
+  retryText: {
+    fontWeight: '600',
+  },
+  badgeText: {
+    fontWeight: '600',
+  },
+  descText: {
+    marginTop: 8,
+  },
+  costText: {
+    fontWeight: '600',
+  },
+  resultText: {
+    marginTop: 4,
   },
 });

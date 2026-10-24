@@ -27,7 +27,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../../app/auth/AuthProvider';
 import { useAppTheme } from '../../../app/providers/ThemeProvider';
-import { MainTabNavProp } from '../../../app/navigation/types';
+import { AppStackNavProp } from '../../../app/navigation/types';
 import { EmptyState, ErrorState, LoadingIndicator } from '../../../shared/components';
 import { SearchBar } from '../../../shared/components/SearchBar';
 import {
@@ -56,7 +56,7 @@ const ASSET_STATUS_FILTERS: StatusFilterOption[] = [
 
 export function AssetListScreen() {
   const theme = useAppTheme();
-  const navigation = useNavigation<MainTabNavProp<'AssetList'>>();
+  const navigation = useNavigation<AppStackNavProp<'AssetList'>>();
   const { currentUser } = useAuth();
 
   // Permission Gating: Check ASSET_READ permission or canonical ADMIN role
@@ -392,7 +392,7 @@ export function AssetListScreen() {
 
   if (currentState.initialLoading && currentState.assets.length === 0) {
     return (
-      <View style={[styles.screenContainer, { backgroundColor: theme.colors.background }]}>
+      <View style={[styles.screenContainer, { backgroundColor: theme.colors.background }]} testID="asset-list-screen">
         {renderSegmentedControl()}
         <View style={styles.centered}>
           <LoadingIndicator size="large" message="Đang tải danh sách tài sản..." testID="initial-loading" />
