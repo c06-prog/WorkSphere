@@ -127,20 +127,56 @@ All 12 client-side mutation flows strictly employ synchronous `useRef` locks bef
   - **Snapshots**: 0 total.
   - **Failures / Skips**: 0.
 
-### 6.3 Backend Compilation & Regression
+### 6.3 Backend Tests: BACKEND_TARGETED_TESTS_BLOCKED_BY_HOST_MEMORY
 - **Checkstyle & Test Compilation**:
-  - `.\mvnw.cmd test-compile`: **BUILD SUCCESS** (0 Checkstyle violations).
-- **Backend Test Note**:
-  - Forked JVM test execution halted due to local Windows host memory constraint (`Insuffient memory for Java Runtime Environment / native memory allocation failed`). Test compilation and Checkstyle 100% verified clean.
+  - `.\mvnw.cmd test-compile`: **BUILD SUCCESS** (0 Checkstyle violations, 0 compiler errors).
+- **Targeted Test Execution Attempt**:
+  - Target classes (3 classes, 41 test methods):
+    - `AssetServiceRequestIntegrationMockMvcTest.java` (6 tests)
+    - `ServiceCategoryMockMvcTest.java` (12 tests)
+    - `ServiceRequestMockMvcTest.java` (23 tests)
+  - Execution command:
+    ```powershell
+    $env:MAVEN_OPTS="-Xms64m -Xmx256m -XX:MaxMetaspaceSize=128m"
+    .\mvnw.cmd test -Dtest=ServiceCategoryMockMvcTest,ServiceRequestMockMvcTest,AssetServiceRequestIntegrationMockMvcTest -DforkCount=1 -DreuseForks=true -DargLine="-Xmx256m -XX:MaxMetaspaceSize=128m"
+    ```
+  - Result: Failed with exit code 1 due to host OS physical memory exhaustion.
+  - Host OS Memory State during execution: Total visible RAM ~14,020 MB, Free physical RAM ~440 MB, Free virtual memory ~657 MB.
+  - Diagnostic failure signature:
+    `org.apache.maven.surefire.booter.SurefireBooterForkException: The forked VM terminated without properly saying goodbye. Process Exit Code: 1`
+    `hs_err_pid*.log` / dumpstream output:
+    `Native memory allocation (malloc) failed to allocate ... bytes`
+    `There is insufficient memory for the Java Runtime Environment to continue.`
+  - Classification: **`BACKEND_TARGETED_TESTS_BLOCKED_BY_HOST_MEMORY`**
+  - Note: Tests are syntactically and semantically valid; execution was halted exclusively by host OS native memory exhaustion during Testcontainers PostgreSQL container lifecycle and Spring Boot context initialization.
 
-### 6.4 Android Build & APK
-- Existing debug APK verified at: `mobile/android/app/build/outputs/apk/debug/app-debug.apk` (157,662,829 bytes).
-- Gradle daemon in-memory compilation requires ~2GB native heap which exceeded transient host memory. Codebase static integrity and typecheck confirm full Android compatibility.
+### 6.4 Android Build & APK Provenance: ANDROID_BUILD_BLOCKED_BY_HOST_MEMORY
+- **Prior Debug APK Provenance Audit**:
+  - File path: `mobile/android/app/build/outputs/apk/debug/app-debug.apk`
+  - File size: `157,662,829 bytes`
+  - Last write timestamp: `10/21/2026 12:29:33 PM`
+  - SHA-256: `ED73C5301606C83548F9989A8C7451A92D714BAC08556566F55F5FA36516384F`
+  - Evaluation: This binary predates checkpoint `55f23ce` (`10/24/2026 16:51:30`) and was produced during Phase 15. It is NOT proof of a successful build from current Phase 16 source code.
+- **Android `assembleDebug` Build Attempt**:
+  - Command:
+    ```powershell
+    cd mobile/android; .\gradlew.bat --stop; .\gradlew.bat assembleDebug --no-daemon
+    ```
+  - Result: Failed due to JVM daemon crash.
+  - Diagnostic failure signature:
+    `Gradle build daemon disappeared unexpectedly (it may have been killed or may have crashed)`
+    `hs_err_pid*.log`:
+    `# There is insufficient memory for the Java Runtime Environment to continue.`
+    `# Native memory allocation (malloc) failed to allocate 31054808 bytes`
+    `# Out of Memory Error (arena.cpp:193)`
+  - Classification: **`ANDROID_BUILD_BLOCKED_BY_HOST_MEMORY`**
 
-### 6.5 Emulator Smoke & E2E Deferrals
-- `adb devices`: `emulator-5554 offline`.
+### 6.5 Android Emulator Smoke: PHASE_16_EMULATOR_OFFLINE_SMOKE_NOT_EXECUTED
+- `adb devices`: `emulator-5554 offline`
+- Server recovery attempt: `adb kill-server`, `adb start-server`, `adb devices` -> `emulator-5554 offline`
+- Classification: **`PHASE_16_EMULATOR_OFFLINE_SMOKE_NOT_EXECUTED`** (Prerequisite running online emulator unavailable)
 - Authenticated E2E credentials (`WORKSPHERE_DEV_E2E_USER_ENABLED`, `WORKSPHERE_E2E_LOGIN`): Not provisioned in environment.
-- Classifications:
+- Additional Classifications:
   - `PHASE_16_AUTH_E2E_CREDENTIALS_NOT_AVAILABLE_SAFE_SKIP`
   - `PHASE_16_MUTATION_E2E_DEFERRED` (deferred pending disposable test fixture isolation)
   - `PHASE_16_OFFLINE_DEVICE_E2E_DEFERRED` (device network manipulation deferred)
@@ -171,6 +207,12 @@ All 12 client-side mutation flows strictly employ synchronous `useRef` locks bef
 
 ## 9. Conclusion
 
-Phase 16 Service Requests (Contracts, List, Detail, Create/Edit, Workflow/Assignment, Comments/Rating, and Integration Hardening) is complete, fully tested, lint-clean within its scope, and ready for Final Independent Audit.
+Phase 16 Service Requests implementation and static hardening (Contracts, List, Detail, Create/Edit, Workflow/Assignment, Comments/Rating, and Integration Hardening) is complete, with mobile Jest tests, TypeScript typecheck, and ESLint fully passing.
 
-**Verdict**: `PHASE_16G_PASS_PUSHED_READY_FOR_FINAL_AUDIT`
+However, full validation evidence remains incomplete due to host environment resource constraints:
+1. Targeted backend tests blocked by host native memory allocation failure (`BACKEND_TARGETED_TESTS_BLOCKED_BY_HOST_MEMORY`).
+2. Android build blocked by Gradle JVM daemon native memory allocation failure (`ANDROID_BUILD_BLOCKED_BY_HOST_MEMORY`).
+3. Existing debug APK is from Phase 15 and does not prove checkpoint 55f23ce compilation.
+4. Emulator-5554 is offline, preventing emulator smoke execution (`PHASE_16_EMULATOR_OFFLINE_SMOKE_NOT_EXECUTED`).
+
+**Verdict**: `PHASE_16G_EVIDENCE_INCOMPLETE_HOST_BLOCKED`
