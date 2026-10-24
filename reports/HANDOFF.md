@@ -4,26 +4,26 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: PHASE 16D CREATE & EDIT SERVICE REQUEST
-- Status: Phase 15 Mobile Task Management CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 15A..15G CLOSED). Phase 14 CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 16 Mobile Service Requests: IN_PROGRESS (Subphase 16A CLOSED/AUDITED/HARDENED, 16B CLOSED/AUDITED, 16C CLOSED/AUDITED, 16D IMPLEMENTED, 16E NOT STARTED). Phase 17 Mobile Asset Management: NOT STARTED.
-  - Subphase 16D: IMPLEMENTED (SCR-SRV-04 Create Service Request, EditServiceRequestModal requester edit flow, ServiceCategorySelectModal category picker, route permission gate, optimistic locking dialog, synchronous submit locks)
+- Current Task: PHASE 16D NARROW HARDENING
+- Status: Phase 15 Mobile Task Management CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 15A..15G CLOSED). Phase 14 CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 16 Mobile Service Requests: IN_PROGRESS (Subphase 16A CLOSED/AUDITED/HARDENED, 16B CLOSED/AUDITED, 16C CLOSED/AUDITED, 16D HARDENED / VERIFIED, 16E NOT STARTED). Phase 17 Mobile Asset Management: NOT STARTED.
+  - Subphase 16D: HARDENED / VERIFIED (SCR-SRV-04 Create Service Request, EditServiceRequestModal requester edit flow, ServiceCategorySelectModal category picker with generation tracking & unmount safety, route permission gate, optimistic locking dialog with authoritative v2 reload proof, synchronous submit locks)
   - Subphase 16C: CLOSED / AUDITED (SCR-SRV-02 Service Request Detail, useServiceRequestDetail hook, hidden route registration, card navigation activation)
   - Subphase 16B: CLOSED / AUDITED (SCR-SRV-01 Service Request List, useServiceRequests hook, ServiceRequestCard presentation staging)
   - Subphase 16A: CLOSED / AUDITED / HARDENED (Contracts, Types, API Adapter, Error Mapper, StatusBadge)
   - Subphases 15A..15F: CLOSED / AUDITED / HARDENED
   - Subphase 15G: CLOSED / VALIDATED (Full Integration & Regression)
   - Subphases 14A..14F: CLOSED (MEMORY_CHECKPOINT_CLOSED)
-- Baseline Checkpoint: `09d8ac7cfee3228e8ca612ee5f7ca71c2a3691a0` (Phase 16C audit checkpoint)
+- Baseline Checkpoint: `d3f67be5d5c46d21257b8fb26f5352a536834de7` (Phase 16D implementation commit)
 - Final Phase 15 Reconciliation Checkpoint: `eb0c973dfe44fc3a717925a87b8a48f313502575` (`fix(mobile): reconcile phase 15 final audit`)
 - Reports: `reports/PHASE_16D_CREATE_EDIT_SERVICE_REQUEST_REPORT.md`, `reports/PHASE_16C_SERVICE_REQUEST_DETAIL_REPORT.md`, `reports/PHASE_16B_SERVICE_REQUEST_LIST_REPORT.md`, `reports/PHASE_16A_SERVICE_REQUEST_CONTRACT_FOUNDATION_REPORT.md`, `reports/PHASE_16_SERVICE_REQUEST_CONTRACT_FREEZE.md`, `reports/PRE_PHASE_16_AUDIT.md`, `reports/PHASE_15_MEMORY_CHECKPOINT.md`, `reports/PHASE_15_FINAL_AUDIT_REPORT.md`, `reports/PHASE_15G_INTEGRATION_HARDENING_REPORT.md`, `reports/PHASE_15F_SUBTASKS_COMMENTS_REPORT.md`, `reports/PHASE_15E_TASK_MUTATIONS_REPORT.md`, `reports/PHASE_15_TASK_DUE_DATE_POLICY.md`, `reports/PHASE_15D_CREATE_EDIT_TASK_REPORT.md`, `reports/PHASE_15C_TASK_DETAIL_REPORT.md`, `reports/PHASE_15B_TASK_LIST_REPORT.md`, `reports/PHASE_15A_TASK_CONTRACT_FOUNDATION_REPORT.md`, `reports/PHASE_15_TASK_CONTRACT_FREEZE.md`, `reports/PRE_PHASE_15_TASK_MANAGEMENT_AUDIT.md`
-- Validation Baseline: Mobile 93/93 suites, 880/880 tests PASS (0 failures, 0 skipped, 0 snapshots); TypeScript 0 errors; ESLint 0 errors (48 pre-existing warnings in projects/organization, 0 warnings in serviceRequests); Android assembleDebug BUILD SUCCESSFUL (203 actionable tasks).
+- Validation Baseline: Mobile 93/93 suites, 885/885 tests PASS (0 failures, 0 skipped, 0 snapshots); TypeScript 0 errors; ESLint 0 errors (48 pre-existing warnings in projects/organization, 0 warnings in serviceRequests); Android assembleDebug BUILD SUCCESSFUL (203 actionable tasks).
 - Delivered Scope:
   - Personal Dashboard (`SCR-MAIN-01`), Project Management (`SCR-PRJ-01` .. `SCR-PRJ-09`), Task Management (`SCR-TSK-01` .. `SCR-TSK-08`).
   - Phase 16A Service Request Foundation & Hardening: 11 API adapter endpoints, transport types, runtime guards, error mapper, StatusBadge extension, typed route contracts.
   - Phase 16B Service Request List: `SCR-SRV-01` (`ServiceRequestsScreen`), `useServiceRequests` list concurrency hook, `ServiceRequestCard` presentation staging, search, status/priority/category filters, pagination, pull-to-refresh, empty & error states. Preserved 5 visible bottom tabs.
   - Phase 16C Service Request Detail: `SCR-SRV-02` (`ServiceRequestDetailScreen`), `useServiceRequestDetail` hook, hidden route registration, activated card press navigation, canonical detail fields, status history, comments preview, attachments metadata, rating section, and mutation staging.
-  - Phase 16D Service Request Create & Edit: `SCR-SRV-04` (`CreateServiceRequestScreen`), `ServiceCategorySelectModal` category picker, `EditServiceRequestModal` requester edit flow, permission gate `SERVICE_REQUEST_CREATE`, `allowedActions` gate `UPDATE`, optimistic locking conflict handling, and synchronous `submittingRef` submit locks.
-- Next Action: INDEPENDENT AUDIT PHASE 16D
+  - Phase 16D Service Request Create & Edit: `SCR-SRV-04` (`CreateServiceRequestScreen`), `ServiceCategorySelectModal` category picker (hardened with monotonic generation tracking and unmount cancellation), `EditServiceRequestModal` requester edit flow, permission gate `SERVICE_REQUEST_CREATE`, `allowedActions` gate `UPDATE`, optimistic locking conflict handling with verified authoritative v2 reload proof, and synchronous `submittingRef` submit locks.
+- Next Action: PHASE 16E (WORKFLOW MUTATIONS & ASSIGNMENT)
 - Explicitly Deferred Outside Phase 15:
   - Task Attachments & Upload (Excluded by D-063, deferred to File Management Module).
   - Task Delete (Deferred per roadmap).

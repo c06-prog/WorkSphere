@@ -19,11 +19,16 @@
 
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
+
+(globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 import { ServiceRequestDetailScreen } from '../../src/features/serviceRequests/screens/ServiceRequestDetailScreen';
 import { useServiceRequestDetail } from '../../src/features/serviceRequests/hooks/useServiceRequestDetail';
 import { AppProviders } from '../../src/app/providers';
 import { ServiceRequestDetailResponse } from '../../src/features/serviceRequests/types/serviceRequestTypes';
 import { ServiceRequestPresentationError } from '../../src/features/serviceRequests/errors/serviceRequestErrorMapper';
+import { serviceRequestApi } from '../../src/features/serviceRequests/api/serviceRequestApi';
+
+jest.mock('../../src/features/serviceRequests/api/serviceRequestApi');
 
 jest.mock('react-native-safe-area-context', () =>
   require('react-native-safe-area-context/jest/mock').default
@@ -414,6 +419,147 @@ describe('ServiceRequestDetailScreen (SCR-SRV-02)', () => {
       await waitFor(() => {
         expect(getByTestId('edit-service-request-modal')).toBeTruthy();
         expect(getByText('Chỉnh sửa yêu cầu')).toBeTruthy();
+      });
+    });
+
+    it('proves edit conflict baseline reload flow: v1 submit -> 409 -> dialog reload -> v2 reloaded -> v2 submit -> v3 applied', async () => {
+      const { useServiceRequestDetail: realUseServiceRequestDetail } =
+        jest.requireActual('../../src/features/serviceRequests/hooks/useServiceRequestDetail');
+
+      (useServiceRequestDetail as jest.Mock).mockImplementation(realUseServiceRequestDetail);
+
+      const mockDetailV1: ServiceRequestDetailResponse = {
+        ...mockDetail,
+        id: 'req-uuid-101',
+        version: 1,
+        title: 'Tiêu đề phiên bản 1',
+        description: 'Mô tả phiên bản 1',
+        priority: 'MEDIUM',
+        status: 'OPEN',
+        allowedActions: ['UPDATE', 'CANCEL'],
+      };
+
+      const mockDetailV2: ServiceRequestDetailResponse = {
+        ...mockDetail,
+        id: 'req-uuid-101',
+        version: 2,
+        title: 'Tiêu đề phiên bản 2 từ server',
+        description: 'Mô tả phiên bản 2 từ server',
+        priority: 'HIGH',
+        status: 'OPEN',
+        allowedActions: ['UPDATE', 'CANCEL'],
+      };
+
+      const mockDetailV3: ServiceRequestDetailResponse = {
+        ...mockDetail,
+        id: 'req-uuid-101',
+        version: 3,
+        title: 'Tiêu đề phiên bản 3 đã sửa thành công',
+        description: 'Mô tả phiên bản 2 từ server',
+        priority: 'HIGH',
+        status: 'OPEN',
+        allowedActions: ['UPDATE', 'CANCEL'],
+      };
+
+      let currentDetail = mockDetailV1;
+      (serviceRequestApi.getServiceRequestDetail as jest.Mock).mockImplementation(async () => currentDetail);
+      (serviceRequestApi.listCategories as jest.Mock).mockResolvedValue([]);
+
+      const { getByTestId, getByText, queryByTestId, queryByText, getByRole } = await renderScreen();
+
+      // Wait for v1 to load and render on screen
+      await waitFor(() => {
+        expect(getByTestId('detail-title')).toBeTruthy();
+        expect(getByText('Tiêu đề phiên bản 1')).toBeTruthy();
+      });
+
+      // Press edit button to open Edit modal
+      const editBtn = getByTestId('btn-edit-service-request');
+      fireEvent.press(editBtn);
+
+      await waitFor(() => {
+        expect(getByTestId('edit-service-request-modal')).toBeTruthy();
+        expect(getByTestId('input-edit-service-request-title').props.value).toBe('Tiêu đề phiên bản 1');
+      });
+
+      // User modifies title
+      fireEvent.changeText(getByTestId('input-edit-service-request-title'), 'Tiêu đề định sửa');
+
+      // Mock updateServiceRequest to reject with 409 conflict
+      const conflictError = {
+        isAxiosError: true,
+        response: {
+          status: 409,
+          data: {
+            code: 'OPTIMISTIC_LOCK_CONFLICT',
+            message: 'Resource version conflict',
+          },
+        },
+      };
+      (serviceRequestApi.updateServiceRequest as jest.Mock).mockRejectedValueOnce(conflictError);
+
+      // Submit form
+      fireEvent.press(getByTestId('btn-submit-edit-service-request'));
+
+      // Assert modal closes and conflict dialog appears
+      await waitFor(() => {
+        expect(queryByTestId('edit-service-request-modal')).toBeNull();
+        expect(getByTestId('dialog-service-request-conflict')).toBeTruthy();
+        expect(getByText('Xung đột dữ liệu')).toBeTruthy();
+      });
+
+      // Next GET request resolves authoritative v2
+      currentDetail = mockDetailV2;
+
+      const pressElement = (element: any) => {
+        if (typeof element.props.onClick === 'function') {
+          element.props.onClick({ defaultPrevented: false });
+        } else {
+          fireEvent.press(element);
+        }
+      };
+
+      // Confirm reload on conflict dialog ("Tải lại dữ liệu")
+      pressElement(getByRole('button', { name: 'Tải lại dữ liệu' }));
+
+      // Assert screen reflects v2 authoritative title and conflict dialog is dismissed
+      await waitFor(() => {
+        expect(getByText('Tiêu đề phiên bản 2 từ server')).toBeTruthy();
+        expect(queryByText('Xung đột dữ liệu')).toBeNull();
+      });
+
+      // User opens edit modal again
+      pressElement(getByTestId('btn-edit-service-request'));
+
+      // Assert edit modal reflects authoritative v2 data (title and priority)
+      await waitFor(() => {
+        expect(getByTestId('edit-service-request-modal')).toBeTruthy();
+        expect(getByTestId('input-edit-service-request-title').props.value).toBe(
+          'Tiêu đề phiên bản 2 từ server'
+        );
+      });
+
+      // Mock updateServiceRequest to resolve v3
+      (serviceRequestApi.updateServiceRequest as jest.Mock).mockResolvedValueOnce(mockDetailV3);
+
+      pressElement(getByTestId('btn-submit-edit-service-request'));
+
+      // Assert outgoing payload includes authoritative version: 2
+      await waitFor(() => {
+        expect(serviceRequestApi.updateServiceRequest).toHaveBeenCalledTimes(2);
+        expect(serviceRequestApi.updateServiceRequest).toHaveBeenLastCalledWith(
+          'req-uuid-101',
+          expect.objectContaining({
+            title: 'Tiêu đề phiên bản 2 từ server',
+            version: 2,
+          })
+        );
+      });
+
+      // Modal closes and authoritative v3 is reflected on screen
+      await waitFor(() => {
+        expect(queryByTestId('edit-service-request-modal')).toBeNull();
+        expect(getByText('Tiêu đề phiên bản 3 đã sửa thành công')).toBeTruthy();
       });
     });
 

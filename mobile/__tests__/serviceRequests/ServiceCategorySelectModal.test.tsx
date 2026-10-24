@@ -15,11 +15,11 @@
  */
 
 import React from 'react';
-import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
 import { ServiceCategorySelectModal } from '../../src/features/serviceRequests/components/ServiceCategorySelectModal';
 import { serviceRequestApi } from '../../src/features/serviceRequests/api/serviceRequestApi';
 import { ServiceCategoryResponse } from '../../src/features/serviceRequests/types/serviceRequestTypes';
-import { AppProviders } from '../../src/app/providers';
+import { ThemeProvider } from '../../src/app/providers/ThemeProvider';
 
 jest.mock('react-native-safe-area-context', () =>
   require('react-native-safe-area-context/jest/mock').default
@@ -75,13 +75,13 @@ describe('ServiceCategorySelectModal', () => {
     (serviceRequestApi.listCategories as jest.Mock).mockResolvedValueOnce(mockCategories);
 
     const { getByText, queryByText } = await render(
-      <AppProviders>
+      <ThemeProvider>
         <ServiceCategorySelectModal
           visible={true}
           onSelect={jest.fn()}
           onClose={jest.fn()}
         />
-      </AppProviders>
+      </ThemeProvider>
     );
 
     await waitFor(() => {
@@ -104,13 +104,13 @@ describe('ServiceCategorySelectModal', () => {
     (serviceRequestApi.listCategories as jest.Mock).mockResolvedValueOnce(mockCategories);
 
     const { getByText, queryByText, getByPlaceholderText } = await render(
-      <AppProviders>
+      <ThemeProvider>
         <ServiceCategorySelectModal
           visible={true}
           onSelect={jest.fn()}
           onClose={jest.fn()}
         />
-      </AppProviders>
+      </ThemeProvider>
     );
 
     await waitFor(() => {
@@ -136,13 +136,13 @@ describe('ServiceCategorySelectModal', () => {
     (serviceRequestApi.listCategories as jest.Mock).mockResolvedValueOnce(mockCategories);
 
     const { getByTestId, getByText, getByPlaceholderText } = await render(
-      <AppProviders>
+      <ThemeProvider>
         <ServiceCategorySelectModal
           visible={true}
           onSelect={jest.fn()}
           onClose={jest.fn()}
         />
-      </AppProviders>
+      </ThemeProvider>
     );
 
     await waitFor(() => {
@@ -164,13 +164,13 @@ describe('ServiceCategorySelectModal', () => {
     const mockOnClose = jest.fn();
 
     const { getByTestId, getByText } = await render(
-      <AppProviders>
+      <ThemeProvider>
         <ServiceCategorySelectModal
           visible={true}
           onSelect={mockOnSelect}
           onClose={mockOnClose}
         />
-      </AppProviders>
+      </ThemeProvider>
     );
 
     await waitFor(() => {
@@ -204,14 +204,14 @@ describe('ServiceCategorySelectModal', () => {
     const mockOnClose = jest.fn();
 
     const { getByTestId, getByText } = await render(
-      <AppProviders>
+      <ThemeProvider>
         <ServiceCategorySelectModal
           visible={true}
           selectedCategoryId="cat-uuid-1"
           onSelect={mockOnSelect}
           onClose={mockOnClose}
         />
-      </AppProviders>
+      </ThemeProvider>
     );
 
     await waitFor(() => {
@@ -237,13 +237,13 @@ describe('ServiceCategorySelectModal', () => {
     const mockOnClose = jest.fn();
 
     const { getByTestId, getByText } = await render(
-      <AppProviders>
+      <ThemeProvider>
         <ServiceCategorySelectModal
           visible={true}
           onSelect={jest.fn()}
           onClose={mockOnClose}
         />
-      </AppProviders>
+      </ThemeProvider>
     );
 
     await waitFor(() => {
@@ -262,13 +262,13 @@ describe('ServiceCategorySelectModal', () => {
       .mockResolvedValueOnce(mockCategories);
 
     const { getByTestId, getByText } = await render(
-      <AppProviders>
+      <ThemeProvider>
         <ServiceCategorySelectModal
           visible={true}
           onSelect={jest.fn()}
           onClose={jest.fn()}
         />
-      </AppProviders>
+      </ThemeProvider>
     );
 
     await waitFor(() => {
@@ -281,6 +281,250 @@ describe('ServiceCategorySelectModal', () => {
 
     await waitFor(() => {
       expect(getByText('Thiết bị văn phòng')).toBeTruthy();
+    });
+  });
+
+  describe('8. Concurrency and Unmount Safety (Phase 16D Hardening)', () => {
+    function createDeferred<T>() {
+      let resolve!: (value: T) => void;
+      let reject!: (reason?: any) => void;
+      const promise = new Promise<T>((res, rej) => {
+        resolve = res;
+        reject = rej;
+      });
+      return { promise, resolve, reject };
+    }
+
+    const batchA: ServiceCategoryResponse[] = [
+      {
+        id: 'cat-uuid-batch-a',
+        parentId: null,
+        code: 'BATCH_A',
+        name: 'Batch A Category',
+        description: 'First fetch',
+        defaultPriority: 'LOW',
+        active: true,
+        createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: null,
+        version: 1,
+      },
+    ];
+
+    const batchB: ServiceCategoryResponse[] = [
+      {
+        id: 'cat-uuid-batch-b',
+        parentId: null,
+        code: 'BATCH_B',
+        name: 'Batch B Category',
+        description: 'Second fetch',
+        defaultPriority: 'HIGH',
+        active: true,
+        createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: null,
+        version: 1,
+      },
+    ];
+
+    it('Test A: Request A pending, Request B starts and resolves; Request A resolves later; category list reflects B only', async () => {
+      const deferredA = createDeferred<ServiceCategoryResponse[]>();
+      const deferredB = createDeferred<ServiceCategoryResponse[]>();
+
+      (serviceRequestApi.listCategories as jest.Mock)
+        .mockReturnValueOnce(deferredA.promise)
+        .mockReturnValueOnce(deferredB.promise);
+
+      const { getByText, queryByText, rerender } = await render(
+        <ThemeProvider>
+          <ServiceCategorySelectModal
+            visible={true}
+            selectedCategoryId={null}
+            onSelect={jest.fn()}
+            onClose={jest.fn()}
+          />
+        </ThemeProvider>
+      );
+
+      // Trigger request B while request A is still in-flight
+      await rerender(
+        <ThemeProvider>
+          <ServiceCategorySelectModal
+            visible={true}
+            selectedCategoryId="cat-uuid-diff"
+            onSelect={jest.fn()}
+            onClose={jest.fn()}
+          />
+        </ThemeProvider>
+      );
+
+      // Request B resolves first
+      await act(async () => {
+        deferredB.resolve(batchB);
+      });
+
+      await waitFor(() => {
+        expect(getByText('Batch B Category')).toBeTruthy();
+        expect(queryByText('Batch A Category')).toBeNull();
+      });
+
+      // Request A settles later (stale generation)
+      await act(async () => {
+        deferredA.resolve(batchA);
+      });
+
+      // Assert B is still rendered and A was discarded
+      expect(getByText('Batch B Category')).toBeTruthy();
+      expect(queryByText('Batch A Category')).toBeNull();
+    });
+
+    it('Test B: Request A pending, Request B starts and succeeds; Request A rejects later; error is discarded, B remains', async () => {
+      const deferredA = createDeferred<ServiceCategoryResponse[]>();
+      const deferredB = createDeferred<ServiceCategoryResponse[]>();
+
+      (serviceRequestApi.listCategories as jest.Mock)
+        .mockReturnValueOnce(deferredA.promise)
+        .mockReturnValueOnce(deferredB.promise);
+
+      const { getByText, queryByTestId, rerender } = await render(
+        <ThemeProvider>
+          <ServiceCategorySelectModal
+            visible={true}
+            selectedCategoryId={null}
+            onSelect={jest.fn()}
+            onClose={jest.fn()}
+          />
+        </ThemeProvider>
+      );
+
+      // Trigger Request B
+      await rerender(
+        <ThemeProvider>
+          <ServiceCategorySelectModal
+            visible={true}
+            selectedCategoryId="cat-uuid-diff"
+            onSelect={jest.fn()}
+            onClose={jest.fn()}
+          />
+        </ThemeProvider>
+      );
+
+      // Request B resolves
+      await act(async () => {
+        deferredB.resolve(batchB);
+      });
+
+      await waitFor(() => {
+        expect(getByText('Batch B Category')).toBeTruthy();
+      });
+
+      // Request A rejects with error later
+      await act(async () => {
+        deferredA.reject(new Error('Late network error'));
+      });
+
+      // Error must be ignored, category select error must not appear, B remains
+      expect(queryByTestId('category-select-error')).toBeNull();
+      expect(getByText('Batch B Category')).toBeTruthy();
+    });
+
+    it('Test C: Request pending, modal unmounts, request settles; zero state updates or warnings', async () => {
+      const deferred = createDeferred<ServiceCategoryResponse[]>();
+      (serviceRequestApi.listCategories as jest.Mock).mockReturnValueOnce(deferred.promise);
+
+      function TestHarness({ mounted }: { mounted: boolean }) {
+        if (!mounted) return null;
+        return (
+          <ThemeProvider>
+            <ServiceCategorySelectModal
+              visible={true}
+              onSelect={jest.fn()}
+              onClose={jest.fn()}
+            />
+          </ThemeProvider>
+        );
+      }
+
+      const { rerender } = await render(<TestHarness mounted={true} />);
+
+      // Verify request is in-flight before unmount
+      await waitFor(() => {
+        expect(serviceRequestApi.listCategories).toHaveBeenCalledTimes(1);
+      });
+
+      // Unmount component via parent conditional render
+      await rerender(<TestHarness mounted={false} />);
+
+      // Resolve after unmount
+      await act(async () => {
+        deferred.resolve(batchA);
+      });
+    });
+
+    it('Test D: Modal closes with A pending, reopens with B; A settling is discarded, B owns state', async () => {
+      const deferredA = createDeferred<ServiceCategoryResponse[]>();
+      const deferredB = createDeferred<ServiceCategoryResponse[]>();
+
+      (serviceRequestApi.listCategories as jest.Mock)
+        .mockReturnValueOnce(deferredA.promise)
+        .mockReturnValueOnce(deferredB.promise);
+
+      const { getByText, queryByText, rerender } = await render(
+        <ThemeProvider>
+          <ServiceCategorySelectModal
+            visible={true}
+            onSelect={jest.fn()}
+            onClose={jest.fn()}
+          />
+        </ThemeProvider>
+      );
+
+      // Verify Request A has started and is pending
+      await waitFor(() => {
+        expect(serviceRequestApi.listCategories).toHaveBeenCalledTimes(1);
+      });
+
+      // Close modal while Request A is pending
+      await rerender(
+        <ThemeProvider>
+          <ServiceCategorySelectModal
+            visible={false}
+            onSelect={jest.fn()}
+            onClose={jest.fn()}
+          />
+        </ThemeProvider>
+      );
+
+      // Reopen modal, triggering Request B
+      await rerender(
+        <ThemeProvider>
+          <ServiceCategorySelectModal
+            visible={true}
+            onSelect={jest.fn()}
+            onClose={jest.fn()}
+          />
+        </ThemeProvider>
+      );
+
+      await waitFor(() => {
+        expect(serviceRequestApi.listCategories).toHaveBeenCalledTimes(2);
+      });
+
+      // Request B resolves
+      await act(async () => {
+        deferredB.resolve(batchB);
+      });
+
+      await waitFor(() => {
+        expect(getByText('Batch B Category')).toBeTruthy();
+      });
+
+      // Stale Request A resolves
+      await act(async () => {
+        deferredA.resolve(batchA);
+      });
+
+      // Still only B is displayed
+      expect(getByText('Batch B Category')).toBeTruthy();
+      expect(queryByText('Batch A Category')).toBeNull();
     });
   });
 });

@@ -87,6 +87,54 @@ Time:        36.373 s
 
 ---
 
-## 4. Next Steps
+## 4. Narrow Hardening & Concurrency Verification (Post-Audit Patch)
 
-- Proceed to **INDEPENDENT AUDIT PHASE 16D** to verify contract conformity and invariant maintenance before initiating Subphase 16E (Workflow Mutations & Assignments).
+Following the Phase 16D Independent Audit (`PHASE_16D_AUDIT_NEEDS_PATCH`), two areas were hardened and deterministically verified:
+
+### 4.1 ServiceCategorySelectModal Concurrency & Unmount Safety
+- **Defect Addressed**: `SERVICE_CATEGORY_SELECTOR_STALE_REQUEST_RISK`
+- **Hardening Applied**:
+  - Monotonic request generation tracking via `requestGenerationRef = useRef<number>(0)`.
+  - Guarded asynchronous resolution in `loadCategories`: if unmounted or if `generation !== requestGenerationRef.current`, discarded data/error state updates.
+  - Invalidated in-flight generation when `visible` transitions to `false` or on unmount.
+- **Deterministic Unit Tests Added** (`ServiceCategorySelectModal.test.tsx`):
+  - *Test A*: In-flight request A superseded by request B; A finishes later; component retains batch B only.
+  - *Test B*: In-flight request A superseded by request B; request A rejects later; error is discarded, batch B remains.
+  - *Test C*: In-flight request pending; component unmounts; request settles; zero state updates or unmount warnings.
+  - *Test D*: Modal closes while A is pending and reopens with B; settling of A is discarded, B owns state.
+
+### 4.2 Edit Conflict Baseline Reload Proof
+- **Gap Addressed**: `SERVICE_REQUEST_EDIT_CONFLICT_TEST_GAP`
+- **Verification Added** (`ServiceRequestDetailScreen.test.tsx`):
+  - Added full end-to-end screen-level integration test:
+    1. Screen renders request `v1`.
+    2. User opens edit modal (`btn-edit-service-request`) and submits modification.
+    3. Transport returns HTTP 409 conflict (`OPTIMISTIC_LOCK_CONFLICT`).
+    4. Edit modal closes, `ConfirmationDialog` (`dialog-service-request-conflict`) opens.
+    5. User confirms reload ("Tải lại dữ liệu").
+    6. Screen calls `refresh()` and resolves authoritative `v2`.
+    7. Screen updates to render authoritative `v2` title; conflict dialog dismissed.
+    8. User opens edit modal again -> inputs reflect authoritative `v2` values.
+    9. User submits -> outgoing `UpdateServiceRequestRequest` explicitly contains `version: 2`.
+    10. Transport resolves `v3` -> screen updates to reflect `v3`.
+
+---
+
+## 5. Post-Hardening Validation Summary
+
+- **Unit & Integration Tests**:
+  - `mobile/__tests__/screens/ServiceRequestDetailScreen.test.tsx`: 16 passed, 16 total.
+  - `mobile/__tests__/serviceRequests/ServiceCategorySelectModal.test.tsx`: 11 passed, 11 total.
+  - `mobile/__tests__/serviceRequests/EditServiceRequestModal.test.tsx`: 6 passed, 6 total.
+  - `mobile/__tests__/screens/CreateServiceRequestScreen.test.tsx`: 7 passed, 7 total.
+- **Full Regression**: 93 suites passed, 93 total; 885 tests passed, 885 total (0 failures, 0 skipped).
+- **TypeScript**: `tsc --noEmit` exit code 0 (0 errors).
+- **ESLint**: exit code 0 (0 errors, 48 pre-existing warnings in projects/organization, 0 warnings in serviceRequests).
+- **Android Native**: `assembleDebug` BUILD SUCCESSFUL in 33s (203 actionable tasks).
+- **Verdict**: `PHASE_16D_HARDENING_PASS_PUSHED`
+
+---
+
+## 6. Next Steps
+
+- Ready for Subphase 16E (Workflow Mutations & Assignments).

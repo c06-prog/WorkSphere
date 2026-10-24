@@ -8,7 +8,7 @@
  * - Accessible radio selection semantics with touch targets >= 48dp.
  */
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   FlatList,
   Modal,
@@ -52,30 +52,52 @@ export function ServiceCategorySelectModal({
     selectedCategoryId ?? null
   );
 
+  const mountedRef = useRef<boolean>(true);
+  const requestGenerationRef = useRef<number>(0);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  const loadCategories = useCallback(async () => {
+    const generation = ++requestGenerationRef.current;
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await serviceRequestApi.listCategories();
+      if (!mountedRef.current || generation !== requestGenerationRef.current) {
+        return;
+      }
+      // Only keep active categories for selection
+      const activeOnly = data.filter(c => c.active);
+      setCategories(activeOnly);
+    } catch (err: unknown) {
+      if (!mountedRef.current || generation !== requestGenerationRef.current) {
+        return;
+      }
+      const message =
+        err instanceof Error ? err.message : 'Không thể tải danh sách danh mục dịch vụ';
+      setError(message);
+    } finally {
+      if (mountedRef.current && generation === requestGenerationRef.current) {
+        setLoading(false);
+      }
+    }
+  }, []);
+
   useEffect(() => {
     if (visible) {
       setDraftSelectedId(selectedCategoryId ?? null);
       setSearch('');
       loadCategories();
+    } else {
+      // Invalidate any in-flight category fetch when modal becomes hidden
+      requestGenerationRef.current++;
     }
-  }, [visible, selectedCategoryId]);
-
-  const loadCategories = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await serviceRequestApi.listCategories();
-      // Only keep active categories for selection
-      const activeOnly = data.filter(c => c.active);
-      setCategories(activeOnly);
-    } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : 'Không thể tải danh sách danh mục dịch vụ';
-      setError(message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [visible, selectedCategoryId, loadCategories]);
 
   const filteredCategories = useMemo(() => {
     const q = search.trim().toLowerCase();
