@@ -29,7 +29,7 @@ import {
   EditProfileScreen,
   ChangePasswordScreen,
 } from '../../features/profile/screens';
-import { AssetListScreen } from '../../features/assets/screens';
+import { AssetListScreen, AssetDetailScreen } from '../../features/assets/screens';
 import { useAppTheme } from '../providers/ThemeProvider';
 import type { MainTabParamList } from './types';
 
@@ -272,6 +272,15 @@ export function MainTabNavigator() {
           tabBarButton: () => null,
           tabBarItemStyle: { display: 'none' },
           headerTitle: 'Tài sản',
+        }}
+      />
+      <Tab.Screen
+        name="AssetDetail"
+        component={AssetDetailScreen}
+        options={{
+          tabBarButton: () => null,
+          tabBarItemStyle: { display: 'none' },
+          headerShown: false,
         }}
       />
     </Tab.Navigator>

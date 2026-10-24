@@ -15,3 +15,10 @@ export type {
   UseAssetsOptions,
   UseAssetsResult,
 } from './useAssets';
+
+export {
+  useAssetDetail,
+} from './useAssetDetail';
+export type {
+  UseAssetDetailResult,
+} from './useAssetDetail';

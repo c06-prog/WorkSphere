@@ -21,13 +21,22 @@
 - Phase 16C Implementation Checkpoint: `reports/PHASE_16C_SERVICE_REQUEST_DETAIL_REPORT.md` (CLOSED / AUDITED)
 - Phase 16D Implementation Checkpoint: `reports/PHASE_16D_CREATE_EDIT_SERVICE_REQUEST_REPORT.md` (HARDENED / VERIFIED)
 - Phase 16E Implementation Checkpoint: `reports/PHASE_16E_WORKFLOW_ASSIGNMENT_REPORT.md` (IMPLEMENTED / VERIFIED)
-- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 15 Mobile Task Management: CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 15A..15G CLOSED). Phase 16 Mobile Service Requests: CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 16A..16G CLOSED). Phase 17 Mobile Asset Management: IN_PROGRESS (Subphases 17A & 17B IMPLEMENTED / VALIDATED, 17C NOT STARTED).
-- Next Action: PHASE 17C ASSET DETAIL SCREEN
+- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 15 Mobile Task Management: CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 15A..15G CLOSED). Phase 16 Mobile Service Requests: CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 16A..16G CLOSED). Phase 17 Mobile Asset Management: IN_PROGRESS (Subphases 17A, 17B, 17C IMPLEMENTED / VALIDATED, 17D NOT STARTED).
+- Next Action: PHASE 17D CREATE & EDIT ASSET
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening
 
-- Latest Implementation: Phase 17B Asset List & My Assets
+- Latest Implementation: Phase 17C Asset Detail & Service Request Linking
+- Implementation Report: `reports/PHASE_17C_ASSET_DETAIL.md`
+- Delivered Scope:
+  - Custom hook `useAssetDetail` (calling `GET /assets/{assetId}`) with monotonic query generation tracking, in-flight promise deduplication, and non-blocking refresh error handling.
+  - UI Component `RepairHistoryPreview` rendering read-only repair audit records with local loading, error, and retry handling.
+  - Screen `AssetDetailScreen` (`SCR-AST-02`) rendering canonical metadata (code, name, category, model, serial, location, dates, price, status), current assignment, repair history preview, and related service requests.
+  - Cross-module integration with Service Requests: "Báo hỏng / Yêu cầu dịch vụ" button visible to active assignee, `ASSET_MANAGE`, or `ADMIN`, navigating to `CreateServiceRequest` with `{ assetId: asset.id }`.
+  - Registered hidden stack route `AssetDetail` in `MainTabNavigator.tsx` while strictly preserving the canonical 5 bottom tabs.
+  - Validation Evidence: 107 test suites (+3 new suites), 1001 tests (+20 new tests) PASS (0 failures, 0 skipped, 0 snapshots). TypeScript 0 errors. ESLint 0 errors (74 historical warnings preserved, 0 asset errors).
+- Prior Implementation: Phase 17B Asset List & My Assets
 - Implementation Report: `reports/PHASE_17B_ASSET_LIST.md`
 - Delivered Scope:
   - Custom query hooks `useMyAssets` (calling `GET /assets/my-assets`) and `useAssets` (calling `GET /assets`) with monotonic query generation tracking, deduplication, and synchronous pagination lock.
