@@ -1364,3 +1364,57 @@ Current operating mode:
      - `17D`: Tạo & Sửa tài sản (`SCR-AST-03`, `SCR-AST-04`).
      - `17E`: Cấp phát & Thu hồi tài sản (`SCR-AST-05`, `SCR-AST-06`).
      - `17F`: Tích hợp toàn diện, kiểm thử hồi quy và Android native verification.
+
+## D-067: Phase 18 Mobile Notification System Contract & Scope Freeze
+
+- **Ngày quyết định**: 2026-10-25.
+- **Phạm vi**: Khóa kiến trúc, hợp đồng API, mô hình điều hướng ngữ cảnh và quy chuẩn tích hợp Mobile Notification System (Phase 18, màn hình canonical `SCR-NOT-01`).
+- **Tình trạng**: APPROVED / FROZEN.
+- **Tài liệu tham chiếu**: `reports/PHASE_18_NOTIFICATION_CONTRACT_FREEZE.md`, `reports/PRE_PHASE_18_AUDIT.md`, `docs/03_MOBILE_SCREEN_MAP.md`, `docs/06_API_CONTRACT.md`, `design/02_SCREEN_INVENTORY.md`, `design/08_API_SCREEN_MAPPING.md`.
+- **Nội dung quyết định**:
+  1. **Quy Chuẩn Mã Màn Hình Canonical (Screen ID Normalization)**:
+     - Mã màn hình chuẩn của Trung tâm Thông báo là **`SCR-NOT-01`** (Notification List Screen) theo `design/02_SCREEN_INVENTORY.md` và `design/08_API_SCREEN_MAPPING.md`. Bất kỳ tham chiếu nào đến `SCR-NOTIF-01` được chuẩn hóa thành bí danh (alias) trỏ về `SCR-NOT-01`.
+     - Tuyệt đối không tạo `NotificationDetailScreen` độc lập: theo `docs/06_API_CONTRACT.md` Section 15, backend không có endpoint chi tiết thông báo (`GET /notifications/{id}`). Client thực hiện điều hướng theo ngữ cảnh (Context Navigation / Deep-link in-app) trực tiếp đến thực thể nguồn (`PROJECT`, `TASK`, `SERVICE_REQUEST`, `ASSET`).
+  2. **Kiến Trúc Điều Hướng và Vị Trí Màn Hình (Navigation Architecture)**:
+     - Giữ nguyên cấu trúc 5 bottom tab (`Dashboard`, `Projects`, `Tasks`, `ServiceRequests`, `More`). Tuyệt đối không thêm bottom tab thứ 6.
+     - Route `NotificationList` (`SCR-NOT-01`) thuộc Stack chính (`AppNavigator` / `AppStackParamList`).
+     - Hai điểm vào chuẩn (Entry Points):
+       + Biểu tượng chuông thông báo (Bell icon button) có badge số lượng chưa đọc tại Header của `DashboardScreen`.
+       + Mục "Thông báo" kèm badge số lượng chưa đọc tại danh mục điều hướng của `MoreScreen`.
+  3. **Ranh Giới Hợp Đồng API & Trì Hoãn Preferences (Endpoints & Scope Boundary)**:
+     - Bốn endpoint canonical trong phạm vi Phase 18:
+       + `GET /api/v1/notifications`: Lấy danh sách thông báo phân trang (hỗ trợ query `page`, `size`, `read`, `type`, `sort=createdAt,desc`). Quyền `NOTIFICATION_READ`.
+       + `PUT /api/v1/notifications/{notificationId}/read`: Đánh dấu đã đọc một thông báo (idempotent). Quyền `NOTIFICATION_UPDATE`.
+       + `PUT /api/v1/notifications/read-all`: Đánh dấu đã đọc tất cả thông báo (idempotent, trả về `{ updatedCount: number }`). Quyền `NOTIFICATION_UPDATE`.
+       + `GET /api/v1/notifications/unread-count`: Lấy số lượng thông báo chưa đọc (`{ count: number }`). Quyền `NOTIFICATION_READ`.
+     - Quản lý cấu hình thông báo (`GET/PUT /api/v1/notification-preferences`): **DEFERRED** (trì hoãn ra ngoài Phase 18). Cấu hình này điều khiển kênh Email và Push (chưa hỗ trợ trên mobile client trong Phase 18), sẽ được triển khai ở Web Admin / User Settings.
+  4. **Quy Chuẩn Điều Hướng Ngữ Cảnh và Bán Kính Định Danh (Identity & Reference Navigation)**:
+     - Ánh xạ từ `referenceType` & `referenceId` sang màn hình ứng dụng:
+       + `TASK`: Điều hướng `navigation.navigate('TaskDetail', { taskId: referenceId })`.
+       + `PROJECT`: Điều hướng `navigation.navigate('ProjectDetail', { projectId: referenceId })`.
+       + `SERVICE_REQUEST`: Điều hướng `navigation.navigate('ServiceRequestDetail', { requestId: referenceId })`.
+       + `ASSET`: Điều hướng `navigation.navigate('AssetDetail', { assetId: referenceId })`.
+     - Xử lý các loại thông báo đặc thù:
+       + `COMMENT_ADDED`: Backend `NotificationEventDispatcher` thiết lập `referenceType = TASK` và `referenceId = taskId` (ID của task chứa bình luận). Mobile điều hướng trực tiếp vào `TaskDetail` (hoặc mở rộng `TaskComments` với `taskId`).
+       + `ASSET_ASSIGNED`: Backend `NotificationEventDispatcher` thiết lập `referenceType = ASSET` và `referenceId = assetId` (ID của Asset, không phải ID phân công). Mobile điều hướng trực tiếp vào `AssetDetail` với `{ assetId: referenceId }`.
+     - Trường hợp `referenceId` rỗng, sai định dạng hoặc `referenceType` không nhận diện: Đánh dấu đã đọc nếu đang unread, giữ người dùng ở `NotificationList`, hiển thị thông báo nhẹ (toast/banner), tuyệt đối không để ứng dụng gặp crash.
+  5. **Kiến Trúc Huy Hiệu Chưa Đọc Toàn Cục (Shared Unread Badge Architecture)**:
+     - Triển khai `NotificationBadgeContext` và hook `useNotificationBadge` nhẹ nhàng, cung cấp:
+       + `unreadCount`: số lượng chưa đọc.
+       + `refreshUnreadCount()`: gọi `GET /api/v1/notifications/unread-count`.
+       + `decrementCount()`: giảm đếm khi đọc lẻ 1 thông báo.
+       + `resetCount()`: đặt về 0 khi "Đọc tất cả".
+     - Đồng bộ đếm khi khởi động ứng dụng và khi `DashboardScreen` / `MoreScreen` nhận focus (`useFocusEffect`).
+     - Tuyệt đối không thêm thư viện quản lý state nặng (không Redux, không Zustand).
+  6. **Quy Chuẩn Khóa Đột Biến Bằng Ref (Synchronous Mutation Locks)**:
+     - Luồng đột biến đánh dấu đã đọc một thông báo và đánh dấu đã đọc tất cả bắt buộc sử dụng synchronous `useRef` lock (`markingReadRef.current = true`, `markingAllRef.current = true`) trước khi kích hoạt request mạng bất đồng bộ, triệt tiêu duplicate submit do rapid-tapping.
+  7. **Ranh Giới Ngoại Trừ (Strict Inclusions & Exclusions)**:
+     - Không triển khai FCM (Firebase Cloud Messaging), APNs (Apple Push Notification service), Android Notification Channels, notification tray native, hay runtime permission `POST_NOTIFICATIONS`.
+     - Không triển khai WebSocket / STOMP / SSE hay background workers. Phân hệ hoạt động strictly qua in-app HTTP polling/focus refresh.
+  8. **Kế Hoạch Phân Kỳ Phase 18**:
+     - `18A`: Hợp đồng Foundation, DTOs, API Adapter, Badge Context, Enums, Mock Data, Route types.
+     - `18B`: Màn hình `SCR-NOT-01` (List UI, bộ lọc Tất cả / Chưa đọc, FlatList phân trang, Empty/Error states, Unread dot & Visual cues).
+     - `18C`: Đột biến đọc (Mark one read, Mark all read) & Đồng bộ Unread Badge (`Dashboard`, `More`).
+     - `18D`: Tích hợp Context Navigation / Deep-linking đa phân hệ (`TASK`, `PROJECT`, `SERVICE_REQUEST`, `ASSET`).
+     - `18E`: Kiểm thử tích hợp toàn diện, hồi quy Mobile, và Android native validation.
+
