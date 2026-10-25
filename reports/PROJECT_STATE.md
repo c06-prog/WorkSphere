@@ -21,13 +21,22 @@
 - Phase 16C Implementation Checkpoint: `reports/PHASE_16C_SERVICE_REQUEST_DETAIL_REPORT.md` (CLOSED / AUDITED)
 - Phase 16D Implementation Checkpoint: `reports/PHASE_16D_CREATE_EDIT_SERVICE_REQUEST_REPORT.md` (HARDENED / VERIFIED)
 - Phase 16E Implementation Checkpoint: `reports/PHASE_16E_WORKFLOW_ASSIGNMENT_REPORT.md` (IMPLEMENTED / VERIFIED)
-- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 15 Mobile Task Management: CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 15A..15G CLOSED). Phase 16 Mobile Service Requests: CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 16A..16G CLOSED). Phase 17 Mobile Asset Management: COMPLETED (Subphases 17A..17F + 17F-CORRECTIVE IMPLEMENTED / VALIDATED / HARDENED).
-- Next Action: PHASE 18 MOBILE NOTIFICATION SYSTEM (Or Phase 17 Final Reconciliation & Closure)
+- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 15 Mobile Task Management: CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 15A..15G CLOSED). Phase 16 Mobile Service Requests: CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 16A..16G CLOSED). Phase 17 Mobile Asset Management: FULLY COMPLETE & ANDROID RUNTIME VERIFIED (Subphases 17A..17F + 17F-CORRECTIVE + 17F-FINAL COMPLETED & TESTED).
+- Next Action: PHASE 18 MOBILE NOTIFICATION SYSTEM
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening
 
-- Latest Implementation: Phase 17F-VALIDATION Asset Repair History Timezone Hardening & Runtime Audit
+- Latest Implementation: Phase 17F-Final Ephemeral E2E Fixture and Android Repair History Validation
+  - Implementation Report: reports/PHASE_17F_FINAL_ANDROID_REPAIR_HISTORY_E2E.md
+  - Delivered Scope:
+    - Added configurable dev role in `E2eUserProvisioner.java` (`ADMIN`/`EMPLOYEE`) gated under `application-dev.yml`.
+    - Implemented dev fixture runner `DevAssetFixtureProvisioner.java` generating canonical category `E2E_ASSET_CAT`.
+    - Resolved Hibernate LazyInitializationException in `JwtAuthenticationFilter` with eager role fetching (`findActiveWithRolesById`).
+    - Successfully validated the end-to-end repair history workflow live on Android Emulator `Medium_Phone` (API 35): Login -> More -> Asset List -> Asset Detail -> "Ghi nhận sửa chữa" CTA -> AddRepairHistoryModal submit -> Backend persistence & RepairHistoryPreview refresh.
+    - Verified single submission (no duplicate records) and timezone integrity (`2026-10-25T08:00:00Z` -> `25/10/2026` in GMT+7).
+    - Validation Evidence: Backend tests (14/14 dev tests pass, 13/13 role seed tests pass), Mobile lint (0 errors), Mobile TypeScript (0 errors), Mobile Asset unit tests (16/16 suites, 122/122 tests pass), Live Android UI screenshot saved at `reports/screenshots/phase17_repair_history_success.png`.
+- Prior Implementation: Phase 17F-VALIDATION Asset Repair History Timezone Hardening & Runtime Audit
   - Implementation Report: reports/PHASE_17F_REPAIR_HISTORY_ANDROID_VALIDATION.md
   - Delivered Scope:
     - Timezone Round-Trip Hardening: Aligned `completedAt` serialization in `AddRepairHistoryModal.tsx` from `T17:00:00Z` to `T10:00:00Z` (17:00:00 GMT+7) to eliminate a 1-day calendar drift in Vietnam and adjacent timezones while preserving `completedAt >= startedAt`.

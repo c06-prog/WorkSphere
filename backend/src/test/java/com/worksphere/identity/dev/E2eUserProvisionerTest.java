@@ -54,12 +54,7 @@ class E2eUserProvisionerTest {
     @Test
     @DisplayName("A. When disabled by default, provisioner does not perform any repository operations")
     void shouldDoNothingWhenDisabled() {
-        E2eUserProvisioner provisioner = new E2eUserProvisioner(
-                userRepository,
-                roleRepository,
-                userRoleRepository,
-                passwordEncoder,
-                false,
+        E2eUserProvisioner provisioner = new E2eUserProvisioner(userRepository, roleRepository, userRoleRepository, passwordEncoder, false, "EMPLOYEE",
                 "some_login",
                 "some_user",
                 "user@test.local",
@@ -75,12 +70,7 @@ class E2eUserProvisionerTest {
     @Test
     @DisplayName("B. When enabled but login and username/email are missing, fails safely without credentials")
     void shouldFailSafelyWhenLoginMissing() {
-        E2eUserProvisioner provisioner = new E2eUserProvisioner(
-                userRepository,
-                roleRepository,
-                userRoleRepository,
-                passwordEncoder,
-                true,
+        E2eUserProvisioner provisioner = new E2eUserProvisioner(userRepository, roleRepository, userRoleRepository, passwordEncoder, true, "EMPLOYEE",
                 "",
                 "",
                 "",
@@ -98,12 +88,7 @@ class E2eUserProvisionerTest {
     @Test
     @DisplayName("C. When enabled but password is empty, fails safely")
     void shouldFailSafelyWhenPasswordEmpty() {
-        E2eUserProvisioner provisioner = new E2eUserProvisioner(
-                userRepository,
-                roleRepository,
-                userRoleRepository,
-                passwordEncoder,
-                true,
+        E2eUserProvisioner provisioner = new E2eUserProvisioner(userRepository, roleRepository, userRoleRepository, passwordEncoder, true, "EMPLOYEE",
                 "e2e_login",
                 "e2e_login",
                 "e2e@worksphere.local",
@@ -121,12 +106,7 @@ class E2eUserProvisionerTest {
     @Test
     @DisplayName("C2. When password length is less than 8 characters, fails safely")
     void shouldFailSafelyWhenPasswordTooShort() {
-        E2eUserProvisioner provisioner = new E2eUserProvisioner(
-                userRepository,
-                roleRepository,
-                userRoleRepository,
-                passwordEncoder,
-                true,
+        E2eUserProvisioner provisioner = new E2eUserProvisioner(userRepository, roleRepository, userRoleRepository, passwordEncoder, true, "EMPLOYEE",
                 "e2e_login",
                 "e2e_login",
                 "e2e@worksphere.local",
@@ -150,12 +130,7 @@ class E2eUserProvisionerTest {
         when(passwordEncoder.encode("SecureE2ePass123!")).thenReturn("hashed_secure_pass");
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        E2eUserProvisioner provisioner = new E2eUserProvisioner(
-                userRepository,
-                roleRepository,
-                userRoleRepository,
-                passwordEncoder,
-                true,
+        E2eUserProvisioner provisioner = new E2eUserProvisioner(userRepository, roleRepository, userRoleRepository, passwordEncoder, true, "EMPLOYEE",
                 "",
                 "e2e_test",
                 "e2e@worksphere.local",
@@ -166,8 +141,8 @@ class E2eUserProvisionerTest {
         provisioner.run(new DefaultApplicationArguments());
 
         ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
-        verify(userRepository, times(2)).save(userCaptor.capture());
-        User createdUser = userCaptor.getAllValues().get(0);
+        verify(userRepository).save(userCaptor.capture());
+        User createdUser = userCaptor.getValue();
 
         assertThat(createdUser.getUsername()).isEqualTo("e2e_test");
         assertThat(createdUser.getEmail()).isEqualTo("e2e@worksphere.local");
@@ -190,12 +165,7 @@ class E2eUserProvisionerTest {
         when(passwordEncoder.encode(anyString())).thenReturn("hashed_pass");
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        E2eUserProvisioner provisioner = new E2eUserProvisioner(
-                userRepository,
-                roleRepository,
-                userRoleRepository,
-                passwordEncoder,
-                true,
+        E2eUserProvisioner provisioner = new E2eUserProvisioner(userRepository, roleRepository, userRoleRepository, passwordEncoder, true, "EMPLOYEE",
                 "nvcuong@company.vn",
                 "",
                 "",
@@ -206,8 +176,8 @@ class E2eUserProvisionerTest {
         provisioner.run(new DefaultApplicationArguments());
 
         ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
-        verify(userRepository, times(2)).save(userCaptor.capture());
-        User createdUser = userCaptor.getAllValues().get(0);
+        verify(userRepository).save(userCaptor.capture());
+        User createdUser = userCaptor.getValue();
 
         assertThat(createdUser.getUsername()).isEqualTo("nvcuong");
         assertThat(createdUser.getEmail()).isEqualTo("nvcuong@company.vn");
@@ -220,17 +190,13 @@ class E2eUserProvisionerTest {
         UUID existingUserId = UUID.randomUUID();
         User existingUser = mock(User.class);
         when(existingUser.getId()).thenReturn(existingUserId);
-        when(existingUser.getRoles()).thenReturn(Collections.singleton(employeeRole));
+        lenient().when(existingUser.getRoles()).thenReturn(Collections.singleton(employeeRole));
+        when(roleRepository.findByCode("EMPLOYEE")).thenReturn(Optional.of(employeeRole));
 
         when(userRepository.findActiveByUsernameOrEmail("e2e_test")).thenReturn(Optional.of(existingUser));
         when(userRepository.findActiveByEmail("e2e@worksphere.local")).thenReturn(Optional.of(existingUser));
 
-        E2eUserProvisioner provisioner = new E2eUserProvisioner(
-                userRepository,
-                roleRepository,
-                userRoleRepository,
-                passwordEncoder,
-                true,
+        E2eUserProvisioner provisioner = new E2eUserProvisioner(userRepository, roleRepository, userRoleRepository, passwordEncoder, true, "EMPLOYEE",
                 "",
                 "e2e_test",
                 "e2e@worksphere.local",
@@ -246,11 +212,12 @@ class E2eUserProvisionerTest {
     }
 
     @Test
-    @DisplayName("F. When an existing account conflicts with username or email, fails safely without modifying data")
-    void shouldFailSafelyWhenAccountCollides() {
-        User existingUser = mock(User.class);
-        when(userRepository.findActiveByUsernameOrEmail("e2e_test")).thenReturn(Optional.of(existingUser));
-        when(userRepository.findActiveByEmail("e2e@worksphere.local")).thenReturn(Optional.empty());
+    @DisplayName("I. When configured with ADMIN role, provisions user with ADMIN role")
+    void shouldProvisionAdminRoleWhenConfigured() {
+        Role adminRole = mock(Role.class);
+        when(adminRole.getId()).thenReturn(UUID.randomUUID());
+        lenient().when(adminRole.getCode()).thenReturn("ADMIN");
+        when(roleRepository.findByCode("ADMIN")).thenReturn(Optional.of(adminRole));
 
         E2eUserProvisioner provisioner = new E2eUserProvisioner(
                 userRepository,
@@ -258,6 +225,56 @@ class E2eUserProvisionerTest {
                 userRoleRepository,
                 passwordEncoder,
                 true,
+                "ADMIN",
+                "admin_e2e",
+                "admin_e2e",
+                "admin_e2e@worksphere.local",
+                "Password123!",
+                "Admin E2E User"
+        );
+
+        when(userRepository.findActiveByUsernameOrEmail("admin_e2e")).thenReturn(Optional.empty());
+        when(userRepository.findActiveByEmail("admin_e2e@worksphere.local")).thenReturn(Optional.empty());
+
+        User mockSavedUser = mock(User.class);
+        when(mockSavedUser.getId()).thenReturn(UUID.randomUUID());
+        when(userRepository.save(any(User.class))).thenReturn(mockSavedUser);
+
+        provisioner.run(new DefaultApplicationArguments());
+
+        ArgumentCaptor<UserRole> roleCaptor = ArgumentCaptor.forClass(UserRole.class);
+        verify(userRoleRepository).save(roleCaptor.capture());
+        assertThat(roleCaptor.getValue().getRoleId()).isEqualTo(adminRole.getId());
+    }
+
+    @Test
+    @DisplayName("J. When configured with invalid role, fails fast with clear message")
+    void shouldFailFastWhenConfiguredWithInvalidRole() {
+        assertThatThrownBy(() -> new E2eUserProvisioner(
+                userRepository,
+                roleRepository,
+                userRoleRepository,
+                passwordEncoder,
+                true,
+                "SUPER_ROOT",
+                "e2e_user",
+                "e2e_user",
+                "e2e@worksphere.local",
+                "Password123!",
+                "Test User"
+        ))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("invalid or unsupported role 'SUPER_ROOT'");
+    }
+
+    @Test
+    @DisplayName("F. When an existing account conflicts with username or email, fails safely without modifying data")
+    void shouldFailSafelyWhenAccountCollides() {
+        User existingUser = mock(User.class);
+        when(userRepository.findActiveByUsernameOrEmail("e2e_test")).thenReturn(Optional.of(existingUser));
+        when(userRepository.findActiveByEmail("e2e@worksphere.local")).thenReturn(Optional.empty());
+
+        E2eUserProvisioner provisioner = new E2eUserProvisioner(userRepository, roleRepository, userRoleRepository, passwordEncoder, true, "EMPLOYEE",
                 "",
                 "e2e_test",
                 "e2e@worksphere.local",
@@ -293,3 +310,5 @@ class E2eUserProvisionerTest {
                 });
     }
 }
+
+

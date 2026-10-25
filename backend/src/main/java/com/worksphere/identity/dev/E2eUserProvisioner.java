@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -31,7 +32,7 @@ import java.util.UUID;
  * - Disabled by default.
  * - Credential values are injected exclusively from external environment variables outside Git.
  * - Zero logging of passwords, tokens, usernames, or emails.
- * - Assigns least-privilege role EMPLOYEE with ACTIVE status.
+ * - Assigns role (defaults to EMPLOYEE, supports ADMIN for authorized administrative testing).
  * - Idempotent execution (skips gracefully if the dedicated account already exists).
  * - Never active in production.
  */
@@ -43,6 +44,9 @@ public class E2eUserProvisioner implements ApplicationRunner {
     private static final Logger log = LoggerFactory.getLogger(E2eUserProvisioner.class);
 
     private static final String ROLE_EMPLOYEE = "EMPLOYEE";
+    private static final String ROLE_ADMIN = "ADMIN";
+    private static final Set<String> ALLOWED_ROLES = Set.of(ROLE_EMPLOYEE, ROLE_ADMIN);
+
     private static final int MIN_PASSWORD_LENGTH = 8;
     private static final int MAX_PASSWORD_LENGTH = 128;
     private static final int MIN_USERNAME_LENGTH = 3;
@@ -54,18 +58,21 @@ public class E2eUserProvisioner implements ApplicationRunner {
     private final PasswordEncoder passwordEncoder;
 
     private final boolean enabled;
+    private final String roleCode;
     private final String login;
     private final String username;
     private final String email;
     private final String password;
     private final String fullName;
 
+    @org.springframework.beans.factory.annotation.Autowired
     public E2eUserProvisioner(
             UserRepository userRepository,
             RoleRepository roleRepository,
             UserRoleRepository userRoleRepository,
             PasswordEncoder passwordEncoder,
             @Value("${worksphere.dev.e2e-user.enabled:false}") boolean enabled,
+            @Value("${worksphere.dev.e2e-user.role:EMPLOYEE}") String roleCode,
             @Value("${worksphere.dev.e2e-user.login:}") String login,
             @Value("${worksphere.dev.e2e-user.username:}") String username,
             @Value("${worksphere.dev.e2e-user.email:}") String email,
@@ -77,11 +84,23 @@ public class E2eUserProvisioner implements ApplicationRunner {
         this.userRoleRepository = userRoleRepository;
         this.passwordEncoder = passwordEncoder;
         this.enabled = enabled;
+        this.roleCode = normalizeAndValidateRole(roleCode);
         this.login = login != null ? login.trim() : "";
         this.username = username != null ? username.trim() : "";
         this.email = email != null ? email.trim() : "";
         this.password = password != null ? password : "";
         this.fullName = fullName != null && !fullName.trim().isEmpty() ? fullName.trim() : "E2E Test User";
+    }
+
+    private static String normalizeAndValidateRole(String rawRole) {
+        String normalized = rawRole != null ? rawRole.trim().toUpperCase() : ROLE_EMPLOYEE;
+        if (normalized.isEmpty()) {
+            normalized = ROLE_EMPLOYEE;
+        }
+        if (!ALLOWED_ROLES.contains(normalized)) {
+            throw new IllegalStateException("E2E user provisioning failed: invalid or unsupported role '" + normalized + "'. Allowed roles: " + ALLOWED_ROLES);
+        }
+        return normalized;
     }
 
     @Override
@@ -104,8 +123,12 @@ public class E2eUserProvisioner implements ApplicationRunner {
             User userByE = existingByEmail.get();
 
             if (userByU.getId().equals(userByE.getId())) {
-                log.info("E2E test account already exists. Provisioning skipped.");
-                ensureEmployeeRoleAttached(userByU);
+                log.info("E2E test account already exists. Ensuring requested role is attached.");
+                Role targetRole = roleRepository.findByCode(roleCode)
+                        .orElse(null);
+                if (targetRole != null) {
+                    ensureRoleAttached(userByU, targetRole);
+                }
                 return;
             } else {
                 log.warn("E2E test account collision: username and email belong to distinct existing accounts.");
@@ -118,9 +141,9 @@ public class E2eUserProvisioner implements ApplicationRunner {
             throw new IllegalStateException("E2E user provisioning aborted: account collision detected");
         }
 
-        Role employeeRole = roleRepository.findByCode(ROLE_EMPLOYEE)
+        Role targetRole = roleRepository.findByCode(roleCode)
                 .orElseThrow(() -> new IllegalStateException(
-                        "E2E user provisioning failed: canonical role " + ROLE_EMPLOYEE + " not found in database"));
+                        "E2E user provisioning failed: canonical role " + roleCode + " not found in database"));
 
         UUID newUserId = UUID.randomUUID();
         String encodedPassword = passwordEncoder.encode(password);
@@ -138,13 +161,10 @@ public class E2eUserProvisioner implements ApplicationRunner {
 
         User savedUser = userRepository.save(newUser);
 
-        UserRole userRole = new UserRole(savedUser.getId(), employeeRole.getId(), Instant.now(), null);
+        UserRole userRole = new UserRole(savedUser.getId(), targetRole.getId(), Instant.now(), null);
         userRoleRepository.save(userRole);
 
-        savedUser.setRoles(Collections.singleton(employeeRole));
-        userRepository.save(savedUser);
-
-        log.info("Dedicated E2E test account provisioned successfully with ACTIVE status and least-privilege role.");
+        log.info("Dedicated E2E test account provisioned successfully with ACTIVE status and role: {}", roleCode);
     }
 
     private void validatePasswordPolicy(String rawPassword) {
@@ -210,13 +230,11 @@ public class E2eUserProvisioner implements ApplicationRunner {
         return sanitized;
     }
 
-    private void ensureEmployeeRoleAttached(User user) {
-        boolean hasEmployee = user.getRoles().stream()
-                .anyMatch(r -> ROLE_EMPLOYEE.equalsIgnoreCase(r.getCode()));
-        if (!hasEmployee) {
-            roleRepository.findByCode(ROLE_EMPLOYEE).ifPresent(role -> {
-                userRoleRepository.save(new UserRole(user.getId(), role.getId(), Instant.now(), null));
-            });
+    private void ensureRoleAttached(User user, Role targetRole) {
+        boolean hasTarget = user.getRoles().stream()
+                .anyMatch(r -> targetRole.getCode().equalsIgnoreCase(r.getCode()));
+        if (!hasTarget) {
+            userRoleRepository.save(new UserRole(user.getId(), targetRole.getId(), Instant.now(), null));
         }
     }
 

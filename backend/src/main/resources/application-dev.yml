@@ -21,8 +21,11 @@ worksphere:
   dev:
     e2e-user:
       enabled: ${WORKSPHERE_DEV_E2E_USER_ENABLED:false}
+      role: ${WORKSPHERE_E2E_ROLE:EMPLOYEE}
       login: ${WORKSPHERE_E2E_LOGIN:}
       username: ${WORKSPHERE_E2E_USERNAME:}
       email: ${WORKSPHERE_E2E_EMAIL:}
       password: ${WORKSPHERE_E2E_PASSWORD:}
       full-name: ${WORKSPHERE_E2E_FULL_NAME:E2E Test User}
+    e2e-asset-fixture:
+      enabled: ${WORKSPHERE_DEV_E2E_ASSET_FIXTURE_ENABLED:false}

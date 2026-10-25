@@ -64,7 +64,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             UUID userId = UUID.fromString(claims.getSubject());
 
             if (SecurityContextHolder.getContext().getAuthentication() == null) {
-                User user = userRepository.findActiveById(userId).orElse(null);
+                User user = userRepository.findActiveWithRolesById(userId).orElse(null);
 
                 if (user != null && user.getStatus() == UserStatus.ACTIVE) {
                     List<SimpleGrantedAuthority> authorities = buildAuthorities(user);
