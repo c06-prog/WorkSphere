@@ -20,16 +20,16 @@ jest.mock('../../src/features/assets/api/assetApi');
 describe('AddRepairHistoryModal Component', () => {
   const mockAssetId = '11111111-2222-3333-4444-555555555555';
 
-  const mockCreatedResponse: AssetRepairHistoryResponse = {
+    const mockCreatedResponse: AssetRepairHistoryResponse = {
     id: '99999999-8888-7777-6666-555555555555',
     repairType: 'MAINTENANCE',
     description: 'Vệ sinh và tra keo tản nhiệt',
     vendorName: 'FPT Services',
     cost: 500000,
     startedAt: '2026-10-25T08:00:00Z',
-    completedAt: '2026-10-25T17:00:00Z',
+    completedAt: '2026-10-25T10:00:00Z',
     result: 'Hoạt động tốt',
-    createdAt: '2026-10-25T17:05:00Z',
+    createdAt: '2026-10-25T10:05:00Z',
   };
 
   beforeEach(() => {
@@ -205,7 +205,7 @@ describe('AddRepairHistoryModal Component', () => {
         vendorName: 'Trung tâm BH',
         cost: 1500000,
         startedAt: '2026-10-20T08:00:00Z',
-        completedAt: '2026-10-21T17:00:00Z',
+        completedAt: '2026-10-21T10:00:00Z',
         result: 'Hoàn tất',
       });
       expect(onCreated).toHaveBeenCalledWith(mockCreatedResponse);

@@ -27,15 +27,14 @@
 
 ## Latest Implementation & Hardening
 
-- Latest Implementation: Phase 17F-CORRECTIVE Asset Repair History Workflow Completion
-  - Implementation Report: reports/PHASE_17F_CORRECTIVE_REPAIR_HISTORY.md
+- Latest Implementation: Phase 17F-VALIDATION Asset Repair History Timezone Hardening & Runtime Audit
+  - Implementation Report: reports/PHASE_17F_REPAIR_HISTORY_ANDROID_VALIDATION.md
   - Delivered Scope:
-    - Created AddRepairHistoryModal.tsx with full support for CreateAssetRepairHistoryRequest (repairType chips, description, startedDate, completedDate, cost, vendorName, result).
-    - Integrated "Ghi nhận sửa chữa" CTA (btn-asset-action-add-repair) in AssetDetailScreen.tsx gated behind ASSET_MANAGE/ADMIN.
-    - Added refreshKey reactivity to RepairHistoryPreview.tsx to instantly reflect newly created repair records.
-    - Added 12 unit tests in AddRepairHistoryModal.test.tsx covering validation, security gating, double-submit prevention, and error mapping.
+    - Timezone Round-Trip Hardening: Aligned `completedAt` serialization in `AddRepairHistoryModal.tsx` from `T17:00:00Z` to `T10:00:00Z` (17:00:00 GMT+7) to eliminate a 1-day calendar drift in Vietnam and adjacent timezones while preserving `completedAt >= startedAt`.
+    - Updated `AddRepairHistoryModal.test.tsx` and validated date preservation across GMT-5, UTC, GMT+7, and GMT+9.
+    - Audited canonical dev fixtures against `E2eUserProvisioner.java` and verified adherence to Decision D-056.
     - Validation Evidence: 114 test suites, 1050 tests PASS (0 failures, 0 skipped, 0 snapshots). TypeScript 0 errors. ESLint 0 errors, 48 historical warnings preserved (0 asset warnings).
-- Prior Implementation: Phase 17C-NAV Asset Stack Navigation Contract Correction
+- Prior Implementation: Phase 17F-CORRECTIVE Asset Repair History Workflow Completion
 - Implementation Report: eports/PHASE_17C_NAVIGATION_CORRECTION.md\r
 - Delivered Scope:
   - Realigned asset navigation architecture to strictly comply with Decision D-066.

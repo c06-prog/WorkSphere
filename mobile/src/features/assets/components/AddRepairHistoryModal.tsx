@@ -173,7 +173,7 @@ export function AddRepairHistoryModal({
     const isoStartedAt = `${startedDate.trim()}T08:00:00Z`;
     let isoCompletedAt: string | undefined;
     if (completedDate.trim()) {
-      isoCompletedAt = `${completedDate.trim()}T17:00:00Z`;
+      isoCompletedAt = `${completedDate.trim()}T10:00:00Z`;
     }
 
     const payload: CreateAssetRepairHistoryRequest = {
