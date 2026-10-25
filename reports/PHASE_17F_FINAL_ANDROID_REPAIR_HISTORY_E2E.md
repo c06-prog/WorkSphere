@@ -59,10 +59,10 @@ To support end-to-end validation under canonical domain boundaries:
      - Cost: `Chi phí: 350.000 đ`
    - Verified via direct backend API query `GET /api/v1/assets/{assetId}/repair-histories`:
      - Returned 1 item with ID `8fef0ba5-1f55-44c4-9bd1-5c235536a2e4`, `repairType: "MAINTENANCE"`, `cost: 350000.00`.
-     - Zero duplicate records created (double-submission prevention verified).
+     - Exactly 1 record created from this submission. Same-tick double-submission protection is strictly enforced by the synchronous `submittingRef.current` lock verified in unit tests.
      - Timezone round-trip verified: `2026-10-25T08:00:00Z` rendered as `25/10/2026` with no rollover under GMT+7.
-6. **Artifact Capture**:
-   - Evidence screenshot saved to `reports/screenshots/phase17_repair_history_success.png`.
+6. **Artifact Capture & Verification**:
+   - Authoritative textual and API verification confirmed in backend and Android UI hierarchy logs. (Screenshot artifact removed per repository scope policy).
 
 ---
 
