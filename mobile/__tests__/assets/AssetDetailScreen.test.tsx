@@ -206,8 +206,9 @@ describe('AssetDetailScreen (SCR-AST-02)', () => {
     const requestItem = getByTestId('related-request-item-0');
     fireEvent.press(requestItem);
 
-    expect(mockNavigate).toHaveBeenCalledWith('ServiceRequestDetail', {
-      requestId: 'srv-uuid-1',
+    expect(mockNavigate).toHaveBeenCalledWith('MainTabs', {
+      screen: 'ServiceRequestDetail',
+      params: { requestId: 'srv-uuid-1' },
     });
   });
 
@@ -219,8 +220,9 @@ describe('AssetDetailScreen (SCR-AST-02)', () => {
     expect(reportFaultBtn).toBeTruthy();
 
     fireEvent.press(reportFaultBtn);
-    expect(mockNavigate).toHaveBeenCalledWith('CreateServiceRequest', {
-      assetId: '11111111-2222-3333-4444-555555555555',
+    expect(mockNavigate).toHaveBeenCalledWith('MainTabs', {
+      screen: 'CreateServiceRequest',
+      params: { assetId: '11111111-2222-3333-4444-555555555555' },
     });
   });
 
@@ -301,5 +303,79 @@ describe('AssetDetailScreen (SCR-AST-02)', () => {
 
     expect(queryByTestId('btn-asset-detail-edit')).toBeNull();
     expect(queryByTestId('btn-asset-action-edit')).toBeNull();
+  });
+
+  it('13. displays Return CTA for ASSIGNED asset with active assignment when user has ASSET_MANAGE', async () => {
+    (useAuth as jest.Mock).mockReturnValue({
+      currentUser: {
+        id: 'usr-manager',
+        fullName: 'Asset Manager',
+        roles: ['EMPLOYEE'],
+        permissions: ['ASSET_MANAGE'],
+      },
+    });
+
+    const { getByTestId, queryByTestId } = await renderScreen();
+
+    // mockAsset is ASSIGNED with currentAssignment -> Return CTA visible, Assign CTA hidden
+    expect(getByTestId('btn-asset-action-return')).toBeTruthy();
+    expect(queryByTestId('btn-asset-action-assign')).toBeNull();
+
+    await act(async () => {
+      fireEvent.press(getByTestId('btn-asset-action-return'));
+    });
+    await waitFor(() => {
+      expect(getByTestId('return-asset-modal')).toBeTruthy();
+    });
+  });
+
+  it('14. displays Assign CTA for AVAILABLE asset when user has ASSET_MANAGE', async () => {
+    (useAuth as jest.Mock).mockReturnValue({
+      currentUser: {
+        id: 'usr-manager',
+        fullName: 'Asset Manager',
+        roles: ['EMPLOYEE'],
+        permissions: ['ASSET_MANAGE'],
+      },
+    });
+
+    const availableAsset: AssetDetailResponse = {
+      ...mockAsset,
+      status: 'AVAILABLE',
+      currentAssignment: null,
+    };
+    (useAssetDetail as jest.Mock).mockReturnValue({
+      ...defaultMockHook,
+      asset: availableAsset,
+    });
+
+    const { getByTestId, queryByTestId } = await renderScreen();
+
+    // AVAILABLE asset -> Assign CTA visible, Return CTA hidden
+    expect(getByTestId('btn-asset-action-assign')).toBeTruthy();
+    expect(queryByTestId('btn-asset-action-return')).toBeNull();
+
+    await act(async () => {
+      fireEvent.press(getByTestId('btn-asset-action-assign'));
+    });
+    await waitFor(() => {
+      expect(getByTestId('assign-asset-modal')).toBeTruthy();
+    });
+  });
+
+  it('15. hides both Assign and Return CTAs for standard user without ASSET_MANAGE/ADMIN', async () => {
+    (useAuth as jest.Mock).mockReturnValue({
+      currentUser: {
+        id: 'usr-employee',
+        fullName: 'Normal Employee',
+        roles: ['EMPLOYEE'],
+        permissions: ['ASSET_READ'],
+      },
+    });
+
+    const { queryByTestId } = await renderScreen();
+
+    expect(queryByTestId('btn-asset-action-assign')).toBeNull();
+    expect(queryByTestId('btn-asset-action-return')).toBeNull();
   });
 });

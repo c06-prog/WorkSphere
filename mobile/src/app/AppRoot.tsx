@@ -10,15 +10,17 @@ export interface AppRootProps {
   sessionState?: SessionState;
   theme?: Theme;
   initialMetrics?: Metrics | null;
+  initialAuthState?: Partial<import('./auth/authTypes').AuthState>;
 }
 
 export function AppRoot({
   sessionState,
   theme,
   initialMetrics,
+  initialAuthState,
 }: AppRootProps) {
   return (
-    <AppProviders theme={theme} initialMetrics={initialMetrics}>
+    <AppProviders theme={theme} initialMetrics={initialMetrics} initialAuthState={initialAuthState}>
       <NavigationContainer>
         <RootNavigator sessionState={sessionState} />
       </NavigationContainer>

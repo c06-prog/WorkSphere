@@ -8,13 +8,14 @@ export interface AppProvidersProps {
   children: ReactNode;
   theme?: Theme;
   initialMetrics?: Metrics | null;
+  initialAuthState?: Partial<import('../auth/authTypes').AuthState>;
 }
 
-export function AppProviders({ children, theme, initialMetrics }: AppProvidersProps) {
+export function AppProviders({ children, theme, initialMetrics, initialAuthState }: AppProvidersProps) {
   return (
     <SafeAreaProvider {...(initialMetrics !== undefined ? { initialMetrics } : {})}>
       <ThemeProvider theme={theme}>
-        <AuthProvider>
+        <AuthProvider initialState={initialAuthState}>
           {children}
         </AuthProvider>
       </ThemeProvider>

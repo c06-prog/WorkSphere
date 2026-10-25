@@ -43,6 +43,9 @@ import { useAssetDetail } from '../hooks/useAssetDetail';
 import { RepairHistoryPreview } from '../components/RepairHistoryPreview';
 import { AssetDetailResponse } from '../types/assetTypes';
 import { EditAssetModal } from '../components/EditAssetModal';
+import { AssignAssetModal } from '../components/AssignAssetModal';
+import { ReturnAssetModal } from '../components/ReturnAssetModal';
+import { AssetAssignmentResponse } from '../types/assetTypes';
 
 export function AssetDetailScreen() {
   const theme = useAppTheme();
@@ -65,6 +68,8 @@ export function AssetDetailScreen() {
   } = useAssetDetail(assetId);
 
   const [editModalVisible, setEditModalVisible] = React.useState(false);
+  const [assignModalVisible, setAssignModalVisible] = React.useState(false);
+  const [returnModalVisible, setReturnModalVisible] = React.useState(false);
   const [conflictDialogVisible, setConflictDialogVisible] = React.useState(false);
 
   // Authorization checks
@@ -76,6 +81,22 @@ export function AssetDetailScreen() {
 
   // Report fault visibility: Active assignee OR Manager/Admin
   const canReportFault = isActiveAssignee || hasAssetManage;
+
+  // Assign is allowed if user has ASSET_MANAGE/ADMIN and asset is AVAILABLE
+  const canAssign = hasAssetManage && asset?.status === 'AVAILABLE';
+
+  // Return is allowed if user has ASSET_MANAGE/ADMIN and asset is ASSIGNED with an active assignment
+  const canReturn = hasAssetManage && asset?.status === 'ASSIGNED' && Boolean(asset?.currentAssignment?.id);
+
+  const handleAssignSuccess = async (_assignment: AssetAssignmentResponse) => {
+    setAssignModalVisible(false);
+    await invalidateAndRefresh();
+  };
+
+  const handleReturnSuccess = async (_result: AssetAssignmentResponse) => {
+    setReturnModalVisible(false);
+    await invalidateAndRefresh();
+  };
 
   const handleEditSuccess = (updatedAsset: AssetDetailResponse) => {
     setEditModalVisible(false);
@@ -96,11 +117,17 @@ export function AssetDetailScreen() {
 
   const handleReportFault = () => {
     if (!asset?.id) return;
-    navigation.navigate('CreateServiceRequest', { assetId: asset.id });
+    (navigation as any).navigate('MainTabs', {
+      screen: 'CreateServiceRequest',
+      params: { assetId: asset.id },
+    });
   };
 
   const handleServiceRequestPress = (serviceRequestId: string) => {
-    navigation.navigate('ServiceRequestDetail', { requestId: serviceRequestId });
+    (navigation as any).navigate('MainTabs', {
+      screen: 'ServiceRequestDetail',
+      params: { requestId: serviceRequestId },
+    });
   };
 
   const formatDate = (isoString?: string | null): string => {
@@ -522,8 +549,30 @@ export function AssetDetailScreen() {
           </View>
         ) : null}
 
-        {/* Action Buttons */}
+                {/* Action Buttons */}
         <View style={styles.actionSection} testID="asset-detail-actions">
+          {canAssign ? (
+            <View style={styles.actionButtonItem}>
+              <AppButton
+                title="Cấp phát tài sản"
+                variant="primary"
+                onPress={() => setAssignModalVisible(true)}
+                accessibilityLabel="Cấp phát tài sản này cho nhân viên"
+                testID="btn-asset-action-assign"
+              />
+            </View>
+          ) : null}
+          {canReturn ? (
+            <View style={styles.actionButtonItem}>
+              <AppButton
+                title="Thu hồi tài sản"
+                variant="primary"
+                onPress={() => setReturnModalVisible(true)}
+                accessibilityLabel="Thu hồi tài sản này về kho"
+                testID="btn-asset-action-return"
+              />
+            </View>
+          ) : null}
           {hasAssetManage ? (
             <View style={styles.actionButtonItem}>
               <AppButton
@@ -555,6 +604,29 @@ export function AssetDetailScreen() {
           asset={asset}
           onClose={() => setEditModalVisible(false)}
           onSuccess={handleEditSuccess}
+          onConflict={handleEditConflict}
+        />
+      ) : null}
+
+            {/* Assign Asset Modal */}
+      {asset ? (
+        <AssignAssetModal
+          visible={assignModalVisible}
+          asset={asset}
+          onClose={() => setAssignModalVisible(false)}
+          onSuccess={handleAssignSuccess}
+          onConflict={handleEditConflict}
+        />
+      ) : null}
+
+      {/* Return Asset Modal */}
+      {asset && asset.currentAssignment ? (
+        <ReturnAssetModal
+          visible={returnModalVisible}
+          asset={asset}
+          assignmentVersion={0}
+          onClose={() => setReturnModalVisible(false)}
+          onSuccess={handleReturnSuccess}
           onConflict={handleEditConflict}
         />
       ) : null}

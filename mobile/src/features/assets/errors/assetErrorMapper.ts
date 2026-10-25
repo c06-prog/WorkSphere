@@ -174,6 +174,17 @@ export function mapAssetError(error: unknown): AssetPresentationError {
           traceId,
         };
 
+      case 'ASSET_ASSIGNMENT_NOT_ACTIVE':
+        return {
+          message: 'Phân công không ở trạng thái hoạt động',
+          placement: 'dialog',
+          retryable: false,
+          isConflict: true,
+          isNotFound: false,
+          isForbidden: false,
+          traceId,
+        };
+
       case 'ASSET_ACCESS_DENIED':
         return {
           message: 'Bạn không có quyền truy cập hoặc thao tác trên tài sản này',
