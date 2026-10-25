@@ -102,22 +102,22 @@ export function NotificationListScreen() {
   const dispatchNavigationTarget = (target: NonNullable<ReturnType<typeof getNotificationNavigationTarget>>) => {
     switch (target.screen) {
       case 'AssetDetail':
-        (navigation as any).navigate('AssetDetail', target.params);
+        navigation.navigate('AssetDetail', target.params);
         break;
       case 'TaskDetail':
-        (navigation as any).navigate('MainTabs', {
+        navigation.navigate('MainTabs', {
           screen: 'TaskDetail',
           params: target.params,
         });
         break;
       case 'ProjectDetail':
-        (navigation as any).navigate('MainTabs', {
+        navigation.navigate('MainTabs', {
           screen: 'ProjectDetail',
           params: target.params,
         });
         break;
       case 'ServiceRequestDetail':
-        (navigation as any).navigate('MainTabs', {
+        navigation.navigate('MainTabs', {
           screen: 'ServiceRequestDetail',
           params: target.params,
         });
