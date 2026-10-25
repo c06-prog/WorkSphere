@@ -4,11 +4,12 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: GIAI ĐOẠN 16A — TEST INFRASTRUCTURE & MULTI-ROLE FIXTURE FOUNDATION
-- Status: Giai đoạn 16A HOÀN THÀNH. Hạ tầng fixture đa vai trò, runbook môi trường, mẫu bằng chứng và ma trận RBAC đã sẵn sàng 100%.
+- Current Task: GIAI ĐOẠN 16B — FLOW-01 AUTHENTICATION, SESSION & RBAC E2E WAVE
+- Status: Giai đoạn 16B HOÀN THÀNH. Xác minh 4 vai trò canonical, vòng đời session/token rotation, direct API RBAC matrix, cách ly người dùng và bằng chứng chạy runtime trên Android Emulator API 35 đạt 100%.
 - Canonical Test Plan: `reports/PHASE_16_SYSTEM_INTEGRATION_TEST_PLAN_FREEZE.md`
 - Subphase 16A Report: `reports/PHASE_16A_TEST_INFRASTRUCTURE_FIXTURE_FOUNDATION.md`
-- Next Action: PHASE 16B — FLOW-01 AUTHENTICATION, SESSION & RBAC E2E WAVE.
+- Subphase 16B Report: `reports/PHASE_16B_AUTH_SESSION_RBAC_E2E.md`
+- Next Action: PHASE 16C — FLOW-02 PROJECT & FLOW-03 TASK MANAGEMENT E2E WAVE.
 - Execution Waves Plan:
   - 16A: Test Infrastructure & Multi-Role Fixture Foundation
   - 16B: FLOW-01 Authentication, Session & RBAC E2E Wave

@@ -24,11 +24,12 @@
 - Phase 17 Mobile Asset Management: CLOSED (MEMORY_CHECKPOINT_CLOSED).
 - Phase 18 Mobile Notification System: CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 18A..18E + 18E-Runtime-Corrective + Type-Safety Hardening CLOSED).
 - Memory Checkpoint: `reports/PHASE_18_MEMORY_CHECKPOINT.md`
-- Current Status: ROADMAP GIAI ĐOẠN 16 — Subphase 16A (Test Infrastructure & Multi-Role Fixture Foundation) COMPLETED. Ready for Wave 16B.
+- Current Status: ROADMAP GIAI ĐOẠN 16 — Subphase 16B (FLOW-01 Authentication, Session & RBAC E2E Wave) COMPLETED. Ready for Wave 16C.
 - Latest Decision: D-068 Roadmap Giai đoạn 16 — System Integration Test Plan & Execution Waves Freeze.
 - Canonical Test Plan: `reports/PHASE_16_SYSTEM_INTEGRATION_TEST_PLAN_FREEZE.md`
 - Subphase 16A Report: `reports/PHASE_16A_TEST_INFRASTRUCTURE_FIXTURE_FOUNDATION.md`
-- Next Action: PHASE 16B — FLOW-01 AUTHENTICATION, SESSION & RBAC E2E WAVE.
+- Subphase 16B Report: `reports/PHASE_16B_AUTH_SESSION_RBAC_E2E.md`
+- Next Action: PHASE 16C — FLOW-02 PROJECT & FLOW-03 TASK MANAGEMENT E2E WAVE.
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening
