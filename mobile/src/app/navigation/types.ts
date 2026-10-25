@@ -49,6 +49,7 @@ export type AppStackParamList = {
   AssetList: undefined;
   AssetDetail: { assetId: string };
   CreateAsset: undefined;
+  NotificationList: undefined;
 };
 
 export type RootStackParamList = {
