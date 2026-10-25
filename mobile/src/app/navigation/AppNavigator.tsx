@@ -2,6 +2,7 @@ import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { MainTabNavigator } from './MainTabNavigator';
 import { AssetListScreen, AssetDetailScreen, CreateAssetScreen } from '../../features/assets/screens';
+import { NotificationListScreen } from '../../features/notifications/screens';
 import { useAppTheme } from '../providers/ThemeProvider';
 import type { AppStackParamList } from './types';
 
@@ -50,6 +51,14 @@ export function AppNavigator() {
         component={CreateAssetScreen}
         options={{
           headerTitle: 'Tạo tài sản mới',
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="NotificationList"
+        component={NotificationListScreen}
+        options={{
+          headerTitle: 'Thông báo',
           headerShown: false,
         }}
       />

@@ -92,7 +92,17 @@ export function DashboardScreen() {
           <Text style={[theme.typography.heading1, { color: theme.colors.textPrimary }]}>
             Bảng điều khiển
           </Text>
-          <Text style={styles.screenIdHidden}>SCR-MAIN-01</Text>
+          <Pressable
+            onPress={() => navigation.navigate('NotificationList')}
+            accessibilityRole="button"
+            accessibilityLabel="Mở danh sách thông báo"
+            testID="btn-dashboard-notifications"
+            style={styles.notificationBellButton}
+          >
+            <Text style={[theme.typography.body, styles.notificationBellText, { color: theme.colors.primary }]}>
+              🔔
+            </Text>
+          </Pressable>
         </View>
         <Text style={[theme.typography.caption, { color: theme.colors.textSecondary, marginTop: theme.spacing.xxs }]}>
           SCR-MAIN-01: Tổng quan công việc và dự án cá nhân
@@ -441,5 +451,14 @@ const styles = StyleSheet.create({
   screenIdBadge: {
     fontSize: 12,
     fontWeight: '500',
+  },
+  notificationBellButton: {
+    minWidth: 48,
+    minHeight: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  notificationBellText: {
+    fontSize: 20,
   },
 });

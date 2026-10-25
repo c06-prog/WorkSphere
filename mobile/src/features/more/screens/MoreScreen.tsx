@@ -28,6 +28,14 @@ export function MoreScreen() {
     >
       <View style={styles.actionContainer}>
         <AppButton
+          title="Thông báo"
+          variant="outline"
+          onPress={() => navigation.navigate('NotificationList')}
+          accessibilityLabel="Xem danh sách thông báo"
+          testID="btn-navigate-notifications"
+          style={styles.buttonSpacing}
+        />
+        <AppButton
           title={assetButtonTitle}
           variant="outline"
           onPress={() => navigation.navigate('AssetList')}
