@@ -5,7 +5,7 @@
 
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
-import type { CompositeNavigationProp, RouteProp } from '@react-navigation/native';
+import type { CompositeNavigationProp, NavigatorScreenParams, RouteProp } from '@react-navigation/native';
 
 export type SessionState = 'INITIALIZING' | 'UNAUTHENTICATED' | 'AUTHENTICATED';
 
@@ -45,7 +45,7 @@ export type MainTabParamList = {
 };
 
 export type AppStackParamList = {
-  MainTabs: undefined;
+  MainTabs: NavigatorScreenParams<MainTabParamList> | undefined;
   AssetList: undefined;
   AssetDetail: { assetId: string };
   CreateAsset: undefined;
@@ -83,5 +83,10 @@ export type ProfileNavigationProp<RouteName extends keyof MainTabParamList> =
 
 export type AssetDetailNavigationProp = CompositeNavigationProp<
   NativeStackNavigationProp<AppStackParamList, 'AssetDetail'>,
+  BottomTabNavigationProp<MainTabParamList>
+>;
+
+export type NotificationListNavigationProp = CompositeNavigationProp<
+  NativeStackNavigationProp<AppStackParamList, 'NotificationList'>,
   BottomTabNavigationProp<MainTabParamList>
 >;

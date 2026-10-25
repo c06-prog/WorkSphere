@@ -20,6 +20,7 @@ export interface NotificationCardProps {
   notification: NotificationResponse;
   onPress?: (notification: NotificationResponse) => void;
   isMarkingRead?: boolean;
+  isNavigating?: boolean;
   testID?: string;
   referenceNowMs?: number;
 }
@@ -28,17 +29,20 @@ export function NotificationCard({
   notification,
   onPress,
   isMarkingRead = false,
+  isNavigating = false,
   testID,
   referenceNowMs,
 }: NotificationCardProps) {
   const theme = useAppTheme();
 
   const isUnread = !notification.read;
+  const isPending = isMarkingRead || isNavigating;
   const timeText = formatRelativeTime(notification.createdAt, referenceNowMs);
 
   const accessibleLabel = [
     isUnread ? 'Chưa đọc' : 'Đã đọc',
     isMarkingRead ? 'Đang đánh dấu đã đọc' : '',
+    isNavigating ? 'Đang mở liên kết' : '',
     `Tiêu đề: ${notification.title}`,
     `Nội dung: ${notification.message}`,
     `Thời gian: ${timeText}`,
@@ -47,7 +51,7 @@ export function NotificationCard({
     .join(', ');
 
   const handlePress = () => {
-    if (onPress && !isMarkingRead) {
+    if (onPress && !isPending) {
       onPress(notification);
     }
   };
@@ -55,10 +59,10 @@ export function NotificationCard({
   return (
     <Pressable
       onPress={handlePress}
-      disabled={isMarkingRead}
+      disabled={isPending}
       accessibilityRole="button"
       accessibilityLabel={accessibleLabel}
-      accessibilityState={{ selected: isUnread, disabled: isMarkingRead }}
+      accessibilityState={{ selected: isUnread, disabled: isPending }}
       testID={testID ?? `notification-card-${notification.id}`}
       style={({ pressed }) => [
         styles.container,
@@ -70,7 +74,7 @@ export function NotificationCard({
           borderRadius: theme.radii.medium,
           padding: theme.spacing.md,
           marginBottom: theme.spacing.sm,
-          opacity: pressed ? 0.85 : isMarkingRead ? 0.6 : 1,
+          opacity: pressed ? 0.85 : isPending ? 0.6 : 1,
         },
       ]}
     >

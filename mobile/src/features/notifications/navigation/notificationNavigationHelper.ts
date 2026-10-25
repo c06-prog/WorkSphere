@@ -12,9 +12,19 @@ export type NotificationNavigationTarget =
   | { screen: 'ServiceRequestDetail'; params: { requestId: string } }
   | { screen: 'AssetDetail'; params: { assetId: string } };
 
+const UUID_REGEX = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+
+/**
+ * Validates whether a string is a standard RFC 4122 UUID.
+ */
+export function isValidUuid(id: string | null | undefined): boolean {
+  if (!id) return false;
+  return UUID_REGEX.test(id.trim());
+}
+
 /**
  * Pure mapping helper that determines target navigation destination from reference metadata.
- * Returns null if referenceType is missing, unrecognized, or referenceId is empty/invalid.
+ * Returns null if referenceType is missing, unrecognized, or referenceId is empty/invalid UUID.
  * Does NOT invoke navigation directly; does NOT parse title/message strings.
  */
 export function getNotificationNavigationTarget(
@@ -26,7 +36,7 @@ export function getNotificationNavigationTarget(
   }
 
   const trimmedId = referenceId.trim();
-  if (trimmedId.length === 0) {
+  if (!isValidUuid(trimmedId)) {
     return null;
   }
 

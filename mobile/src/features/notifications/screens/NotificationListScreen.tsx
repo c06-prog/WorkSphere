@@ -17,7 +17,7 @@
  * - Context deep-link navigation is deferred to Phase 18D.
  */
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState, useEffect, useContext } from 'react';
 import {
   FlatList,
   Pressable,
@@ -28,20 +28,42 @@ import {
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useAppTheme } from '../../../app/providers/ThemeProvider';
-import { AppStackNavProp } from '../../../app/navigation/types';
+import { NotificationListNavigationProp } from '../../../app/navigation/types';
+import { AuthContext } from '../../../app/auth/AuthProvider';
 import { EmptyState, ErrorState, LoadingIndicator } from '../../../shared/components';
 import { ConfirmationDialog } from '../../../shared/components/ConfirmationDialog';
 import { useNotificationBadge } from '../context/NotificationBadgeContext';
 import { NotificationCard } from '../components/NotificationCard';
 import { NotificationResponse } from '../types/notificationTypes';
 import { NotificationTabMode, useNotifications } from '../hooks/useNotifications';
+import { getNotificationNavigationTarget } from '../navigation/notificationNavigationHelper';
 
 export function NotificationListScreen() {
   const theme = useAppTheme();
-  const navigation = useNavigation<AppStackNavProp<'NotificationList'>>();
+  const navigation = useNavigation<NotificationListNavigationProp>();
   const { unreadCount, refreshUnreadCount } = useNotificationBadge();
+  const authContext = useContext(AuthContext);
+  const currentUser = authContext?.currentUser;
 
   const [confirmMarkAllVisible, setConfirmMarkAllVisible] = useState(false);
+  const [infoMessage, setInfoMessage] = useState<string | null>(null);
+  const [navigatingId, setNavigatingId] = useState<string | null>(null);
+
+  const navigatingIdsRef = useRef<Set<string>>(new Set());
+  const activeSessionUserIdRef = useRef<string | undefined>(currentUser?.id);
+
+  // Synchronize session user
+  useEffect(() => {
+    activeSessionUserIdRef.current = currentUser?.id;
+  }, [currentUser?.id]);
+
+  // Clear locks on unmount
+  useEffect(() => {
+    const navigatingIds = navigatingIdsRef.current;
+    return () => {
+      navigatingIds.clear();
+    };
+  }, []);
 
   const {
     notifications,
@@ -77,11 +99,87 @@ export function NotificationListScreen() {
     }
   };
 
-  const handleNotificationPress = (notification: NotificationResponse) => {
-    if (!notification.read) {
-      markOneAsRead(notification.id).catch(() => {});
+  const dispatchNavigationTarget = (target: NonNullable<ReturnType<typeof getNotificationNavigationTarget>>) => {
+    switch (target.screen) {
+      case 'AssetDetail':
+        (navigation as any).navigate('AssetDetail', target.params);
+        break;
+      case 'TaskDetail':
+        (navigation as any).navigate('MainTabs', {
+          screen: 'TaskDetail',
+          params: target.params,
+        });
+        break;
+      case 'ProjectDetail':
+        (navigation as any).navigate('MainTabs', {
+          screen: 'ProjectDetail',
+          params: target.params,
+        });
+        break;
+      case 'ServiceRequestDetail':
+        (navigation as any).navigate('MainTabs', {
+          screen: 'ServiceRequestDetail',
+          params: target.params,
+        });
+        break;
     }
-    // Context deep-link will be plugged in Phase 18D
+  };
+
+  const handleNotificationPress = async (notification: NotificationResponse) => {
+    const notificationId = notification.id;
+
+    // Check synchronous lock to prevent rapid duplicate double-tap navigation
+    if (navigatingIdsRef.current.has(notificationId)) {
+      return;
+    }
+
+    const target = getNotificationNavigationTarget(notification.referenceType, notification.referenceId);
+
+    // Case C & E: Missing or unsupported reference
+    if (!target) {
+      if (!notification.read) {
+        await markOneAsRead(notificationId).catch(() => {});
+      }
+      setInfoMessage('Thông báo này không có nội dung liên kết để mở.');
+      return;
+    }
+
+    // Set lock
+    navigatingIdsRef.current.add(notificationId);
+    setNavigatingId(notificationId);
+    setInfoMessage(null);
+
+    const initialUserId = authContext?.currentUser?.id ?? activeSessionUserIdRef.current;
+    const initialSession = authContext?.sessionState ?? 'AUTHENTICATED';
+
+    try {
+      if (!notification.read) {
+        // Case A: Unread notification
+        const success = await markOneAsRead(notificationId);
+        // Case D: Mark-read failed -> do not navigate
+        if (!success) {
+          return;
+        }
+      }
+
+      const currentUserId = authContext?.currentUser?.id ?? activeSessionUserIdRef.current;
+      const currentSession = authContext?.sessionState ?? 'AUTHENTICATED';
+
+      // Session check: ensure user is still authenticated and session hasn't switched
+      if (
+        initialSession !== 'AUTHENTICATED' ||
+        currentSession !== 'AUTHENTICATED' ||
+        (initialUserId && currentUserId !== initialUserId)
+      ) {
+        return;
+      }
+
+      // Dispatch navigation
+      dispatchNavigationTarget(target);
+    } finally {
+      navigatingIdsRef.current.delete(notificationId);
+      setNavigatingId(null);
+    }
   };
 
   const handleConfirmMarkAll = async () => {
@@ -210,8 +308,20 @@ export function NotificationListScreen() {
           <Text style={[theme.typography.caption, styles.errorText, { color: theme.colors.error }]}>
             {mutationError.message}
           </Text>
-          <Pressable onPress={clearMutationError} style={styles.closeErrorButton}>
+          <Pressable onPress={clearMutationError} style={styles.closeErrorButton} accessibilityLabel="Đóng thông báo lỗi">
             <Text style={[theme.typography.caption, styles.closeErrorText, { color: theme.colors.error }]}>✕</Text>
+          </Pressable>
+        </View>
+      )}
+
+      {/* Info / Feedback Banner for Missing/Unsupported Reference */}
+      {infoMessage && (
+        <View style={[styles.mutationErrorBanner, { backgroundColor: theme.colors.surfaceVariant }]} testID="banner-notification-info">
+          <Text style={[theme.typography.caption, styles.errorText, { color: theme.colors.textPrimary }]}>
+            {infoMessage}
+          </Text>
+          <Pressable onPress={() => setInfoMessage(null)} style={styles.closeErrorButton} accessibilityLabel="Đóng thông báo">
+            <Text style={[theme.typography.caption, styles.closeErrorText, { color: theme.colors.textSecondary }]}>✕</Text>
           </Pressable>
         </View>
       )}
@@ -245,6 +355,7 @@ export function NotificationListScreen() {
               notification={item}
               onPress={handleNotificationPress}
               isMarkingRead={isMarkingId(item.id)}
+              isNavigating={navigatingId === item.id}
               testID={`notification-card-${item.id}`}
             />
           )}
