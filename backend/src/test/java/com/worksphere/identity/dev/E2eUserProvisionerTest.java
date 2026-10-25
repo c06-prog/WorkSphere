@@ -309,6 +309,37 @@ class E2eUserProvisionerTest {
                     assertThat(context).doesNotHaveBean(E2eUserProvisioner.class);
                 });
     }
+
+    @Test
+    @DisplayName("H. Supports all 4 canonical roles: EMPLOYEE, ADMIN, PROJECT_MANAGER, TEAM_LEADER")
+    void shouldSupportAllCanonicalRoles() {
+        Role pmRole = mock(Role.class);
+        lenient().when(pmRole.getId()).thenReturn(UUID.randomUUID());
+        lenient().when(pmRole.getCode()).thenReturn("PROJECT_MANAGER");
+        when(roleRepository.findByCode("PROJECT_MANAGER")).thenReturn(Optional.of(pmRole));
+        when(passwordEncoder.encode(anyString())).thenReturn("encodedSecret");
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        E2eUserProvisioner pmProvisioner = new E2eUserProvisioner(
+                userRepository, roleRepository, userRoleRepository, passwordEncoder,
+                true, "PROJECT_MANAGER", "pm_login", "pm_login", "pm@test.local", "Password123!", "PM User");
+
+        pmProvisioner.run(new DefaultApplicationArguments());
+
+        ArgumentCaptor<UserRole> roleCaptor = ArgumentCaptor.forClass(UserRole.class);
+        verify(userRoleRepository).save(roleCaptor.capture());
+        assertThat(roleCaptor.getValue().getRoleId()).isEqualTo(pmRole.getId());
+    }
+
+    @Test
+    @DisplayName("I. Fails fast with descriptive error when role is not canonical")
+    void shouldFailFastWhenRoleIsInvalid() {
+        assertThatThrownBy(() -> new E2eUserProvisioner(
+                userRepository, roleRepository, userRoleRepository, passwordEncoder,
+                true, "FACILITY_MANAGER", "user", "user", "user@test.local", "Password123!", "User"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("invalid or unsupported role 'FACILITY_MANAGER'");
+    }
 }
 
 

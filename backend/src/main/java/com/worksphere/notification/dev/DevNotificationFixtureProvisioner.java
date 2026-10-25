@@ -148,6 +148,18 @@ public class DevNotificationFixtureProvisioner implements ApplicationRunner {
                     ) ON CONFLICT (id) DO NOTHING
                     """,
                     FIXTURE_PROJECT_ID, userId, today, today.plusDays(30), userId, nowTs, nowTs);
+
+            // Add manager as PROJECT_MANAGER in project_members for consistent membership query
+            jdbcTemplate.update("""
+                    INSERT INTO project_members (
+                        id, project_id, user_id, project_role, joined_at, is_active,
+                        created_by, created_at, updated_at
+                    ) VALUES (
+                        gen_random_uuid(), ?, ?, 'PROJECT_MANAGER', ?, TRUE,
+                        ?, ?, ?
+                    ) ON CONFLICT (project_id, user_id) DO NOTHING
+                    """,
+                    FIXTURE_PROJECT_ID, userId, nowTs, userId, nowTs, nowTs);
         }
 
         // 2. Task

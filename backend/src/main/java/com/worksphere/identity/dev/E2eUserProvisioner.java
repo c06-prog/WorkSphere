@@ -45,7 +45,9 @@ public class E2eUserProvisioner implements ApplicationRunner {
 
     private static final String ROLE_EMPLOYEE = "EMPLOYEE";
     private static final String ROLE_ADMIN = "ADMIN";
-    private static final Set<String> ALLOWED_ROLES = Set.of(ROLE_EMPLOYEE, ROLE_ADMIN);
+    private static final String ROLE_PROJECT_MANAGER = "PROJECT_MANAGER";
+    private static final String ROLE_TEAM_LEADER = "TEAM_LEADER";
+    private static final Set<String> ALLOWED_ROLES = Set.of(ROLE_EMPLOYEE, ROLE_ADMIN, ROLE_PROJECT_MANAGER, ROLE_TEAM_LEADER);
 
     private static final int MIN_PASSWORD_LENGTH = 8;
     private static final int MAX_PASSWORD_LENGTH = 128;
