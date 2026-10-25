@@ -4,8 +4,10 @@ import { NotificationListScreen } from '../../src/features/notifications/screens
 import { notificationApi } from '../../src/features/notifications/api/notificationApi';
 import { NotificationResponse } from '../../src/features/notifications/types/notificationTypes';
 import { ThemeProvider } from '../../src/app/providers/ThemeProvider';
+import { useNotificationBadge } from '../../src/features/notifications/context/NotificationBadgeContext';
 
 jest.mock('../../src/features/notifications/api/notificationApi');
+jest.mock('../../src/features/notifications/context/NotificationBadgeContext');
 
 const mockGoBack = jest.fn();
 jest.mock('@react-navigation/native', () => {
@@ -16,11 +18,13 @@ jest.mock('@react-navigation/native', () => {
       goBack: mockGoBack,
       navigate: jest.fn(),
     }),
+    useFocusEffect: (cb: () => void) => cb(),
   };
 });
 
 describe('NotificationListScreen (SCR-NOT-01)', () => {
   const mockApi = notificationApi as jest.Mocked<typeof notificationApi>;
+  const mockUseBadge = useNotificationBadge as jest.MockedFunction<typeof useNotificationBadge>;
 
   const sampleNotifications: NotificationResponse[] = [
     {
@@ -47,6 +51,14 @@ describe('NotificationListScreen (SCR-NOT-01)', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockUseBadge.mockReturnValue({
+      unreadCount: 1,
+      isLoading: false,
+      error: null,
+      refreshUnreadCount: jest.fn().mockResolvedValue(undefined),
+      applyNotificationRead: jest.fn(),
+      applyAllRead: jest.fn(),
+    });
   });
 
   it('renders header, title, tabs, and lists notifications', async () => {

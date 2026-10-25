@@ -19,6 +19,7 @@ import { formatRelativeTime } from '../utils/notificationDate';
 export interface NotificationCardProps {
   notification: NotificationResponse;
   onPress?: (notification: NotificationResponse) => void;
+  isMarkingRead?: boolean;
   testID?: string;
   referenceNowMs?: number;
 }
@@ -26,6 +27,7 @@ export interface NotificationCardProps {
 export function NotificationCard({
   notification,
   onPress,
+  isMarkingRead = false,
   testID,
   referenceNowMs,
 }: NotificationCardProps) {
@@ -36,13 +38,16 @@ export function NotificationCard({
 
   const accessibleLabel = [
     isUnread ? 'Chưa đọc' : 'Đã đọc',
+    isMarkingRead ? 'Đang đánh dấu đã đọc' : '',
     `Tiêu đề: ${notification.title}`,
     `Nội dung: ${notification.message}`,
     `Thời gian: ${timeText}`,
-  ].join(', ');
+  ]
+    .filter(Boolean)
+    .join(', ');
 
   const handlePress = () => {
-    if (onPress) {
+    if (onPress && !isMarkingRead) {
       onPress(notification);
     }
   };
@@ -50,9 +55,10 @@ export function NotificationCard({
   return (
     <Pressable
       onPress={handlePress}
+      disabled={isMarkingRead}
       accessibilityRole="button"
       accessibilityLabel={accessibleLabel}
-      accessibilityState={{ selected: isUnread }}
+      accessibilityState={{ selected: isUnread, disabled: isMarkingRead }}
       testID={testID ?? `notification-card-${notification.id}`}
       style={({ pressed }) => [
         styles.container,
@@ -64,7 +70,7 @@ export function NotificationCard({
           borderRadius: theme.radii.medium,
           padding: theme.spacing.md,
           marginBottom: theme.spacing.sm,
-          opacity: pressed ? 0.85 : 1,
+          opacity: pressed ? 0.85 : isMarkingRead ? 0.6 : 1,
         },
       ]}
     >

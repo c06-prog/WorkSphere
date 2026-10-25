@@ -5,9 +5,11 @@ import { MoreScreen } from '../../src/features/more/screens/MoreScreen';
 import { ThemeProvider } from '../../src/app/providers/ThemeProvider';
 import { useDashboard } from '../../src/features/dashboard/hooks/useDashboard';
 import { useAuth } from '../../src/app/auth/AuthProvider';
+import { useNotificationBadge } from '../../src/features/notifications/context/NotificationBadgeContext';
 
 jest.mock('../../src/features/dashboard/hooks/useDashboard');
 jest.mock('../../src/app/auth/AuthProvider');
+jest.mock('../../src/features/notifications/context/NotificationBadgeContext');
 
 const mockNavigate = jest.fn();
 jest.mock('@react-navigation/native', () => {
@@ -18,15 +20,25 @@ jest.mock('@react-navigation/native', () => {
       navigate: mockNavigate,
       goBack: jest.fn(),
     }),
+    useFocusEffect: (cb: () => void) => cb(),
   };
 });
 
 describe('Notification Navigation Entry Points', () => {
   const mockUseDashboard = useDashboard as jest.MockedFunction<typeof useDashboard>;
   const mockUseAuth = useAuth as jest.MockedFunction<typeof useAuth>;
+  const mockUseBadge = useNotificationBadge as jest.MockedFunction<typeof useNotificationBadge>;
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockUseBadge.mockReturnValue({
+      unreadCount: 0,
+      isLoading: false,
+      error: null,
+      refreshUnreadCount: jest.fn().mockResolvedValue(undefined),
+      applyNotificationRead: jest.fn(),
+      applyAllRead: jest.fn(),
+    });
   });
 
   it('Dashboard bell button navigates to NotificationList', async () => {

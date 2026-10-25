@@ -12,7 +12,7 @@
  * - Touch targets >= 48dp and accessibility headers/roles
  */
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import {
   Pressable,
   RefreshControl,
@@ -21,10 +21,11 @@ import {
   Text,
   View,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useAppTheme } from '../../../app/providers/ThemeProvider';
 import { MainTabNavProp } from '../../../app/navigation/types';
 import { EmptyState, ErrorState, LoadingIndicator, PriorityBadge, StatusBadge } from '../../../shared/components';
+import { useNotificationBadge } from '../../notifications';
 import { MetricCard } from '../components/MetricCard';
 import { useDashboard } from '../hooks/useDashboard';
 import { formatDateTime } from '../utils/dateFormat';
@@ -34,6 +35,20 @@ export function DashboardScreen() {
   const theme = useAppTheme();
   const navigation = useNavigation<MainTabNavProp<'Dashboard'>>();
   const { data, initialLoading, refreshing, error, refreshError, load, refresh } = useDashboard();
+  const { unreadCount, refreshUnreadCount } = useNotificationBadge();
+
+  // Focus effect: Refresh unread badge count
+  useFocusEffect(
+    useCallback(() => {
+      refreshUnreadCount().catch(() => {});
+    }, [refreshUnreadCount])
+  );
+
+  const badgeText = unreadCount > 99 ? '99+' : unreadCount > 0 ? String(unreadCount) : null;
+  const bellAccessibilityLabel =
+    unreadCount > 0
+      ? `Thông báo, ${unreadCount} thông báo chưa đọc`
+      : 'Thông báo, không có thông báo chưa đọc';
 
   if (initialLoading && !data) {
     return (
@@ -95,13 +110,23 @@ export function DashboardScreen() {
           <Pressable
             onPress={() => navigation.navigate('NotificationList')}
             accessibilityRole="button"
-            accessibilityLabel="Mở danh sách thông báo"
+            accessibilityLabel={bellAccessibilityLabel}
             testID="btn-dashboard-notifications"
             style={styles.notificationBellButton}
           >
             <Text style={[theme.typography.body, styles.notificationBellText, { color: theme.colors.primary }]}>
               🔔
             </Text>
+            {badgeText && (
+              <View
+                style={[styles.badgeContainer, { backgroundColor: theme.colors.error }]}
+                testID="badge-dashboard-notifications"
+              >
+                <Text style={[styles.badgeText, { color: theme.colors.onError }]}>
+                  {badgeText}
+                </Text>
+              </View>
+            )}
           </Pressable>
         </View>
         <Text style={[theme.typography.caption, { color: theme.colors.textSecondary, marginTop: theme.spacing.xxs }]}>
@@ -457,8 +482,25 @@ const styles = StyleSheet.create({
     minHeight: 48,
     alignItems: 'center',
     justifyContent: 'center',
+    position: 'relative',
   },
   notificationBellText: {
     fontSize: 20,
+  },
+  badgeContainer: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    paddingHorizontal: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    lineHeight: 12,
   },
 });

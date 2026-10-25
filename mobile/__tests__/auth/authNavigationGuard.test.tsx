@@ -19,6 +19,15 @@ jest.mock('react-native-screens', () => {
   };
 });
 
+jest.mock('../../src/features/notifications/context/NotificationBadgeContext', () => ({
+  useNotificationBadge: () => ({
+    unreadCount: 0,
+    refreshUnreadCount: jest.fn().mockResolvedValue(0),
+    applyNotificationRead: jest.fn(),
+    applyAllRead: jest.fn(),
+  }),
+}));
+
 describe('RootNavigator Authentication Guard', () => {
   const createMockAuthContext = (
     sessionState: 'INITIALIZING' | 'UNAUTHENTICATED' | 'AUTHENTICATED'

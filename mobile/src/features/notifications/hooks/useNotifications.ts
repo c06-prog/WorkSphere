@@ -13,6 +13,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { notificationApi } from '../api/notificationApi';
+import { useNotificationBadge } from '../context/NotificationBadgeContext';
 import {
   NotificationListQuery,
   NotificationResponse,
@@ -53,6 +54,12 @@ export interface UseNotificationsResult {
   refresh: () => Promise<void>;
   loadMore: () => Promise<void>;
   retryPagination: () => Promise<void>;
+  markOneAsRead: (notificationId: string) => Promise<boolean>;
+  markAllAsRead: () => Promise<number>;
+  isMarkingId: (id: string) => boolean;
+  isMarkingAll: boolean;
+  mutationError: NotificationPresentationError | null;
+  clearMutationError: () => void;
 }
 
 export function useNotifications(options?: UseNotificationsOptions): UseNotificationsResult {
@@ -70,12 +77,19 @@ export function useNotifications(options?: UseNotificationsOptions): UseNotifica
   const [error, setError] = useState<NotificationPresentationError | null>(null);
   const [paginationError, setPaginationError] = useState<NotificationPresentationError | null>(null);
   const [refreshError, setRefreshError] = useState<string | null>(null);
+  const [mutationError, setMutationError] = useState<NotificationPresentationError | null>(null);
+  const [markingIds, setMarkingIds] = useState<Record<string, boolean>>({});
+  const [isMarkingAll, setIsMarkingAll] = useState<boolean>(false);
+
+  const { applyNotificationRead, applyAllRead, refreshUnreadCount } = useNotificationBadge();
 
   const autoLoad = options?.autoLoad ?? true;
 
   const mountedRef = useRef<boolean>(true);
   const queryGenerationRef = useRef<number>(0);
   const paginationLockRef = useRef<boolean>(false);
+  const markingIdsRef = useRef<Set<string>>(new Set<string>());
+  const markingAllRef = useRef<boolean>(false);
 
   // Track latest query state to guard against concurrent mutations and stale callbacks
   const queryStateRef = useRef({
@@ -266,6 +280,126 @@ export function useNotifications(options?: UseNotificationsOptions): UseNotifica
   }, [loadMore]);
 
   /**
+   * Marks a single notification as read with synchronous useRef lock protection.
+   */
+  const markOneAsRead = useCallback(
+    async (notificationId: string): Promise<boolean> => {
+      if (!notificationId || typeof notificationId !== 'string') {
+        return false;
+      }
+
+      const trimmed = notificationId.trim();
+      if (trimmed.length === 0 || markingIdsRef.current.has(trimmed)) {
+        return false;
+      }
+
+      // Find item in state; if already read, no-op immediately
+      const item = queryStateRef.current.notifications.find((n) => n.id === trimmed);
+      if (item && item.read) {
+        return true;
+      }
+
+      // Acquire synchronous lock before async hop
+      markingIdsRef.current.add(trimmed);
+      setMarkingIds((prev) => ({ ...prev, [trimmed]: true }));
+      setMutationError(null);
+
+      try {
+        await notificationApi.markNotificationRead(trimmed);
+
+        // Update list items deterministically
+        setNotifications((prev) => {
+          if (queryStateRef.current.mode === 'UNREAD') {
+            return prev.filter((n) => n.id !== trimmed);
+          }
+          return prev.map((n) => (n.id === trimmed ? { ...n, read: true } : n));
+        });
+
+        if (queryStateRef.current.mode === 'UNREAD') {
+          setTotalItems((prev) => Math.max(0, prev - 1));
+        }
+
+        // Notify badge context
+        applyNotificationRead(trimmed);
+        return true;
+      } catch (err) {
+        const presentationError = mapNotificationError(err, 'markRead');
+        setMutationError(presentationError);
+        return false;
+      } finally {
+        markingIdsRef.current.delete(trimmed);
+        if (mountedRef.current) {
+          setMarkingIds((prev) => {
+            const next = { ...prev };
+            delete next[trimmed];
+            return next;
+          });
+        }
+      }
+    },
+    [applyNotificationRead]
+  );
+
+  /**
+   * Marks all notifications as read with synchronous useRef lock protection.
+   */
+  const markAllAsRead = useCallback(async (): Promise<number> => {
+    if (markingAllRef.current) {
+      return 0;
+    }
+
+    // Acquire synchronous lock before async hop
+    markingAllRef.current = true;
+    setIsMarkingAll(true);
+    setMutationError(null);
+
+    try {
+      const response = await notificationApi.markAllNotificationsRead();
+
+      // Invalidate current query generation to discard in-flight stale list responses
+      queryGenerationRef.current += 1;
+
+      // Update local state
+      setNotifications((prev) => {
+        if (queryStateRef.current.mode === 'UNREAD') {
+          return [];
+        }
+        return prev.map((n) => ({ ...n, read: true }));
+      });
+
+      if (queryStateRef.current.mode === 'UNREAD') {
+        setTotalItems(0);
+        setHasNext(false);
+      }
+
+      // Reset badge context to 0 immediately
+      applyAllRead();
+
+      // Trigger background authoritative badge refresh
+      refreshUnreadCount().catch(() => {});
+
+      return response.updatedCount;
+    } catch (err) {
+      const presentationError = mapNotificationError(err, 'markAllRead');
+      setMutationError(presentationError);
+      return 0;
+    } finally {
+      markingAllRef.current = false;
+      if (mountedRef.current) {
+        setIsMarkingAll(false);
+      }
+    }
+  }, [applyAllRead, refreshUnreadCount]);
+
+  const isMarkingId = useCallback((id: string): boolean => {
+    return !!markingIds[id];
+  }, [markingIds]);
+
+  const clearMutationError = useCallback(() => {
+    setMutationError(null);
+  }, []);
+
+  /**
    * Changes active mode tab ("Tất cả" vs "Chưa đọc").
    */
   const setMode = useCallback((newMode: NotificationTabMode) => {
@@ -320,5 +454,11 @@ export function useNotifications(options?: UseNotificationsOptions): UseNotifica
     refresh,
     loadMore,
     retryPagination,
+    markOneAsRead,
+    markAllAsRead,
+    isMarkingId,
+    isMarkingAll,
+    mutationError,
+    clearMutationError,
   };
 }

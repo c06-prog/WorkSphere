@@ -14,6 +14,16 @@ jest.mock('@react-navigation/native', () => ({
     navigate: mockNavigate,
     goBack: jest.fn(),
   }),
+  useFocusEffect: (cb: () => void) => cb(),
+}));
+
+jest.mock('../../src/features/notifications/context/NotificationBadgeContext', () => ({
+  useNotificationBadge: () => ({
+    unreadCount: 0,
+    refreshUnreadCount: jest.fn().mockResolvedValue(0),
+    applyNotificationRead: jest.fn(),
+    applyAllRead: jest.fn(),
+  }),
 }));
 
 describe('MoreScreen Asset Entry', () => {

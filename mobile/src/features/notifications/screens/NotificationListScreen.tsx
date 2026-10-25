@@ -17,7 +17,7 @@
  * - Context deep-link navigation is deferred to Phase 18D.
  */
 
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   FlatList,
   Pressable,
@@ -26,10 +26,12 @@ import {
   Text,
   View,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useAppTheme } from '../../../app/providers/ThemeProvider';
 import { AppStackNavProp } from '../../../app/navigation/types';
 import { EmptyState, ErrorState, LoadingIndicator } from '../../../shared/components';
+import { ConfirmationDialog } from '../../../shared/components/ConfirmationDialog';
+import { useNotificationBadge } from '../context/NotificationBadgeContext';
 import { NotificationCard } from '../components/NotificationCard';
 import { NotificationResponse } from '../types/notificationTypes';
 import { NotificationTabMode, useNotifications } from '../hooks/useNotifications';
@@ -37,6 +39,9 @@ import { NotificationTabMode, useNotifications } from '../hooks/useNotifications
 export function NotificationListScreen() {
   const theme = useAppTheme();
   const navigation = useNavigation<AppStackNavProp<'NotificationList'>>();
+  const { unreadCount, refreshUnreadCount } = useNotificationBadge();
+
+  const [confirmMarkAllVisible, setConfirmMarkAllVisible] = useState(false);
 
   const {
     notifications,
@@ -51,7 +56,20 @@ export function NotificationListScreen() {
     loadInitial,
     refresh,
     loadMore,
+    markOneAsRead,
+    markAllAsRead,
+    isMarkingId,
+    isMarkingAll,
+    mutationError,
+    clearMutationError,
   } = useNotifications({ autoLoad: true });
+
+  // Focus effect: Refresh unread badge authoritative baseline
+  useFocusEffect(
+    useCallback(() => {
+      refreshUnreadCount().catch(() => {});
+    }, [refreshUnreadCount])
+  );
 
   const handleTabPress = (newMode: NotificationTabMode) => {
     if (newMode !== mode) {
@@ -59,9 +77,16 @@ export function NotificationListScreen() {
     }
   };
 
-  const handleNotificationPress = (_notification: NotificationResponse) => {
-    // In Phase 18B: Item press is a type-safe placeholder.
-    // Mark-read mutation is implemented in Phase 18C, and context deep-linking in Phase 18D.
+  const handleNotificationPress = (notification: NotificationResponse) => {
+    if (!notification.read) {
+      markOneAsRead(notification.id).catch(() => {});
+    }
+    // Context deep-link will be plugged in Phase 18D
+  };
+
+  const handleConfirmMarkAll = async () => {
+    setConfirmMarkAllVisible(false);
+    await markAllAsRead();
   };
 
   return (
@@ -98,7 +123,26 @@ export function NotificationListScreen() {
           Thông báo
         </Text>
 
-        <View style={styles.headerRightPlaceholder} />
+        <Pressable
+          onPress={() => setConfirmMarkAllVisible(true)}
+          disabled={unreadCount === 0 || isMarkingAll}
+          accessibilityRole="button"
+          accessibilityLabel="Đánh dấu tất cả thông báo đã đọc"
+          testID="btn-mark-all-read"
+          style={styles.markAllButton}
+        >
+          <Text
+            style={[
+              theme.typography.caption,
+              styles.markAllButtonText,
+              {
+                color: unreadCount > 0 && !isMarkingAll ? theme.colors.primary : theme.colors.disabled,
+              },
+            ]}
+          >
+            Đọc tất cả
+          </Text>
+        </Pressable>
       </View>
 
       {/* Segmented Filter Tabs: Tất cả / Chưa đọc */}
@@ -160,6 +204,18 @@ export function NotificationListScreen() {
         </Pressable>
       </View>
 
+      {/* Mutation Error Banner */}
+      {mutationError && (
+        <View style={[styles.mutationErrorBanner, { backgroundColor: theme.colors.errorContainer }]}>
+          <Text style={[theme.typography.caption, styles.errorText, { color: theme.colors.error }]}>
+            {mutationError.message}
+          </Text>
+          <Pressable onPress={clearMutationError} style={styles.closeErrorButton}>
+            <Text style={[theme.typography.caption, styles.closeErrorText, { color: theme.colors.error }]}>✕</Text>
+          </Pressable>
+        </View>
+      )}
+
       {/* Main Content Area */}
       {initialLoading ? (
         <View style={styles.centerWrapper}>
@@ -188,6 +244,7 @@ export function NotificationListScreen() {
             <NotificationCard
               notification={item}
               onPress={handleNotificationPress}
+              isMarkingRead={isMarkingId(item.id)}
               testID={`notification-card-${item.id}`}
             />
           )}
@@ -237,6 +294,19 @@ export function NotificationListScreen() {
           testID="notification-flat-list"
         />
       )}
+
+      {/* Confirmation Dialog for Mark All Read */}
+      <ConfirmationDialog
+        visible={confirmMarkAllVisible}
+        title="Đánh dấu tất cả đã đọc"
+        message="Bạn có chắc chắn muốn đánh dấu tất cả thông báo hiện có là đã đọc?"
+        confirmText="Xác nhận"
+        cancelText="Hủy"
+        onConfirm={handleConfirmMarkAll}
+        onCancel={() => setConfirmMarkAllVisible(false)}
+        loading={isMarkingAll}
+        testID="dialog-confirm-mark-all"
+      />
     </View>
   );
 }
@@ -267,6 +337,34 @@ const styles = StyleSheet.create({
   },
   headerRightPlaceholder: {
     width: 48,
+  },
+  markAllButton: {
+    minHeight: 48,
+    minWidth: 70,
+    justifyContent: 'center',
+    alignItems: 'flex-end',
+  },
+  markAllButtonText: {
+    fontWeight: '600',
+  },
+  mutationErrorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  errorText: {
+    flex: 1,
+  },
+  closeErrorButton: {
+    minWidth: 32,
+    minHeight: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
+  },
+  closeErrorText: {
+    fontWeight: '700',
   },
   tabBarContainer: {
     flexDirection: 'row',

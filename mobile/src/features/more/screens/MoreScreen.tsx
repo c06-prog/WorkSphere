@@ -1,14 +1,31 @@
-import React from 'react';
-import { StyleSheet, View } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import React, { useCallback } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../../app/auth/AuthProvider';
+import { useAppTheme } from '../../../app/providers/ThemeProvider';
+import { useNotificationBadge } from '../../notifications';
 import { PlaceholderScreen } from '../../../shared/components/PlaceholderScreen';
 import { AppButton } from '../../../shared/components/AppButton';
 import type { MainTabNavProp } from '../../../app/navigation/types';
 
 export function MoreScreen() {
+  const theme = useAppTheme();
   const navigation = useNavigation<MainTabNavProp<'More'>>();
   const { currentUser } = useAuth();
+  const { unreadCount, refreshUnreadCount } = useNotificationBadge();
+
+  // Focus effect: Refresh unread badge
+  useFocusEffect(
+    useCallback(() => {
+      refreshUnreadCount().catch(() => {});
+    }, [refreshUnreadCount])
+  );
+
+  const badgeText = unreadCount > 99 ? '99+' : unreadCount > 0 ? String(unreadCount) : null;
+  const notificationAccessibilityLabel =
+    unreadCount > 0
+      ? `Xem danh sách thông báo, ${unreadCount} thông báo chưa đọc`
+      : 'Xem danh sách thông báo, không có thông báo chưa đọc';
 
   const hasAssetManageOrRead =
     (currentUser?.permissions?.includes('ASSET_READ') ?? false) ||
@@ -27,14 +44,37 @@ export function MoreScreen() {
       testID="screen-more"
     >
       <View style={styles.actionContainer}>
-        <AppButton
-          title="Thông báo"
-          variant="outline"
+        {/* Notification Button with Pill Badge */}
+        <Pressable
           onPress={() => navigation.navigate('NotificationList')}
-          accessibilityLabel="Xem danh sách thông báo"
+          accessibilityRole="button"
+          accessibilityLabel={notificationAccessibilityLabel}
           testID="btn-navigate-notifications"
-          style={styles.buttonSpacing}
-        />
+          style={[
+            styles.notificationRowButton,
+            styles.buttonSpacing,
+            {
+              borderColor: theme.colors.primary,
+              backgroundColor: theme.colors.surface,
+              borderRadius: theme.radii.medium,
+            },
+          ]}
+        >
+          <Text style={[theme.typography.label, styles.notificationButtonText, { color: theme.colors.primary }]}>
+            Thông báo
+          </Text>
+          {badgeText && (
+            <View
+              style={[styles.badgePill, { backgroundColor: theme.colors.error }]}
+              testID="badge-more-notifications"
+            >
+              <Text style={[styles.badgePillText, { color: theme.colors.onError }]}>
+                {badgeText}
+              </Text>
+            </View>
+          )}
+        </Pressable>
+
         <AppButton
           title={assetButtonTitle}
           variant="outline"
@@ -69,5 +109,32 @@ const styles = StyleSheet.create({
   },
   buttonSpacing: {
     marginBottom: 12,
+  },
+  notificationRowButton: {
+    minHeight: 48,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    position: 'relative',
+  },
+  notificationButtonText: {
+    fontWeight: '600',
+  },
+  badgePill: {
+    position: 'absolute',
+    right: 16,
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    paddingHorizontal: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgePillText: {
+    fontSize: 11,
+    fontWeight: '700',
+    lineHeight: 14,
   },
 });

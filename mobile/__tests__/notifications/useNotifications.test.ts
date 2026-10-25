@@ -2,11 +2,14 @@ import { renderHook, act } from '@testing-library/react-native';
 import { useNotifications } from '../../src/features/notifications/hooks/useNotifications';
 import { notificationApi } from '../../src/features/notifications/api/notificationApi';
 import { NotificationResponse } from '../../src/features/notifications/types/notificationTypes';
+import { useNotificationBadge } from '../../src/features/notifications/context/NotificationBadgeContext';
 
 jest.mock('../../src/features/notifications/api/notificationApi');
+jest.mock('../../src/features/notifications/context/NotificationBadgeContext');
 
 describe('useNotifications Hook', () => {
   const mockApi = notificationApi as jest.Mocked<typeof notificationApi>;
+  const mockUseBadge = useNotificationBadge as jest.MockedFunction<typeof useNotificationBadge>;
 
   const mockItem1: NotificationResponse = {
     id: 'notif-1',
@@ -32,6 +35,14 @@ describe('useNotifications Hook', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockUseBadge.mockReturnValue({
+      unreadCount: 1,
+      isLoading: false,
+      error: null,
+      refreshUnreadCount: jest.fn().mockResolvedValue(undefined),
+      applyNotificationRead: jest.fn(),
+      applyAllRead: jest.fn(),
+    });
   });
 
   it('1. loads initial notifications on mount with mode="ALL" (read=undefined)', async () => {
