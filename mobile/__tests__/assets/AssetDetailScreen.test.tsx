@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, fireEvent } from '@testing-library/react-native';
+import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
 import { AssetDetailScreen } from '../../src/features/assets/screens/AssetDetailScreen';
 import { useAssetDetail } from '../../src/features/assets/hooks/useAssetDetail';
 import { useAuth } from '../../src/app/auth/AuthProvider';
@@ -263,5 +263,43 @@ describe('AssetDetailScreen (SCR-AST-02)', () => {
     fireEvent.press(backBtn);
 
     expect(mockGoBack).toHaveBeenCalledTimes(1);
+  });
+  it('11. displays Edit buttons (header and action section) for ASSET_MANAGE/ADMIN', async () => {
+    (useAuth as jest.Mock).mockReturnValue({
+      currentUser: {
+        id: 'usr-manager',
+        fullName: 'Asset Manager',
+        roles: ['EMPLOYEE'],
+        permissions: ['ASSET_MANAGE'],
+      },
+    });
+
+    const { getByTestId } = await renderScreen();
+
+    expect(getByTestId('btn-asset-detail-edit')).toBeTruthy();
+    expect(getByTestId('btn-asset-action-edit')).toBeTruthy();
+
+    await act(async () => {
+      fireEvent.press(getByTestId('btn-asset-detail-edit'));
+    });
+    await waitFor(() => {
+      expect(getByTestId('edit-asset-modal')).toBeTruthy();
+    });
+  });
+
+  it('12. hides Edit buttons for standard employee without ASSET_MANAGE/ADMIN', async () => {
+    (useAuth as jest.Mock).mockReturnValue({
+      currentUser: {
+        id: 'usr-employee',
+        fullName: 'Normal Employee',
+        roles: ['EMPLOYEE'],
+        permissions: ['ASSET_READ'],
+      },
+    });
+
+    const { queryByTestId } = await renderScreen();
+
+    expect(queryByTestId('btn-asset-detail-edit')).toBeNull();
+    expect(queryByTestId('btn-asset-action-edit')).toBeNull();
   });
 });

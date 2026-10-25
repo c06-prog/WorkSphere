@@ -34,12 +34,15 @@ import { useAuth } from '../../../app/auth/AuthProvider';
 import { AppStackScreenRouteProp, AssetDetailNavigationProp } from '../../../app/navigation/types';
 import {
   AppButton,
+  ConfirmationDialog,
   ErrorState,
   LoadingIndicator,
   StatusBadge,
 } from '../../../shared/components';
 import { useAssetDetail } from '../hooks/useAssetDetail';
 import { RepairHistoryPreview } from '../components/RepairHistoryPreview';
+import { AssetDetailResponse } from '../types/assetTypes';
+import { EditAssetModal } from '../components/EditAssetModal';
 
 export function AssetDetailScreen() {
   const theme = useAppTheme();
@@ -57,7 +60,12 @@ export function AssetDetailScreen() {
     refreshError,
     refresh,
     retry,
+    applyAssetUpdate,
+    invalidateAndRefresh,
   } = useAssetDetail(assetId);
+
+  const [editModalVisible, setEditModalVisible] = React.useState(false);
+  const [conflictDialogVisible, setConflictDialogVisible] = React.useState(false);
 
   // Authorization checks
   const isAdmin = currentUser?.roles?.some(r => r.toUpperCase() === 'ADMIN') ?? false;
@@ -68,6 +76,23 @@ export function AssetDetailScreen() {
 
   // Report fault visibility: Active assignee OR Manager/Admin
   const canReportFault = isActiveAssignee || hasAssetManage;
+
+  const handleEditSuccess = (updatedAsset: AssetDetailResponse) => {
+    setEditModalVisible(false);
+    if (updatedAsset) {
+      applyAssetUpdate(updatedAsset);
+    }
+  };
+
+  const handleEditConflict = () => {
+    setEditModalVisible(false);
+    setConflictDialogVisible(true);
+  };
+
+  const handleReloadOnConflict = async () => {
+    setConflictDialogVisible(false);
+    await invalidateAndRefresh();
+  };
 
   const handleReportFault = () => {
     if (!asset?.id) return;
@@ -159,7 +184,21 @@ export function AssetDetailScreen() {
         >
           {asset.assetCode}
         </Text>
-        <View style={styles.headerRightSpacer} />
+                {hasAssetManage ? (
+          <Pressable
+            onPress={() => setEditModalVisible(true)}
+            style={styles.editButtonTouch}
+            accessibilityRole="button"
+            accessibilityLabel="Chỉnh sửa tài sản"
+            testID="btn-asset-detail-edit"
+          >
+            <Text style={[theme.typography.bodyMedium, styles.editButtonText, { color: theme.colors.primary }]}>
+              Sửa
+            </Text>
+          </Pressable>
+        ) : (
+          <View style={styles.headerRightSpacer} />
+        )}
       </View>
 
       <ScrollView
@@ -483,19 +522,54 @@ export function AssetDetailScreen() {
           </View>
         ) : null}
 
-        {/* Report Fault CTA Button */}
-        {canReportFault ? (
-          <View style={styles.actionSection} testID="asset-detail-actions">
-            <AppButton
-              title="Báo hỏng / Yêu cầu dịch vụ"
-              variant="primary"
-              onPress={handleReportFault}
-              accessibilityLabel="Báo hỏng hoặc tạo yêu cầu dịch vụ cho tài sản này"
-              testID="btn-asset-report-fault"
-            />
-          </View>
-        ) : null}
+        {/* Action Buttons */}
+        <View style={styles.actionSection} testID="asset-detail-actions">
+          {hasAssetManage ? (
+            <View style={styles.actionButtonItem}>
+              <AppButton
+                title="Chỉnh sửa thông tin"
+                variant="secondary"
+                onPress={() => setEditModalVisible(true)}
+                accessibilityLabel="Chỉnh sửa thông tin tài sản"
+                testID="btn-asset-action-edit"
+              />
+            </View>
+          ) : null}
+          {canReportFault ? (
+            <View style={styles.actionButtonItem}>
+              <AppButton
+                title="Báo hỏng / Yêu cầu dịch vụ"
+                variant="primary"
+                onPress={handleReportFault}
+                accessibilityLabel="Báo hỏng hoặc tạo yêu cầu dịch vụ cho tài sản này"
+                testID="btn-asset-report-fault"
+              />
+            </View>
+          ) : null}
+        </View>
       </ScrollView>
+      {/* Edit Asset Modal */}
+      {asset ? (
+        <EditAssetModal
+          visible={editModalVisible}
+          asset={asset}
+          onClose={() => setEditModalVisible(false)}
+          onSuccess={handleEditSuccess}
+          onConflict={handleEditConflict}
+        />
+      ) : null}
+
+      {/* Conflict Dialog */}
+      <ConfirmationDialog
+        visible={conflictDialogVisible}
+        title="Xung đột dữ liệu"
+        message="Dữ liệu tài sản đã được cập nhật bởi người dùng khác trong khi bạn đang thao tác. Bạn có muốn tải lại dữ liệu mới nhất không?"
+        confirmText="Tải lại dữ liệu"
+        cancelText="Hủy bỏ"
+        onConfirm={handleReloadOnConflict}
+        onCancel={() => setConflictDialogVisible(false)}
+        testID="dialog-asset-conflict"
+      />
     </View>
   );
 }
@@ -644,5 +718,17 @@ const styles = StyleSheet.create({
   },
   requestTitleText: {
     marginTop: 4,
+  },
+  editButtonTouch: {
+    minWidth: 48,
+    minHeight: 48,
+    justifyContent: 'center',
+    alignItems: 'flex-end',
+  },
+  editButtonText: {
+    fontWeight: '600',
+  },
+  actionButtonItem: {
+    marginBottom: 8,
   },
 });

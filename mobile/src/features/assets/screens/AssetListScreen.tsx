@@ -64,6 +64,11 @@ export function AssetListScreen() {
     (currentUser?.permissions?.includes('ASSET_READ') ?? false) ||
     (currentUser?.roles?.some(r => r.toUpperCase() === 'ADMIN') ?? false);
 
+  // ASSET_MANAGE permission check for creating asset
+  const canManage =
+    (currentUser?.permissions?.includes('ASSET_MANAGE') ?? false) ||
+    (currentUser?.roles?.some(r => r.toUpperCase() === 'ADMIN') ?? false);
+
   const [activeTab, setActiveTab] = useState<AssetTabMode>('my-assets');
 
   // Mode 1: My Assets
@@ -172,6 +177,47 @@ export function AssetListScreen() {
   const renderHeader = () => {
     return (
       <View style={styles.headerWrapper}>
+      {/* Top Title Bar */}
+      <View style={[styles.topBar, { paddingHorizontal: theme.spacing.md, paddingTop: theme.spacing.sm }]}>
+        <View style={styles.titleContainer}>
+          <Text
+            style={[theme.typography.heading1, styles.pageTitle, { color: theme.colors.textPrimary }]}
+            accessibilityRole="header"
+          >
+            Tài sản
+          </Text>
+          <Text style={[theme.typography.caption, { color: theme.colors.textSecondary }]}>
+            SCR-AST-01: Quản lý thiết bị và tài sản
+          </Text>
+        </View>
+
+        {canManage ? (
+          <Pressable
+            onPress={() => navigation.navigate('CreateAsset')}
+            style={({ pressed }) => [
+              styles.createButton,
+              {
+                backgroundColor: theme.colors.primary,
+                borderRadius: theme.radii.small,
+                opacity: pressed ? 0.8 : 1,
+              },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Tạo tài sản mới"
+            testID="btn-create-asset"
+          >
+            <Text
+              style={[
+                theme.typography.caption,
+                styles.createButtonText,
+                { color: theme.colors.surface },
+              ]}
+            >
+              + Tạo mới
+            </Text>
+          </Pressable>
+        ) : null}
+      </View>
         {renderSegmentedControl()}
 
         {/* Directory Controls: Search & Category Chips only for all-assets tab */}
@@ -447,6 +493,27 @@ export function AssetListScreen() {
         onEndReachedThreshold={0.3}
         testID="asset-list-flatlist"
       />
+
+      {/* Floating Action Button for Create Asset */}
+      {canManage ? (
+        <Pressable
+          onPress={() => navigation.navigate('CreateAsset')}
+          style={({ pressed }) => [
+            styles.fabButton,
+            {
+              backgroundColor: theme.colors.primary,
+              ...theme.shadows.level3,
+              opacity: pressed ? 0.85 : 1,
+            },
+          ]}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel="Tạo tài sản mới (Nút nổi)"
+          testID="fab-create-asset"
+        >
+          <Text style={[styles.fabText, { color: theme.colors.surface }]}>+</Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -531,5 +598,44 @@ const styles = StyleSheet.create({
   },
   retryText: {
     fontWeight: '600',
+  },
+  topBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  titleContainer: {
+    flex: 1,
+  },
+  pageTitle: {
+    marginBottom: 2,
+  },
+  createButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 36,
+  },
+  createButtonText: {
+    fontWeight: '700',
+  },
+  fabButton: {
+    position: 'absolute',
+    right: 20,
+    bottom: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 6,
+  },
+  fabText: {
+    fontSize: 28,
+    fontWeight: '600',
+    lineHeight: 30,
+    marginTop: -2,
   },
 });

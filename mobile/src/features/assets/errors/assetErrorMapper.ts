@@ -140,6 +140,7 @@ export function mapAssetError(error: unknown): AssetPresentationError {
           traceId,
         };
 
+      case 'ASSET_SERIAL_ALREADY_EXISTS':
       case 'ASSET_SERIAL_NUMBER_ALREADY_EXISTS':
         return {
           message: 'Số serial của tài sản đã tồn tại trong hệ thống',

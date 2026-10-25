@@ -1,23 +1,11 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { MainTabNavigator } from './MainTabNavigator';
-import { AssetListScreen, AssetDetailScreen } from '../../features/assets/screens';
-import { PlaceholderScreen } from '../../shared/components/PlaceholderScreen';
+import { AssetListScreen, AssetDetailScreen, CreateAssetScreen } from '../../features/assets/screens';
 import { useAppTheme } from '../providers/ThemeProvider';
 import type { AppStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<AppStackParamList>();
-
-function CreateAssetPlaceholder() {
-  return (
-    <PlaceholderScreen
-      title="Create Asset"
-      screenId="SCR-AST-03"
-      subtitle="SCR-AST-03: Create Asset Screen (Phase 17D Shell)"
-      testID="screen-create-asset"
-    />
-  );
-}
 
 export function AppNavigator() {
   const theme = useAppTheme();
@@ -59,10 +47,10 @@ export function AppNavigator() {
       />
       <Stack.Screen
         name="CreateAsset"
-        component={CreateAssetPlaceholder}
+        component={CreateAssetScreen}
         options={{
           headerTitle: 'Tạo tài sản mới',
-          headerShown: true,
+          headerShown: false,
         }}
       />
     </Stack.Navigator>
