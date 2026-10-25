@@ -1418,3 +1418,36 @@ Current operating mode:
      - `18D`: Tích hợp Context Navigation / Deep-linking đa phân hệ (`TASK`, `PROJECT`, `SERVICE_REQUEST`, `ASSET`).
      - `18E`: Kiểm thử tích hợp toàn diện, hồi quy Mobile, và Android native validation.
 
+
+## D-068 Roadmap Giai đoạn 16 — System Integration Test Plan & Execution Waves Freeze
+
+WorkSphere chính thức khóa Kế hoạch Kiểm thử Tích hợp & End-to-End Toàn Hệ thống cho Giai đoạn 16 (Roadmap Section 20) theo các nguyên tắc kiến trúc sau:
+
+1. **Chuẩn Hóa Danh Pháp Giai Đoạn (Canonical Phase Reconciliation)**:
+   - Tên chính thức là **Giai đoạn 16: Tích hợp và kiểm thử hệ thống (System Integration & End-to-End Testing)** theo `docs/08_DEVELOPMENT_ROADMAP.md` (Mục 3 & Mục 20).
+   - Tuyệt đối không tự sáng tạo "Phase 19" hay làm sai lệch phân kỳ canonical.
+2. **Khóa 6 Luồng Nghiệp Vụ Canonical (6 Canonical E2E Flows)**:
+   - `FLOW-01`: Xác thực, Quản lý Phiên & Đăng xuất (Launch $\rightarrow$ Login $\rightarrow$ Permissions $\rightarrow$ Dashboard $\rightarrow$ Refresh Token $\rightarrow$ Logout).
+   - `FLOW-02`: Quản trị Dự án & Thành viên (Create Project $\rightarrow$ Assign Members/Roles $\rightarrow$ Milestones $\rightarrow$ Project Dashboard).
+   - `FLOW-03`: Vòng đời Công việc / Task (Create Task $\rightarrow$ Assign $\rightarrow$ `TODO` $\rightarrow$ `IN_PROGRESS` $\rightarrow$ `IN_REVIEW` $\rightarrow$ `DONE`).
+   - `FLOW-04`: Vòng đời Yêu cầu Dịch vụ / Service Request (Create Request $\rightarrow$ Assign Dispatcher/Specialist $\rightarrow$ `IN_PROGRESS` $\rightarrow$ `RESOLVED` $\rightarrow$ `CLOSED` $\rightarrow$ Satisfaction Rating).
+   - `FLOW-05`: Vòng đời Tài sản & Lịch sử Sửa chữa (Create Asset $\rightarrow$ Assign to Employee $\rightarrow$ Report Incident / Link Request $\rightarrow$ Complete Repair $\rightarrow$ Repair History).
+   - `FLOW-06`: Trung tâm Thông báo & Điều hướng Ngữ cảnh Chéo (System Events $\rightarrow$ Generate Notifications $\rightarrow$ Shared Unread Badges $\rightarrow$ Notification Center $\rightarrow$ Context Navigation $\rightarrow$ Mark Read).
+3. **Khóa Ma Trận Phân Quyền Truy Cập (Authoritative RBAC Matrix)**:
+   - Hệ thống cố định đúng 4 vai trò canonical theo Flyway migrations (`V011`, `V014`, `V015`): `ADMIN` (29 permissions), `PROJECT_MANAGER` (20 permissions), `TEAM_LEADER` (14 permissions), `EMPLOYEE` (13 permissions).
+   - Không hỗ trợ hoặc tự ý thêm các vai trò ngoài canonical như `FACILITY_MANAGER`.
+4. **Kiến Trúc Kiểm Thử Đa Tầng (4 Testing Layers)**:
+   - **L1**: Unit & Component Contracts (JUnit 5 & Jest).
+   - **L2**: Mobile Navigation & State Integration (React Native Testing Library & Navigators).
+   - **L3**: Backend Integration & Database Security (Testcontainers PostgreSQL 16 & Spring MockMvc).
+   - **L4**: Android Native Runtime E2E (Android Emulator 5554, Metro bundler, Spring Boot dev, Logcat, Screenshots).
+5. **Kế Hoạch Phân Đợt Sóng Thực Thi (Subphase Waves Execution Breakdown)**:
+   - `Phase 16A`: Test Infrastructure & Multi-Role Fixture Foundation.
+   - `Phase 16B`: FLOW-01 Authentication, Session & RBAC E2E Wave.
+   - `Phase 16C`: FLOW-02 Project & FLOW-03 Task Management E2E Wave.
+   - `Phase 16D`: FLOW-04 Service Request & FLOW-05 Asset Management E2E Wave.
+   - `Phase 16E`: FLOW-06 Notification, Cross-Module Context Navigation & Regression Wave.
+   - `Phase 16F`: Full System Regression, Android Native Verification & Release Hardening.
+6. **Ranh Giới An Toàn & Đóng Giai Đoạn**:
+   - Mọi wave kiểm thử runtime phải dừng sạch nền tảng dev (backend, Metro, adb reverse, emulator).
+   - Tiêu chí hoàn thành Giai đoạn 16: 100% 6 luồng canonical chạy thành công trên Android runtime thật, 0 lỗi P0/P1 tồn đọng, 100% RBAC rules đạt, bằng chứng đầy đủ trong `reports/`.
