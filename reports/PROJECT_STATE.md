@@ -21,13 +21,21 @@
 - Phase 16C Implementation Checkpoint: `reports/PHASE_16C_SERVICE_REQUEST_DETAIL_REPORT.md` (CLOSED / AUDITED)
 - Phase 16D Implementation Checkpoint: `reports/PHASE_16D_CREATE_EDIT_SERVICE_REQUEST_REPORT.md` (HARDENED / VERIFIED)
 - Phase 16E Implementation Checkpoint: `reports/PHASE_16E_WORKFLOW_ASSIGNMENT_REPORT.md` (IMPLEMENTED / VERIFIED)
-- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 15 Mobile Task Management: CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 15A..15G CLOSED). Phase 16 Mobile Service Requests: CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 16A..16G CLOSED). Phase 17 Mobile Asset Management: COMPLETED (Subphases 17A..17F IMPLEMENTED / VALIDATED / HARDENED).
-- Next Action: PHASE 17 FINAL RECONCILIATION & CLOSURE
+- Current Status: Phase 13 Mobile Authentication CLOSED. Phase 14 Mobile Dashboard and Projects CLOSED (MEMORY_CHECKPOINT_CLOSED). Phase 15 Mobile Task Management: CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 15A..15G CLOSED). Phase 16 Mobile Service Requests: CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 16A..16G CLOSED). Phase 17 Mobile Asset Management: COMPLETED (Subphases 17A..17F + 17F-CORRECTIVE IMPLEMENTED / VALIDATED / HARDENED).
+- Next Action: PHASE 18 MOBILE NOTIFICATION SYSTEM (Or Phase 17 Final Reconciliation & Closure)
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening
 
-- Latest Implementation: Phase 17C-NAV Asset Stack Navigation Contract Correction
+- Latest Implementation: Phase 17F-CORRECTIVE Asset Repair History Workflow Completion
+  - Implementation Report: reports/PHASE_17F_CORRECTIVE_REPAIR_HISTORY.md
+  - Delivered Scope:
+    - Created AddRepairHistoryModal.tsx with full support for CreateAssetRepairHistoryRequest (repairType chips, description, startedDate, completedDate, cost, vendorName, result).
+    - Integrated "Ghi nhận sửa chữa" CTA (btn-asset-action-add-repair) in AssetDetailScreen.tsx gated behind ASSET_MANAGE/ADMIN.
+    - Added refreshKey reactivity to RepairHistoryPreview.tsx to instantly reflect newly created repair records.
+    - Added 12 unit tests in AddRepairHistoryModal.test.tsx covering validation, security gating, double-submit prevention, and error mapping.
+    - Validation Evidence: 114 test suites, 1050 tests PASS (0 failures, 0 skipped, 0 snapshots). TypeScript 0 errors. ESLint 0 errors, 48 historical warnings preserved (0 asset warnings).
+- Prior Implementation: Phase 17C-NAV Asset Stack Navigation Contract Correction
 - Implementation Report: eports/PHASE_17C_NAVIGATION_CORRECTION.md\r
 - Delivered Scope:
   - Realigned asset navigation architecture to strictly comply with Decision D-066.

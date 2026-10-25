@@ -45,6 +45,7 @@ import { AssetDetailResponse } from '../types/assetTypes';
 import { EditAssetModal } from '../components/EditAssetModal';
 import { AssignAssetModal } from '../components/AssignAssetModal';
 import { ReturnAssetModal } from '../components/ReturnAssetModal';
+import { AddRepairHistoryModal } from '../components/AddRepairHistoryModal';
 import { AssetAssignmentResponse } from '../types/assetTypes';
 
 export function AssetDetailScreen() {
@@ -70,6 +71,8 @@ export function AssetDetailScreen() {
   const [editModalVisible, setEditModalVisible] = React.useState(false);
   const [assignModalVisible, setAssignModalVisible] = React.useState(false);
   const [returnModalVisible, setReturnModalVisible] = React.useState(false);
+  const [addRepairModalVisible, setAddRepairModalVisible] = React.useState(false);
+  const [repairRefreshKey, setRepairRefreshKey] = React.useState(0);
   const [conflictDialogVisible, setConflictDialogVisible] = React.useState(false);
 
   // Authorization checks
@@ -494,6 +497,7 @@ export function AssetDetailScreen() {
         <RepairHistoryPreview
           assetId={asset.id}
           initialHistories={asset.repairHistories}
+          refreshKey={repairRefreshKey}
           testID="asset-detail-repair-history"
         />
 
@@ -584,6 +588,17 @@ export function AssetDetailScreen() {
               />
             </View>
           ) : null}
+          {hasAssetManage ? (
+            <View style={styles.actionButtonItem}>
+              <AppButton
+                title="Ghi nhận sửa chữa"
+                variant="outline"
+                onPress={() => setAddRepairModalVisible(true)}
+                accessibilityLabel="Ghi nhận bảo dưỡng hoặc sửa chữa cho tài sản này"
+                testID="btn-asset-action-add-repair"
+              />
+            </View>
+          ) : null}
           {canReportFault ? (
             <View style={styles.actionButtonItem}>
               <AppButton
@@ -628,6 +643,19 @@ export function AssetDetailScreen() {
           onClose={() => setReturnModalVisible(false)}
           onSuccess={handleReturnSuccess}
           onConflict={handleEditConflict}
+        />
+      ) : null}
+
+      {/* Add Repair History Modal */}
+      {asset ? (
+        <AddRepairHistoryModal
+          visible={addRepairModalVisible}
+          assetId={asset.id}
+          onClose={() => setAddRepairModalVisible(false)}
+          onCreated={() => {
+            setRepairRefreshKey(prev => prev + 1);
+          }}
+          testID="modal-add-repair-history"
         />
       ) : null}
 

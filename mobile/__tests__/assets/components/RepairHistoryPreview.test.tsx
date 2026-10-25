@@ -1,5 +1,5 @@
 import React from 'react';
-import { render } from '@testing-library/react-native';
+import { render, act } from '@testing-library/react-native';
 import { RepairHistoryPreview } from '../../../src/features/assets/components/RepairHistoryPreview';
 import { assetApi } from '../../../src/features/assets/api/assetApi';
 import { AssetRepairHistoryResponse } from '../../../src/features/assets/types/assetTypes';
@@ -80,5 +80,27 @@ describe('RepairHistoryPreview Component', () => {
     });
 
     expect(getByTestId('repair-history-preview')).toBeTruthy();
+  });
+
+  it('4. re-fetches repair histories when refreshKey changes', async () => {
+    (assetApi.getRepairHistories as jest.Mock).mockResolvedValueOnce(mockHistories);
+
+    const { rerender } = await render(
+      <ThemeProvider>
+        <RepairHistoryPreview assetId="ast-1" initialHistories={[]} refreshKey={0} />
+      </ThemeProvider>
+    );
+
+    expect(assetApi.getRepairHistories).not.toHaveBeenCalled();
+
+    await act(async () => {
+      rerender(
+        <ThemeProvider>
+          <RepairHistoryPreview assetId="ast-1" initialHistories={[]} refreshKey={1} />
+        </ThemeProvider>
+      );
+    });
+
+    expect(assetApi.getRepairHistories).toHaveBeenCalledWith('ast-1');
   });
 });

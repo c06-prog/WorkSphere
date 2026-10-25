@@ -377,5 +377,44 @@ describe('AssetDetailScreen (SCR-AST-02)', () => {
 
     expect(queryByTestId('btn-asset-action-assign')).toBeNull();
     expect(queryByTestId('btn-asset-action-return')).toBeNull();
+    expect(queryByTestId('btn-asset-action-add-repair')).toBeNull();
+  });
+
+  it('16. displays Add Repair CTA for user with ASSET_MANAGE and opens AddRepairHistoryModal', async () => {
+    (useAuth as jest.Mock).mockReturnValue({
+      currentUser: {
+        id: 'usr-manager',
+        fullName: 'Asset Manager',
+        roles: ['EMPLOYEE'],
+        permissions: ['ASSET_MANAGE'],
+      },
+    });
+
+    const { getByTestId } = await renderScreen();
+
+    expect(getByTestId('btn-asset-action-add-repair')).toBeTruthy();
+
+    await act(async () => {
+      fireEvent.press(getByTestId('btn-asset-action-add-repair'));
+    });
+
+    await waitFor(() => {
+      expect(getByTestId('modal-add-repair-history')).toBeTruthy();
+    });
+  });
+
+  it('17. displays Add Repair CTA for user with ADMIN role', async () => {
+    (useAuth as jest.Mock).mockReturnValue({
+      currentUser: {
+        id: 'usr-admin',
+        fullName: 'System Admin',
+        roles: ['ADMIN'],
+        permissions: [],
+      },
+    });
+
+    const { getByTestId } = await renderScreen();
+
+    expect(getByTestId('btn-asset-action-add-repair')).toBeTruthy();
   });
 });

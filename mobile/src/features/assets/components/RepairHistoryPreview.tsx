@@ -1,8 +1,9 @@
 /**
- * Phase 17C: RepairHistoryPreview Component
+ * Phase 17C & 17F-CORRECTIVE: RepairHistoryPreview Component
  * Displays a list or preview of repair and maintenance histories for an asset.
  * Can consume histories directly from AssetDetailResponse.repairHistories,
  * or fetch independently via assetApi.getRepairHistories(assetId).
+ * Supports external refresh triggers via refreshKey.
  *
  * Invariants:
  * - Read-only display of repair audit records.
@@ -11,7 +12,7 @@
  * - No raw internal database UUIDs rendered.
  */
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -26,12 +27,14 @@ import { AssetRepairHistoryResponse } from '../types/assetTypes';
 export interface RepairHistoryPreviewProps {
   assetId: string;
   initialHistories?: AssetRepairHistoryResponse[];
+  refreshKey?: number;
   testID?: string;
 }
 
 export function RepairHistoryPreview({
   assetId,
   initialHistories,
+  refreshKey,
   testID = 'repair-history-preview',
 }: RepairHistoryPreviewProps) {
   const theme = useAppTheme();
@@ -40,6 +43,8 @@ export function RepairHistoryPreview({
   );
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+
+  const prevRefreshKeyRef = useRef(refreshKey);
 
   useEffect(() => {
     if (initialHistories) {
@@ -60,6 +65,17 @@ export function RepairHistoryPreview({
       setLoading(false);
     }
   }, [assetId]);
+
+  useEffect(() => {
+    if (
+      refreshKey !== undefined &&
+      prevRefreshKeyRef.current !== undefined &&
+      refreshKey !== prevRefreshKeyRef.current
+    ) {
+      loadHistories();
+    }
+    prevRefreshKeyRef.current = refreshKey;
+  }, [refreshKey, loadHistories]);
 
   const formatCurrency = (amount?: number | null): string => {
     if (amount === undefined || amount === null) return 'Không có';
@@ -82,12 +98,10 @@ export function RepairHistoryPreview({
         return 'Bảo dưỡng';
       case 'REPAIR':
         return 'Sửa chữa';
-      case 'WARRANTY':
-        return 'Bảo hành';
-      case 'REPLACEMENT':
-        return 'Thay thế';
       case 'INSPECTION':
         return 'Kiểm định';
+      case 'UPGRADE':
+        return 'Nâng cấp';
       default:
         return type;
     }
