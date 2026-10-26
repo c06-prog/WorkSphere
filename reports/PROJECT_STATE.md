@@ -39,7 +39,9 @@
 - Subphase 16E Corrective Report: `reports/PHASE_16E_CORRECTIVE_NAVIGATION_FIXTURE_SCANNER.md`
 - Subphase 16E Final Runtime Report: `reports/PHASE_16E_FINAL_ANDROID_BACK_HISTORY_EVIDENCE.md`
 - Subphase 16E Final Regression Patch Report: `reports/PHASE_16E_FINAL_REGRESSION_PATCH.md`
-- Next Action: PHASE 16F — CROSS-MODULE INTEGRATION & FINAL END-TO-END ACCEPTANCE WAVE.
+- Subphase 16F Full System Release Readiness Report: `reports/PHASE_16F_FULL_SYSTEM_RELEASE_READINESS.md`
+- Phase 16 System Integration Memory Checkpoint: `reports/PHASE_16_SYSTEM_INTEGRATION_MEMORY_CHECKPOINT.md`
+- Next Action: READY FOR UAT / RELEASE CANDIDATE STAGING.
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening
