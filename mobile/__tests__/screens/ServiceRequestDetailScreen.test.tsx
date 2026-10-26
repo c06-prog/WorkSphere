@@ -50,6 +50,11 @@ jest.mock('@react-navigation/native', () => {
     useRoute: () => ({
       params: { requestId: 'req-uuid-101' },
     }),
+    useFocusEffect: (callback: () => void | (() => void)) => {
+      require('react').useEffect(() => {
+        return callback();
+      }, [callback]);
+    },
   };
 });
 
