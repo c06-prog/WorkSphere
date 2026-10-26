@@ -4,15 +4,16 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: GIAI ĐOẠN 16C — FLOW-02 PROJECT & FLOW-03 TASK MANAGEMENT E2E WAVE
-- Status: Giai đoạn 16C HOÀN THÀNH. Xác minh đầy đủ FLOW-02 (Project Management) và FLOW-03 (Task Management) trên Android Emulator API 35 và Backend API, bao gồm 4 vai trò canonical, ma trận RBAC trực tiếp, ràng buộc nghiệp vụ trạng thái dự án ACTIVE khi tạo task, optimistic locking (HTTP 409 khi stale version), quản lý thành viên dự án, vòng đời chuyển trạng thái công việc và subtask.
+- Current Task: GIAI ĐOẠN 16D — FLOW-04 SERVICE REQUEST & FLOW-05 ASSET MANAGEMENT E2E WAVE
+- Status: Giai đoạn 16D HOÀN THÀNH. Xác minh đầy đủ FLOW-04 (Service Request Management) và FLOW-05 (Asset Management & Repair History) trên Android Emulator API 35 và Backend API, bao gồm 4 vai trò canonical, toàn bộ vòng đời yêu cầu dịch vụ (OPEN -> ASSIGNED -> IN_PROGRESS -> RESOLVED -> CLOSED) kèm comment, toàn bộ vòng đời tài sản (AVAILABLE -> ASSIGNED -> RETURNED), liên kết chéo từ Chi tiết tài sản -> Báo hỏng (tạo yêu cầu kèm assetId), ghi nhận lịch sử sửa chữa (repair history) gắn với serviceRequestId, kiểm soát optimistic locking (HTTP 409 khi stale version), full backend regression (340 tests PASS), và full mobile regression (1142 tests PASS).
 - Canonical Test Plan: `reports/PHASE_16_SYSTEM_INTEGRATION_TEST_PLAN_FREEZE.md`
 - Subphase 16A Report: `reports/PHASE_16A_TEST_INFRASTRUCTURE_FIXTURE_FOUNDATION.md`
 - Subphase 16B Report: `reports/PHASE_16B_AUTH_SESSION_RBAC_E2E.md`
 - Subphase 16B Corrective Report: `reports/PHASE_16B_RUNTIME_CORRECTIVE_AUTH_MOBILE_RBAC.md`
 - Subphase 16C Report: `reports/PHASE_16C_PROJECT_TASK_E2E.md`
 - Subphase 16C Corrective Report: `reports/PHASE_16C_CORRECTIVE_PROJECT_TASK_COMPLETENESS.md`
-- Next Action: PHASE 16D — FLOW-04 SERVICE REQUEST & FLOW-05 ASSET MANAGEMENT E2E WAVE.
+- Subphase 16D Report: `reports/PHASE_16D_SERVICE_REQUEST_ASSET_E2E.md`
+- Next Action: PHASE 16E — FLOW-06 NOTIFICATION, CROSS-MODULE CONTEXT NAVIGATION & REGRESSION WAVE.
 - Execution Waves Plan:
   - 16A: Test Infrastructure & Multi-Role Fixture Foundation
   - 16B: FLOW-01 Authentication, Session & RBAC E2E Wave
