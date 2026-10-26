@@ -31,6 +31,7 @@
 - Subphase 16B Report: `reports/PHASE_16B_AUTH_SESSION_RBAC_E2E.md`
 - Subphase 16B Corrective Report: `reports/PHASE_16B_RUNTIME_CORRECTIVE_AUTH_MOBILE_RBAC.md`
 - Subphase 16C Report: `reports/PHASE_16C_PROJECT_TASK_E2E.md`
+- Subphase 16C Corrective Report: `reports/PHASE_16C_CORRECTIVE_PROJECT_TASK_COMPLETENESS.md`
 - Next Action: PHASE 16D — FLOW-04 SERVICE REQUEST MANAGEMENT & FLOW-05 ASSET MANAGEMENT E2E WAVE.
 - Working tree at checkpoint: clean
 
