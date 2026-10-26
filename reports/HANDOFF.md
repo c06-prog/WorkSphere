@@ -4,11 +4,12 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: GIAI ĐOẠN 16B — FLOW-01 AUTHENTICATION, SESSION & RBAC E2E WAVE
-- Status: Giai đoạn 16B HOÀN THÀNH. Xác minh 4 vai trò canonical, vòng đời session/token rotation, direct API RBAC matrix, cách ly người dùng và bằng chứng chạy runtime trên Android Emulator API 35 đạt 100%.
+- Current Task: GIAI ĐOẠN 16B — FLOW-01 AUTHENTICATION, SESSION & RBAC E2E WAVE & RUNTIME CORRECTIVE
+- Status: Giai đoạn 16B và 16B-RUNTIME-CORRECTIVE HOÀN THÀNH. Xác minh 4 vai trò canonical trực tiếp trên Android Emulator API 35, Session recovery sau app-process restart, Logout & Back-guard, Coalescing concurrent 401s, vòng đời session/token rotation, direct API RBAC matrix, cách ly người dùng đạt 100%.
 - Canonical Test Plan: `reports/PHASE_16_SYSTEM_INTEGRATION_TEST_PLAN_FREEZE.md`
 - Subphase 16A Report: `reports/PHASE_16A_TEST_INFRASTRUCTURE_FIXTURE_FOUNDATION.md`
 - Subphase 16B Report: `reports/PHASE_16B_AUTH_SESSION_RBAC_E2E.md`
+- Subphase 16B Corrective Report: `reports/PHASE_16B_RUNTIME_CORRECTIVE_AUTH_MOBILE_RBAC.md`
 - Next Action: PHASE 16C — FLOW-02 PROJECT & FLOW-03 TASK MANAGEMENT E2E WAVE.
 - Execution Waves Plan:
   - 16A: Test Infrastructure & Multi-Role Fixture Foundation
