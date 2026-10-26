@@ -26,19 +26,19 @@ export type MainTabParamList = {
   ChangePassword: undefined;
   Settings: undefined;
   // Phase 14 Project Stack Screens
-  ProjectDetail: { projectId: string };
+  ProjectDetail: { projectId: string; returnOrigin?: 'NotificationList' };
   CreateProject: undefined;
   EditProject: { projectId: string };
   ProjectMembers: { projectId: string };
   ProjectMilestones: { projectId: string };
   // Phase 15 Task Stack Screens
-  TaskDetail: { taskId: string };
+  TaskDetail: { taskId: string; returnOrigin?: 'NotificationList' };
   CreateTask: { projectId?: string; parentTaskId?: string } | undefined;
   EditTask: { taskId: string };
   SubtaskList: { parentTaskId: string; projectId: string; parentTaskTitle?: string };
   TaskComments: { taskId: string; taskTitle?: string };
   // Phase 16 Service Request Stack Screens
-  ServiceRequestDetail: { requestId: string };
+  ServiceRequestDetail: { requestId: string; returnOrigin?: 'NotificationList' };
   CreateServiceRequest: { assetId?: string } | undefined;
   ServiceRequestComments: { requestId: string };
   ServiceRating: { requestId: string };

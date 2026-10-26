@@ -126,7 +126,20 @@ describe('Phase 18D Real Navigator Tree Integration', () => {
     name: 'Dự án Alpha',
     code: 'PRJ-ALPHA',
     status: 'ACTIVE',
+    priority: 'HIGH',
     startDate: '2026-01-01',
+    manager: {
+      id: 'usr-pm',
+      fullName: 'Quản Lý Alpha',
+    },
+    department: {
+      id: 'dep-1',
+      code: 'DEP-IT',
+      name: 'Công nghệ thông tin',
+    },
+    milestones: [],
+    members: [],
+    allowedActions: [],
     createdAt: '2026-01-01T00:00:00Z',
     updatedAt: '2026-01-01T00:00:00Z',
     version: 1,
@@ -141,6 +154,10 @@ describe('Phase 18D Real Navigator Tree Integration', () => {
     priority: 'HIGH',
     status: 'OPEN',
     requester: { id: 'usr-1', fullName: 'Tester', email: 'tester@worksphere.local' },
+    histories: [],
+    comments: [],
+    attachments: [],
+    allowedActions: [],
     createdAt: '2026-10-25T08:00:00Z',
     updatedAt: '2026-10-25T08:00:00Z',
     version: 1,
@@ -268,6 +285,120 @@ describe('Phase 18D Real Navigator Tree Integration', () => {
     const taskDetailScreen = await findByTestId('screen-task-detail');
     expect(taskDetailScreen).toBeTruthy();
     expect(getByText('Nhiệm vụ kiểm thử')).toBeTruthy();
+
+    // 5. Back from TaskDetail -> returns to NotificationList
+    const taskBackBtn = getByTestId('btn-task-detail-back');
+    await act(async () => {
+      fireEvent.press(taskBackBtn);
+    });
+
+    expect(await findByTestId('screen-notification-list')).toBeTruthy();
+
+    // 6. Back from NotificationList -> returns to Dashboard
+    const notifBackBtn = getByTestId('btn-notification-back');
+    await act(async () => {
+      fireEvent.press(notifBackBtn);
+    });
+
+    expect(await findByTestId('screen-dashboard')).toBeTruthy();
+  });
+
+  it('navigates from NotificationList -> ProjectDetail -> Back -> NotificationList', async () => {
+    const { getByTestId, findByTestId, getByText } = await render(
+      <AppRoot
+        sessionState="AUTHENTICATED"
+        initialAuthState={{
+          sessionState: 'AUTHENTICATED',
+          currentUser: {
+            id: 'usr-tester',
+            username: 'tester',
+            fullName: 'Tester',
+            email: 'tester@worksphere.local',
+            roles: ['ADMIN'],
+            permissions: ['TASK_READ', 'PROJECT_READ', 'SERVICE_REQUEST_READ', 'ASSET_READ'],
+          },
+          initialized: true,
+        }}
+      />
+    );
+
+    // 1. Dashboard bell -> NotificationList
+    const bellBtn = await findByTestId('btn-dashboard-notifications');
+    await act(async () => {
+      fireEvent.press(bellBtn);
+    });
+
+    expect(await findByTestId('screen-notification-list')).toBeTruthy();
+
+    // 2. Tap Project notification -> ProjectDetail
+    await waitFor(() => {
+      expect(getByText('Thông báo Project')).toBeTruthy();
+    });
+
+    await act(async () => {
+      fireEvent.press(getByTestId('notification-card-notif-proj-1'));
+    });
+
+    // 3. ProjectDetail renders
+    expect(await findByTestId('screen-project-detail')).toBeTruthy();
+    expect(getByText('Dự án Alpha')).toBeTruthy();
+
+    // 4. Back from ProjectDetail -> returns to NotificationList
+    const projBackBtn = getByTestId('btn-project-detail-back');
+    await act(async () => {
+      fireEvent.press(projBackBtn);
+    });
+
+    expect(await findByTestId('screen-notification-list')).toBeTruthy();
+  });
+
+  it('navigates from NotificationList -> ServiceRequestDetail -> Back -> NotificationList', async () => {
+    const { getByTestId, findByTestId, getByText } = await render(
+      <AppRoot
+        sessionState="AUTHENTICATED"
+        initialAuthState={{
+          sessionState: 'AUTHENTICATED',
+          currentUser: {
+            id: 'usr-tester',
+            username: 'tester',
+            fullName: 'Tester',
+            email: 'tester@worksphere.local',
+            roles: ['ADMIN'],
+            permissions: ['TASK_READ', 'PROJECT_READ', 'SERVICE_REQUEST_READ', 'ASSET_READ'],
+          },
+          initialized: true,
+        }}
+      />
+    );
+
+    // 1. Dashboard bell -> NotificationList
+    const bellBtn = await findByTestId('btn-dashboard-notifications');
+    await act(async () => {
+      fireEvent.press(bellBtn);
+    });
+
+    expect(await findByTestId('screen-notification-list')).toBeTruthy();
+
+    // 2. Tap ServiceRequest notification -> ServiceRequestDetail
+    await waitFor(() => {
+      expect(getByText('Thông báo Yêu cầu dịch vụ')).toBeTruthy();
+    });
+
+    await act(async () => {
+      fireEvent.press(getByTestId('notification-card-notif-sr-1'));
+    });
+
+    // 3. ServiceRequestDetail renders
+    expect(await findByTestId('screen-service-request-detail')).toBeTruthy();
+    expect(getByText('Hỗ trợ phần cứng')).toBeTruthy();
+
+    // 4. Back from ServiceRequestDetail -> returns to NotificationList
+    const srBackBtn = getByTestId('btn-back');
+    await act(async () => {
+      fireEvent.press(srBackBtn);
+    });
+
+    expect(await findByTestId('screen-notification-list')).toBeTruthy();
   });
 
   it('navigates from More screen -> NotificationList -> AssetDetail -> Back -> NotificationList', async () => {

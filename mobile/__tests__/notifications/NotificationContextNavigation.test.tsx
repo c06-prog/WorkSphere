@@ -109,7 +109,7 @@ describe('Notification Context Navigation Orchestration (Phase 18D)', () => {
       expect(mockApplyRead).toHaveBeenCalledWith('notif-task-1');
       expect(mockNavigate).toHaveBeenCalledWith('MainTabs', {
         screen: 'TaskDetail',
-        params: { taskId: validTaskUuid },
+        params: { taskId: validTaskUuid, returnOrigin: 'NotificationList' },
       });
     });
   });
@@ -188,7 +188,7 @@ describe('Notification Context Navigation Orchestration (Phase 18D)', () => {
       expect(mockApi.markNotificationRead).not.toHaveBeenCalled();
       expect(mockNavigate).toHaveBeenCalledWith('MainTabs', {
         screen: 'ProjectDetail',
-        params: { projectId: validProjectUuid },
+        params: { projectId: validProjectUuid, returnOrigin: 'NotificationList' },
       });
     });
   });
@@ -227,7 +227,7 @@ describe('Notification Context Navigation Orchestration (Phase 18D)', () => {
       expect(mockApi.markNotificationRead).not.toHaveBeenCalled();
       expect(mockNavigate).toHaveBeenCalledWith('MainTabs', {
         screen: 'ServiceRequestDetail',
-        params: { requestId: validServiceRequestUuid },
+        params: { requestId: validServiceRequestUuid, returnOrigin: 'NotificationList' },
       });
     });
   });

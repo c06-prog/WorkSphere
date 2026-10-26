@@ -23,8 +23,9 @@
  * - Safe presentation error handling with reload/retry, and friendly 403 / 404 screens
  */
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  BackHandler,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -87,9 +88,31 @@ export function TaskDetailScreen() {
   const navigation = useNavigation<MainTabNavProp<'TaskDetail'>>();
   const route = useRoute<MainTabScreenRouteProp<'TaskDetail'>>();
 
-  const { taskId } = route.params;
+  const { taskId, returnOrigin } = route.params;
   const { task, initialLoading, refreshing, error, refreshError, load, refresh, applyTaskUpdate } =
     useTaskDetail(taskId);
+
+  const handleBack = useCallback(() => {
+    if (returnOrigin === 'NotificationList') {
+      const parentNav = navigation.getParent?.();
+      if (parentNav?.goBack) {
+        parentNav.goBack();
+        return;
+      }
+    }
+    navigation.goBack();
+  }, [navigation, returnOrigin]);
+
+  useEffect(() => {
+    if (returnOrigin !== 'NotificationList') return;
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      handleBack();
+      return true;
+    });
+    return () => {
+      backHandler.remove();
+    };
+  }, [handleBack, returnOrigin]);
 
   // Mutation modal visibility states
   const [statusModalVisible, setStatusModalVisible] = useState<boolean>(false);
@@ -276,7 +299,7 @@ export function TaskDetailScreen() {
           testID="task-detail-error-state"
         />
         <Pressable
-          onPress={() => navigation.goBack()}
+          onPress={handleBack}
           style={({ pressed }) => [
             styles.backButtonBottom,
             {
@@ -365,7 +388,7 @@ export function TaskDetailScreen() {
         {/* Top Navigation Row: Back Button & Edit Action */}
         <View style={styles.topNavRow}>
           <Pressable
-            onPress={() => navigation.goBack()}
+            onPress={handleBack}
             style={({ pressed }) => [
               styles.backNavRow,
               { opacity: pressed ? 0.7 : 1 },

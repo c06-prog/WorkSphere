@@ -107,19 +107,19 @@ export function NotificationListScreen() {
       case 'TaskDetail':
         navigation.navigate('MainTabs', {
           screen: 'TaskDetail',
-          params: target.params,
+          params: { ...target.params, returnOrigin: 'NotificationList' },
         });
         break;
       case 'ProjectDetail':
         navigation.navigate('MainTabs', {
           screen: 'ProjectDetail',
-          params: target.params,
+          params: { ...target.params, returnOrigin: 'NotificationList' },
         });
         break;
       case 'ServiceRequestDetail':
         navigation.navigate('MainTabs', {
           screen: 'ServiceRequestDetail',
-          params: target.params,
+          params: { ...target.params, returnOrigin: 'NotificationList' },
         });
         break;
     }

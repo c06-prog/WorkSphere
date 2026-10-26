@@ -13,8 +13,9 @@
  * - Safe presentation error handling with reload/retry
  */
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  BackHandler,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -53,9 +54,31 @@ export function ProjectDetailScreen() {
   const navigation = useNavigation<MainTabNavProp<'ProjectDetail'>>();
   const route = useRoute<MainTabScreenRouteProp<'ProjectDetail'>>();
 
-  const { projectId } = route.params;
+  const { projectId, returnOrigin } = route.params;
   const { project, initialLoading, refreshing, error, refreshError, load, refresh } =
     useProjectDetail(projectId);
+
+  const handleBack = useCallback(() => {
+    if (returnOrigin === 'NotificationList') {
+      const parentNav = navigation.getParent?.();
+      if (parentNav?.goBack) {
+        parentNav.goBack();
+        return;
+      }
+    }
+    navigation.goBack();
+  }, [navigation, returnOrigin]);
+
+  useEffect(() => {
+    if (returnOrigin !== 'NotificationList') return;
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      handleBack();
+      return true;
+    });
+    return () => {
+      backHandler.remove();
+    };
+  }, [handleBack, returnOrigin]);
 
   const [statusModalVisible, setStatusModalVisible] = useState(false);
   const [createMilestoneVisible, setCreateMilestoneVisible] = useState(false);
@@ -109,7 +132,7 @@ export function ProjectDetailScreen() {
           testID="project-detail-error-state"
         />
         <Pressable
-          onPress={() => navigation.goBack()}
+          onPress={handleBack}
           style={({ pressed }) => [
             styles.backButtonBottom,
             {
@@ -162,6 +185,24 @@ export function ProjectDetailScreen() {
           />
         }
       >
+        {/* Top Navigation Row: Back Button */}
+        <View style={styles.topNavRow}>
+          <Pressable
+            onPress={handleBack}
+            style={({ pressed }) => [
+              styles.backNavRow,
+              { opacity: pressed ? 0.7 : 1 },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Quay lại danh sách dự án"
+            testID="btn-project-detail-back"
+          >
+            <Text style={[theme.typography.body, styles.backNavText, { color: theme.colors.primary }]}>
+              ← Quay lại
+            </Text>
+          </Pressable>
+        </View>
+
         {/* Top Header Card */}
         <View
           style={[
@@ -609,5 +650,19 @@ const styles = StyleSheet.create({
     minHeight: 32,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  topNavRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  backNavRow: {
+    paddingVertical: 8,
+    minHeight: 48,
+    justifyContent: 'center',
+  },
+  backNavText: {
+    fontWeight: '600',
   },
 });

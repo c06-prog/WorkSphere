@@ -16,6 +16,7 @@
 - Subphase 16D Corrective Report: `reports/PHASE_16D_RUNTIME_CORRECTIVE_SERVICE_ASSET.md`
 - Subphase 16D Final Runtime Report: `reports/PHASE_16D_FINAL_ANDROID_MUTATION_EVIDENCE.md`
 - Subphase 16E Report: `reports/PHASE_16E_NOTIFICATION_CROSS_MODULE_E2E.md`
+- Subphase 16E Corrective Report: `reports/PHASE_16E_CORRECTIVE_NAVIGATION_FIXTURE_SCANNER.md`
 - Next Action: PHASE 16F — CROSS-MODULE INTEGRATION & FINAL END-TO-END ACCEPTANCE WAVE.
 - Execution Waves Plan:
   - 16A: Test Infrastructure & Multi-Role Fixture Foundation

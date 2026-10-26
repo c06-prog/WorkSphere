@@ -20,8 +20,9 @@
  * - Staged mutations: Zero active mutation controls (16D/16E/16F own them).
  */
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  BackHandler,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -129,7 +130,7 @@ export function ServiceRequestDetailScreen() {
   const navigation = useNavigation<MainTabNavProp<'ServiceRequestDetail'>>();
   const route = useRoute<MainTabScreenRouteProp<'ServiceRequestDetail'>>();
 
-  const { requestId } = route.params;
+  const { requestId, returnOrigin } = route.params;
   const {
     request,
     initialLoading,
@@ -141,6 +142,28 @@ export function ServiceRequestDetailScreen() {
     invalidateAndRefresh,
     applyServiceRequestUpdate,
   } = useServiceRequestDetail(requestId);
+
+  const handleBack = useCallback(() => {
+    if (returnOrigin === 'NotificationList') {
+      const parentNav = navigation.getParent?.();
+      if (parentNav?.goBack) {
+        parentNav.goBack();
+        return;
+      }
+    }
+    navigation.goBack();
+  }, [navigation, returnOrigin]);
+
+  useEffect(() => {
+    if (returnOrigin !== 'NotificationList') return;
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      handleBack();
+      return true;
+    });
+    return () => {
+      backHandler.remove();
+    };
+  }, [handleBack, returnOrigin]);
 
   // Edit & Conflict state
   const [editModalVisible, setEditModalVisible] = useState<boolean>(false);
@@ -304,7 +327,7 @@ export function ServiceRequestDetailScreen() {
           testID="service-request-detail-error"
         />
         <Pressable
-          onPress={() => navigation.goBack()}
+          onPress={handleBack}
           style={[styles.errorBackBtn, { backgroundColor: theme.colors.surfaceVariant }]}
           testID="btn-error-back"
           accessibilityRole="button"
@@ -389,7 +412,7 @@ export function ServiceRequestDetailScreen() {
         {/* Top Header Row with Back Button & Request Number */}
         <View style={styles.topNavRow}>
           <Pressable
-            onPress={() => navigation.goBack()}
+            onPress={handleBack}
             style={({ pressed }) => [
               styles.backButton,
               {
