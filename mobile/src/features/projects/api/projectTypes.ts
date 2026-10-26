@@ -144,8 +144,8 @@ export interface ProjectSummary {
   status: ProjectStatus;
   priority: ProjectPriority;
   manager: ProjectManagerSummary;
-  startDate: string; // YYYY-MM-DD
-  plannedEndDate: string; // YYYY-MM-DD
+  startDate: string | null; // YYYY-MM-DD
+  plannedEndDate: string | null; // YYYY-MM-DD
   progressPercent: number;
   memberCount: number;
   taskSummary: ProjectTaskSummary;
@@ -175,8 +175,8 @@ export interface ProjectDetail {
   priority: ProjectPriority;
   manager: ProjectManagerSummary;
   department: ProjectDepartmentDetail | null;
-  startDate: string; // YYYY-MM-DD
-  plannedEndDate: string; // YYYY-MM-DD
+  startDate: string | null; // YYYY-MM-DD
+  plannedEndDate: string | null; // YYYY-MM-DD
   actualEndDate: string | null; // YYYY-MM-DD
   progressPercent: number;
   memberCount: number;
@@ -289,8 +289,8 @@ export function isProjectSummary(data: unknown): data is ProjectSummary {
     isProjectStatus(obj.status) &&
     isProjectPriority(obj.priority) &&
     isProjectManagerSummary(obj.manager) &&
-    typeof obj.startDate === 'string' &&
-    typeof obj.plannedEndDate === 'string' &&
+    (obj.startDate === null || typeof obj.startDate === 'string') &&
+    (obj.plannedEndDate === null || typeof obj.plannedEndDate === 'string') &&
     typeof obj.progressPercent === 'number' &&
     typeof obj.memberCount === 'number' &&
     isProjectTaskSummary(obj.taskSummary) &&
@@ -313,8 +313,8 @@ export function isProjectDetail(data: unknown): data is ProjectDetail {
     isProjectPriority(obj.priority) &&
     isProjectManagerSummary(obj.manager) &&
     (obj.department === null || isProjectDepartmentDetail(obj.department)) &&
-    typeof obj.startDate === 'string' &&
-    typeof obj.plannedEndDate === 'string' &&
+    (obj.startDate === null || typeof obj.startDate === 'string') &&
+    (obj.plannedEndDate === null || typeof obj.plannedEndDate === 'string') &&
     (obj.actualEndDate === null || typeof obj.actualEndDate === 'string') &&
     typeof obj.progressPercent === 'number' &&
     typeof obj.memberCount === 'number' &&

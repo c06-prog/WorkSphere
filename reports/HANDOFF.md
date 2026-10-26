@@ -4,13 +4,14 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: GIAI ĐOẠN 16B — FLOW-01 AUTHENTICATION, SESSION & RBAC E2E WAVE & RUNTIME CORRECTIVE
-- Status: Giai đoạn 16B và 16B-RUNTIME-CORRECTIVE HOÀN THÀNH. Xác minh 4 vai trò canonical trực tiếp trên Android Emulator API 35, Session recovery sau app-process restart, Logout & Back-guard, Coalescing concurrent 401s, vòng đời session/token rotation, direct API RBAC matrix, cách ly người dùng đạt 100%.
+- Current Task: GIAI ĐOẠN 16C — FLOW-02 PROJECT & FLOW-03 TASK MANAGEMENT E2E WAVE
+- Status: Giai đoạn 16C HOÀN THÀNH. Xác minh đầy đủ FLOW-02 (Project Management) và FLOW-03 (Task Management) trên Android Emulator API 35 và Backend API, bao gồm 4 vai trò canonical, ma trận RBAC trực tiếp, ràng buộc nghiệp vụ trạng thái dự án ACTIVE khi tạo task, optimistic locking (HTTP 409 khi stale version), quản lý thành viên dự án, vòng đời chuyển trạng thái công việc và subtask.
 - Canonical Test Plan: `reports/PHASE_16_SYSTEM_INTEGRATION_TEST_PLAN_FREEZE.md`
 - Subphase 16A Report: `reports/PHASE_16A_TEST_INFRASTRUCTURE_FIXTURE_FOUNDATION.md`
 - Subphase 16B Report: `reports/PHASE_16B_AUTH_SESSION_RBAC_E2E.md`
 - Subphase 16B Corrective Report: `reports/PHASE_16B_RUNTIME_CORRECTIVE_AUTH_MOBILE_RBAC.md`
-- Next Action: PHASE 16C — FLOW-02 PROJECT & FLOW-03 TASK MANAGEMENT E2E WAVE.
+- Subphase 16C Report: `reports/PHASE_16C_PROJECT_TASK_E2E.md`
+- Next Action: PHASE 16D — FLOW-04 SERVICE REQUEST & FLOW-05 ASSET MANAGEMENT E2E WAVE.
 - Execution Waves Plan:
   - 16A: Test Infrastructure & Multi-Role Fixture Foundation
   - 16B: FLOW-01 Authentication, Session & RBAC E2E Wave
