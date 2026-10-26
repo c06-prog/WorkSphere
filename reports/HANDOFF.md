@@ -4,8 +4,8 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: GIAI ĐOẠN 16D-FINAL-RUNTIME — ANDROID MUTATION COMPLETION FOR SERVICE REQUEST & ASSET FLOWS
-- Status: Giai đoạn 16D, 16D-RUNTIME-CORRECTIVE và 16D-FINAL-RUNTIME HOÀN THÀNH TOÀN DIỆN. Đã hoàn thành 100% các đột biến trực tiếp trên giao diện Android Emulator API 35 và đối soát trực tiếp với database PostgreSQL `worksphere-dev-pg`: Admin Create Asset, Admin Assign Asset, Admin Return Asset, Service Request Status Mutation, Employee Report Fault -> Create Service Request, Admin Add Repair History, và Admin Edit Asset với kiểm thử Optimistic Lock Conflict (HTTP 409). Toàn bộ tiến trình dev đã dừng sạch sẽ, cổng mạng 8080/8081 đã được giải phóng.
+- Current Task: GIAI ĐOẠN 16E — FLOW-06 NOTIFICATION LIFECYCLE, CROSS-MODULE CONTEXT NAVIGATION & REGRESSION WAVE
+- Status: Giai đoạn 16E HOÀN THÀNH TOÀN DIỆN. Đã xác thực 100% các đột biến sinh thông báo thật (PROJECT_MEMBER_ADDED, TASK_ASSIGNED, COMMENT_ADDED, SERVICE_REQUEST_UPDATED, ASSET_ASSIGNED), cách ly thông tin đa người dùng (cross-user mark read rejection HTTP 404), điều hướng màn hình ngữ cảnh liên module trên Android (ProjectDetail, TaskDetail, ServiceRequestDetail, AssetDetail), xử lý an toàn thông báo thiếu thực thể tham chiếu (banner thông báo không gây crash), tính năng Đọc tất cả (unreads -> 0), điều hướng từ More Menu và chuyển đổi phiên làm việc (e2e_emp -> e2e_admin) không rò rỉ state. Đã chạy full regression Mobile (1142/1142 tests PASS) và Backend (340/340 tests PASS, Checkstyle 0 violations). Toàn bộ dev processes và emulator đã được dừng và dọn dẹp sạch sẽ.
 - Canonical Test Plan: `reports/PHASE_16_SYSTEM_INTEGRATION_TEST_PLAN_FREEZE.md`
 - Subphase 16A Report: `reports/PHASE_16A_TEST_INFRASTRUCTURE_FIXTURE_FOUNDATION.md`
 - Subphase 16B Report: `reports/PHASE_16B_AUTH_SESSION_RBAC_E2E.md`
@@ -15,7 +15,8 @@
 - Subphase 16D Report: `reports/PHASE_16D_SERVICE_REQUEST_ASSET_E2E.md`
 - Subphase 16D Corrective Report: `reports/PHASE_16D_RUNTIME_CORRECTIVE_SERVICE_ASSET.md`
 - Subphase 16D Final Runtime Report: `reports/PHASE_16D_FINAL_ANDROID_MUTATION_EVIDENCE.md`
-- Next Action: PHASE 16E — FLOW-06 NOTIFICATION, CROSS-MODULE CONTEXT NAVIGATION & REGRESSION WAVE.
+- Subphase 16E Report: `reports/PHASE_16E_NOTIFICATION_CROSS_MODULE_E2E.md`
+- Next Action: PHASE 16F — CROSS-MODULE INTEGRATION & FINAL END-TO-END ACCEPTANCE WAVE.
 - Execution Waves Plan:
   - 16A: Test Infrastructure & Multi-Role Fixture Foundation
   - 16B: FLOW-01 Authentication, Session & RBAC E2E Wave

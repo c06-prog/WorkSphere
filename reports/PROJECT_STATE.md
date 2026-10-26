@@ -24,7 +24,7 @@
 - Phase 17 Mobile Asset Management: CLOSED (MEMORY_CHECKPOINT_CLOSED).
 - Phase 18 Mobile Notification System: CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 18A..18E + 18E-Runtime-Corrective + Type-Safety Hardening CLOSED).
 - Memory Checkpoint: `reports/PHASE_18_MEMORY_CHECKPOINT.md`
-- Current Status: ROADMAP GIAI ĐOẠN 16 — Subphase 16D (FLOW-04 Service Request & FLOW-05 Asset Management E2E Wave) COMPLETED. Ready for Wave 16E.
+- Current Status: ROADMAP GIAI ĐOẠN 16 — Subphase 16E (FLOW-06 Notification Lifecycle & Cross-Module Context Navigation E2E Wave) COMPLETED. Ready for Wave 16F.
 - Latest Decision: D-068 Roadmap Giai đoạn 16 — System Integration Test Plan & Execution Waves Freeze.
 - Canonical Test Plan: `reports/PHASE_16_SYSTEM_INTEGRATION_TEST_PLAN_FREEZE.md`
 - Subphase 16A Report: `reports/PHASE_16A_TEST_INFRASTRUCTURE_FIXTURE_FOUNDATION.md`
@@ -35,7 +35,8 @@
 - Subphase 16D Report: `reports/PHASE_16D_SERVICE_REQUEST_ASSET_E2E.md`
 - Subphase 16D Corrective Report: `reports/PHASE_16D_RUNTIME_CORRECTIVE_SERVICE_ASSET.md`
 - Subphase 16D Final Runtime Report: `reports/PHASE_16D_FINAL_ANDROID_MUTATION_EVIDENCE.md`
-- Next Action: PHASE 16E — FLOW-06 NOTIFICATION MANAGEMENT END-TO-END WAVE.
+- Subphase 16E Report: `reports/PHASE_16E_NOTIFICATION_CROSS_MODULE_E2E.md`
+- Next Action: PHASE 16F — CROSS-MODULE INTEGRATION & FINAL END-TO-END ACCEPTANCE WAVE.
 - Working tree at checkpoint: clean
 
 ## Latest Implementation & Hardening
