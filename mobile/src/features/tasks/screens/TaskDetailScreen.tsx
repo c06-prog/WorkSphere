@@ -33,7 +33,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { useAppTheme } from '../../../app/providers/ThemeProvider';
 import { MainTabNavProp, MainTabScreenRouteProp } from '../../../app/navigation/types';
 import {
@@ -103,16 +103,18 @@ export function TaskDetailScreen() {
     navigation.goBack();
   }, [navigation, returnOrigin]);
 
-  useEffect(() => {
-    if (returnOrigin !== 'NotificationList') return;
-    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
-      handleBack();
-      return true;
-    });
-    return () => {
-      backHandler.remove();
-    };
-  }, [handleBack, returnOrigin]);
+  useFocusEffect(
+    useCallback(() => {
+      if (returnOrigin !== 'NotificationList') return;
+      const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+        handleBack();
+        return true;
+      });
+      return () => {
+        backHandler.remove();
+      };
+    }, [handleBack, returnOrigin])
+  );
 
   // Mutation modal visibility states
   const [statusModalVisible, setStatusModalVisible] = useState<boolean>(false);
