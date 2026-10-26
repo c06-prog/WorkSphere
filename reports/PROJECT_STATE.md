@@ -33,6 +33,7 @@
 - Subphase 16C Report: `reports/PHASE_16C_PROJECT_TASK_E2E.md`
 - Subphase 16C Corrective Report: `reports/PHASE_16C_CORRECTIVE_PROJECT_TASK_COMPLETENESS.md`
 - Subphase 16D Report: `reports/PHASE_16D_SERVICE_REQUEST_ASSET_E2E.md`
+- Subphase 16D Corrective Report: `reports/PHASE_16D_RUNTIME_CORRECTIVE_SERVICE_ASSET.md`
 - Next Action: PHASE 16E — FLOW-06 NOTIFICATION MANAGEMENT END-TO-END WAVE.
 - Working tree at checkpoint: clean
 

@@ -114,7 +114,7 @@ Cả hai bộ kiểm thử toàn diện của hệ thống đều vượt qua v�
 
 ## 5. KẾT LUẬN & BÀN GIAO
 
-Giai đoạn **16D — FLOW-04 Service Request & FLOW-05 Asset Management E2E Wave** đã hoàn thành đạt chuẩn tuyệt đối, sẵn sàng chuyển tiếp sang **Giai đoạn 16E — FLOW-06 Notification Management End-to-End Wave**.
+Giai đoạn **16D — FLOW-04 Service Request & FLOW-05 Asset Management E2E Wave** đã hoàn thành đạt chuẩn tuyệt đối, và được bổ sung toàn diện bằng chứng runtime và kiểm định concurrency/security qua **PHASE 16D-RUNTIME-CORRECTIVE** (`reports/PHASE_16D_RUNTIME_CORRECTIVE_SERVICE_ASSET.md`), sẵn sàng chuyển tiếp sang **Giai đoạn 16E — FLOW-06 Notification Management End-to-End Wave**.
 
 **Marker chính thức:**  
-`PHASE_16D_SERVICE_REQUEST_ASSET_E2E_COMPLETE_READY_FOR_16E`
+`PHASE_16D_SERVICE_REQUEST_ASSET_E2E_CONFIRMED_READY_FOR_16E`

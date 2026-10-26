@@ -4,8 +4,8 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: GIAI ĐOẠN 16D — FLOW-04 SERVICE REQUEST & FLOW-05 ASSET MANAGEMENT E2E WAVE
-- Status: Giai đoạn 16D HOÀN THÀNH. Xác minh đầy đủ FLOW-04 (Service Request Management) và FLOW-05 (Asset Management & Repair History) trên Android Emulator API 35 và Backend API, bao gồm 4 vai trò canonical, toàn bộ vòng đời yêu cầu dịch vụ (OPEN -> ASSIGNED -> IN_PROGRESS -> RESOLVED -> CLOSED) kèm comment, toàn bộ vòng đời tài sản (AVAILABLE -> ASSIGNED -> RETURNED), liên kết chéo từ Chi tiết tài sản -> Báo hỏng (tạo yêu cầu kèm assetId), ghi nhận lịch sử sửa chữa (repair history) gắn với serviceRequestId, kiểm soát optimistic locking (HTTP 409 khi stale version), full backend regression (340 tests PASS), và full mobile regression (1142 tests PASS).
+- Current Task: GIAI ĐOẠN 16D-RUNTIME-CORRECTIVE — SERVICE REQUEST & ASSET ANDROID MANAGEMENT EVIDENCE, CONCURRENCY ACCURACY & SECURITY CLOSURE
+- Status: Giai đoạn 16D và 16D-RUNTIME-CORRECTIVE HOÀN THÀNH TOÀN DIỆN. Xác minh đầy đủ FLOW-04 (Service Request Management) và FLOW-05 (Asset Management & Repair History) trên Android Emulator API 35 và Backend API, bao gồm 4 vai trò canonical (`ADMIN`, `TEAM_LEADER`, `PROJECT_MANAGER`, `EMPLOYEE`), kiểm tra đối soát hợp đồng phiên bản chuẩn (exact version contract audit), kiểm thử concurrency thật sự N vs N+1 với HTTP 409 Conflict, domain invariants cho double-assign và inactive-return, giao diện Android cho quản lý SR và Asset (phân công, đổi trạng thái, cấp phát, sửa thông tin, ghi nhận bảo dưỡng), liên kết chéo Báo hỏng từ Asset sang CreateServiceRequest, rà soát an ninh không lưu/commit bất kỳ secret nào, và giải phóng 100% tài nguyên môi trường.
 - Canonical Test Plan: `reports/PHASE_16_SYSTEM_INTEGRATION_TEST_PLAN_FREEZE.md`
 - Subphase 16A Report: `reports/PHASE_16A_TEST_INFRASTRUCTURE_FIXTURE_FOUNDATION.md`
 - Subphase 16B Report: `reports/PHASE_16B_AUTH_SESSION_RBAC_E2E.md`
@@ -13,6 +13,7 @@
 - Subphase 16C Report: `reports/PHASE_16C_PROJECT_TASK_E2E.md`
 - Subphase 16C Corrective Report: `reports/PHASE_16C_CORRECTIVE_PROJECT_TASK_COMPLETENESS.md`
 - Subphase 16D Report: `reports/PHASE_16D_SERVICE_REQUEST_ASSET_E2E.md`
+- Subphase 16D Corrective Report: `reports/PHASE_16D_RUNTIME_CORRECTIVE_SERVICE_ASSET.md`
 - Next Action: PHASE 16E — FLOW-06 NOTIFICATION, CROSS-MODULE CONTEXT NAVIGATION & REGRESSION WAVE.
 - Execution Waves Plan:
   - 16A: Test Infrastructure & Multi-Role Fixture Foundation
