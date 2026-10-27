@@ -1,0 +1,63 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: worksphere-compose-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-worksphere}
+      POSTGRES_USER: ${POSTGRES_USER:-worksphere_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    ports:
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5433}:5432"
+    volumes:
+      - worksphere-postgres-data:/var/lib/postgresql/data
+    networks:
+      - worksphere-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-worksphere_user} -d $${POSTGRES_DB:-worksphere}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: worksphere-backend:stage17-local
+    container_name: worksphere-compose-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${BACKEND_PORT:-8080}:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-worksphere}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-worksphere_user}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      WORKSPHERE_JWT_SECRET: ${JWT_SECRET_KEY:-worksphere-dev-secret-key-must-be-at-least-32-characters-long}
+      WORKSPHERE_STORAGE_PATH: /app/uploads
+      SERVER_PORT: 8080
+    volumes:
+      - worksphere-uploads:/app/uploads
+    networks:
+      - worksphere-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+
+volumes:
+  worksphere-postgres-data:
+    name: worksphere-postgres-data
+  worksphere-uploads:
+    name: worksphere-uploads
+
+networks:
+  worksphere-network:
+    name: worksphere-network
+    driver: bridge
