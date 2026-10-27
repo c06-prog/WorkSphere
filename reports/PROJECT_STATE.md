@@ -24,8 +24,9 @@
 - Phase 17 Mobile Asset Management: CLOSED (MEMORY_CHECKPOINT_CLOSED).
 - Phase 18 Mobile Notification System: CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 18A..18E + 18E-Runtime-Corrective + Type-Safety Hardening CLOSED).
 - Memory Checkpoint: `reports/PHASE_18_MEMORY_CHECKPOINT.md`
-- Current Status: ROADMAP GIAI ĐOẠN 18A (GitHub Actions CI Foundation & Backend Quality Gates) COMPLETED. ci.yml updated with permissions, concurrency, timeouts, backend checkstyle gate, Testcontainers full tests (340/340), fat JAR packaging, test reports and jar artifact uploads, mobile quality gates retained. Local validation verified. Ready for Stage 18B (Mobile & Android Build Packaging).
+- Current Status: ROADMAP GIAI ĐOẠN 18B (Android Debug Build & CI Artifact Packaging) COMPLETED. ci.yml updated with android-debug-build job, packaging app-debug.apk on GitHub-hosted runner, uploading worksphere-android-debug-apk artifact (30 days retention). Local and remote builds verified. Ready for Stage 18C (Docker Build & Version Tagging).
 - Latest Decision: D-069 Khóa Kế Hoạch Kiểm Thử Chấp Nhận Người Dùng (UAT Plan Freeze) & Hợp Đồng Nghiệm Thu Doanh Nghiệp (Đã Đối Soát Khớp Mã Nguồn).
+- Stage 18B Android CI Artifact Report: `reports/ROADMAP_STAGE_18B_ANDROID_CI_ARTIFACT.md`
 - Stage 18A CI Foundation Report: `reports/ROADMAP_STAGE_18A_CI_FOUNDATION.md`
 - Stage 17 Memory Checkpoint: `reports/ROADMAP_STAGE_17_MEMORY_CHECKPOINT.md`
 - Stage 17D Final Verification Report: `reports/ROADMAP_STAGE_17D_FINAL_VERIFICATION.md`
