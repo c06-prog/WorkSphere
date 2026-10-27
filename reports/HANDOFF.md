@@ -4,11 +4,12 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: PRE-UAT AUDIT, BUSINESS ACCEPTANCE CONTRACT & UAT EXECUTION PLAN FREEZE
-- Status: PRE-UAT AUDIT VÀ UAT PLAN FREEZE HOÀN THÀNH. Đã thiết lập Hợp đồng Nghiệm thu Nghiệp vụ (Business Acceptance Contract), chuyển đổi toàn diện 6 Technical Integration Flows thành 10 Business Acceptance Scenarios (UAT-01 đến UAT-10), khóa 4 vai trò nghiệp vụ canonical (EMPLOYEE, TEAM_LEADER, PROJECT_MANAGER, ADMIN), thiết lập chính sách dữ liệu UAT với tiền tố UAT-, chuẩn hóa 4 mức độ phân loại defect (Severity 1-4), định hình 5 đợt sóng thực thi UAT (Waves 1-5), và ban hành 2 mẫu báo cáo chuẩn hóa (UAT Scenario Template & UAT Defect Template). Toàn bộ mã nguồn backend và mobile được bảo toàn nguyên vẹn 100%. Sẵn sàng bước vào các giai đoạn DevOps/Hạ tầng hoặc thực thi đợt sóng UAT đầu tiên theo phân công.
-- Latest Decision: D-069 Khóa Kế Hoạch Kiểm Thử Chấp Nhận Người Dùng (UAT Plan Freeze) & Hợp Đồng Nghiệm Thu Doanh Nghiệp.
+- Current Task: UAT PLAN NARROW CORRECTION — SOURCE-ALIGNED BUSINESS SCENARIOS & D-069 RECONCILIATION
+- Status: HIỆU CHỈNH KẾ HOẠCH UAT KHỚP MÃ NGUỒN HOÀN THÀNH. Đã hoàn tất đối soát và điều chỉnh hẹp 10 kịch bản UAT (UAT-01 đến UAT-10), loại bỏ các điểm chệch hướng ngoài phạm vi mã nguồn (tự đăng ký public, thu hồi đa thiết bị trên Mobile, thông báo đa kênh, cơ chế ngoại tuyến offline-first, màn hình admin user trên Mobile và CRUD danh mục tài sản trên Mobile). Cập nhật Quyết định Kiến trúc D-069 ghi nhận đối soát kiểm toán minh bạch. Ban hành báo cáo UAT Scope Correction Report (`reports/UAT_SCOPE_CORRECTION.md`). Toàn bộ mã nguồn backend và mobile được bảo toàn nguyên vẹn 100%. Sẵn sàng chuyển tiếp sang Roadmap Giai đoạn 17 (Docker và Môi trường Local).
+- Latest Decision: D-069 Khóa Kế Hoạch Kiểm Thử Chấp Nhận Người Dùng (UAT Plan Freeze) & Hợp Đồng Nghiệm Thu Doanh Nghiệp (Đã Đối Soát Khớp Mã Nguồn).
 - Pre-UAT Audit Report: `reports/PRE_UAT_AUDIT.md`
 - UAT Execution Plan Freeze: `reports/UAT_PLAN_FREEZE.md`
+- UAT Scope Correction Report: `reports/UAT_SCOPE_CORRECTION.md`
 - UAT Scenario Template: `reports/templates/UAT_SCENARIO_TEMPLATE.md`
 - UAT Defect Template: `reports/templates/UAT_DEFECT_TEMPLATE.md`
 - Canonical Test Plan: `reports/PHASE_16_SYSTEM_INTEGRATION_TEST_PLAN_FREEZE.md`

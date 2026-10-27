@@ -24,10 +24,11 @@
 - Phase 17 Mobile Asset Management: CLOSED (MEMORY_CHECKPOINT_CLOSED).
 - Phase 18 Mobile Notification System: CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 18A..18E + 18E-Runtime-Corrective + Type-Safety Hardening CLOSED).
 - Memory Checkpoint: `reports/PHASE_18_MEMORY_CHECKPOINT.md`
-- Current Status: ROADMAP GIAI ĐOẠN 16 — CLOSED (16A–16F PASS). Pre-UAT Audit & UAT Plan Freeze COMPLETED (Authoritative Business Acceptance Contract Established).
-- Latest Decision: D-069 Khóa Kế Hoạch Kiểm Thử Chấp Nhận Người Dùng (UAT Plan Freeze) & Hợp Đồng Nghiệm Thu Doanh Nghiệp.
+- Current Status: ROADMAP GIAI ĐOẠN 16 — CLOSED (16A–16F PASS). UAT Scope Correction COMPLETED (All 10 scenarios source-reconciled). Ready for Roadmap Giai đoạn 17 (Docker/Local Env).
+- Latest Decision: D-069 Khóa Kế Hoạch Kiểm Thử Chấp Nhận Người Dùng (UAT Plan Freeze) & Hợp Đồng Nghiệm Thu Doanh Nghiệp (Đã Đối Soát Khớp Mã Nguồn).
 - Pre-UAT Audit Report: `reports/PRE_UAT_AUDIT.md`
 - UAT Execution Plan Freeze: `reports/UAT_PLAN_FREEZE.md`
+- UAT Scope Correction Report: `reports/UAT_SCOPE_CORRECTION.md`
 - UAT Scenario Template: `reports/templates/UAT_SCENARIO_TEMPLATE.md`
 - UAT Defect Template: `reports/templates/UAT_DEFECT_TEMPLATE.md`
 - Canonical Test Plan: `reports/PHASE_16_SYSTEM_INTEGRATION_TEST_PLAN_FREEZE.md`

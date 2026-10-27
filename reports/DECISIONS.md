@@ -1455,39 +1455,47 @@ WorkSphere chính thức khóa Kế hoạch Kiểm thử Tích hợp & End-to-En
 
 ---
 
-## D-069 Khóa Kế Hoạch Kiểm Thử Chấp Nhận Người Dùng (UAT Plan Freeze) & Hợp Đồng Nghiệm Thu Doanh Nghiệp
+## D-069 Khóa Kế Hoạch Kiểm Thử Chấp Nhận Người Dùng (UAT Plan Freeze) & Hợp Đồng Nghiệm Thu Doanh Nghiệp (Đã Đối Soát Khớp Mã Nguồn)
 
-- **Ngày quyết định**: 2026-10-27
+- **Ngày quyết định**: 2026-10-27 (Cập nhật đối soát nguồn: 2026-10-27)
 - **Tác giả**: Antigravity Assistant & Technical Architect
-- **Trạng thái**: Ratified / Authoritative Freeze
+- **Trạng thái**: Ratified / Authoritative Freeze / Source-Reconciled
+- **Ghi chú lịch sử kiểm toán**:
+  - Bản kế hoạch UAT ban đầu có chứa một số từ ngữ chệch hướng so với mã nguồn thực tế (tự đăng ký public, thu hồi đa thiết bị trên Mobile, thông báo đa kênh, tính nhất quán ngoại tuyến, và màn hình quản trị user trên Mobile).
+  - Sau đợt kiểm toán đọc độc lập (Read-Only Audit), D-069 được đối soát và điều chỉnh hẹp để 100% kịch bản UAT khớp chính xác với năng lực mã nguồn và tài liệu canonical hiện có mà không xóa bỏ kết luận kiểm toán lịch sử.
 - **Ngữ cảnh**:
   - Giai đoạn 16 (Tích hợp và kiểm thử hệ thống) đã hoàn tất toàn diện với 100% 6 flows integration (FLOW-01 đến FLOW-06), 340/340 Backend tests, 1144/1144 Mobile tests, và xác minh runtime trên Android emulator với 4 roles canonical (EMPLOYEE, TEAM_LEADER, PROJECT_MANAGER, ADMIN).
   - Trước khi bước vào các giai đoạn DevOps/Triển khai tiếp theo (Giai đoạn 17 Docker/Local Env, Giai đoạn 18 CI/CD, Giai đoạn 19 Giám sát/Backup) và Giai đoạn 21 Nghiệm thu dự án, cần thiết lập một Hợp đồng Nghiệm thu Nghiệp vụ (Business Acceptance Contract) và Khóa Kế hoạch Thực thi UAT (UAT Execution Plan Freeze) chính thức.
-- **Quyết định**:
-  1. **Chuyển dịch 6 Technical Integration Flows thành 10 Business Acceptance Scenarios**:
-     - UAT-01: Đăng ký, Đăng nhập, Duy trì Phiên & Phân định Vai trò (FLOW-01).
-     - UAT-02: Đổi Mật khẩu & Thu hồi Phiên Bảo mật Đa thiết bị (FLOW-01).
-     - UAT-03: Vòng đời Dự án, Phân bổ Nhân sự & Kiểm soát Kế hoạch (FLOW-02).
-     - UAT-04: Phân rã Công việc, Giao Task, Cập nhật Tiến độ & Báo cáo Hoàn thành (FLOW-03).
-     - UAT-05: Phê duyệt & Đánh giá Chất lượng Nhiệm vụ theo Phân cấp (FLOW-03).
-     - UAT-06: Tạo, Tiếp nhận & Xử lý Yêu cầu Dịch vụ Nội bộ (FLOW-04).
-     - UAT-07: Quản lý Danh mục Thiết bị & Gắn kết Tài sản với Yêu cầu Xử lý (FLOW-05 & FLOW-04).
-     - UAT-08: Quản trị Hệ thống, Vòng đời Người dùng & Phân quyền Truy cập (RBAC Matrix & FLOW-01).
-     - UAT-09: Trung tâm Thông báo Đa kênh & Điều hướng Ngữ cảnh Công việc (FLOW-06).
-     - UAT-10: Cô lập Dữ liệu Phân quyền & Tính Nhất quán Trạng thái Ngoại tuyến/Mạng Yếu.
+- **Quyết định (Đã đối soát hẹp với Source Code)**:
+  1. **Chuyển dịch 6 Technical Integration Flows thành 10 Business Acceptance Scenarios Khớp Nguồn**:
+     - UAT-01 (MOBILE_UI): Đăng nhập, Khôi phục Phiên, Đăng xuất và Phân định Vai trò (Loại trừ tự đăng ký public và RegistrationScreen).
+     - UAT-02 (MOBILE_UI): Đổi Mật khẩu và Bảo vệ Phiên Xác thực (Loại trừ danh sách thiết bị/thu hồi đa thiết bị trên Mobile UI).
+     - UAT-03 (MOBILE_UI): Vòng đời Dự án, Phân bổ Thành viên & Mốc Tiến độ.
+     - UAT-04 (MOBILE_UI): Phân rã Công việc, Giao Task, Cập nhật Tiến độ & Báo cáo Hoàn thành.
+     - UAT-05 (MOBILE_UI): Phê duyệt & Đánh giá Chất lượng Nhiệm vụ theo Phân cấp.
+     - UAT-06 (MOBILE_UI): Tạo, Tiếp nhận, Xử lý & Đánh giá Yêu cầu Dịch vụ Nội bộ.
+     - UAT-07 (MOBILE_UI): Quản lý Tài sản và Liên kết Yêu cầu Dịch vụ (Chọn danh mục có sẵn trên Mobile; loại trừ Mobile Asset Category CRUD).
+     - UAT-08 (MOBILE_UI_PLUS_ADMIN_API): Quản trị Người dùng qua Admin API và Kiểm chứng RBAC trên Mobile (Thực thi tạo/khóa user qua Admin API; kiểm chứng đăng nhập/phân quyền trên Mobile UI; loại trừ Mobile User Admin screen).
+     - UAT-09 (MOBILE_UI): Trung tâm Thông báo Trong Ứng dụng và Điều hướng Ngữ cảnh (In-app notification center qua REST per D-067; loại trừ FCM, APNs, push tray ngoài, Email, SMS).
+     - UAT-10 (MOBILE_UI): Cô lập Dữ liệu Người dùng, Gián đoạn Mạng và Retry An toàn (Mô hình NETWORK_ERROR_RETRY phụ thuộc trực tuyến; loại trừ offline-first, local SQLite sync).
   2. **Khóa 4 Vai trò Canonical và Ma trận Nghiệp vụ**:
      - Khóa cứng 4 vai trò: EMPLOYEE, TEAM_LEADER, PROJECT_MANAGER, ADMIN.
      - Tuyệt đối cấm các vai trò ngoài tài liệu chuẩn như FACILITY_MANAGER.
-  3. **Chiến lược Môi trường & Dữ liệu UAT**:
+  3. **Ranh giới Phân định Kênh Thực Thi**:
+     - Rõ ràng phân định các kịch bản chạy hoàn toàn trên Mobile UI (UAT-01 đến UAT-07, UAT-09, UAT-10) và kịch bản kết hợp Admin API với Mobile UI (UAT-08).
+  4. **Chiến lược Môi trường & Dữ liệu UAT**:
      - Môi trường UAT độc lập (Staging Server TLS/HTTPS, cơ sở dữ liệu riêng, Android release-candidate APK ký số nội bộ).
      - Toàn bộ dữ liệu UAT sử dụng tiền tố chuẩn hóa UAT- để đảm bảo nhận diện và thu hồi an toàn.
-  4. **Phân loại Defect & Quy trình Retest (Severity 1-4)**:
+  5. **Điều kiện Kích hoạt Thực thi UAT**:
+     - Trạng thái hiện tại: UAT_PLAN_CORRECTED, UAT_ENVIRONMENT_NOT_READY, UAT_EXECUTION_NOT_STARTED.
+     - Thực thi UAT bị chặn cho đến khi hoàn thành chuẩn bị môi trường Staging và đóng gói Release APK (Roadmap Giai đoạn 17 & 18).
+  6. **Phân loại Defect & Quy trình Retest (Severity 1-4)**:
      - Severity 1 (Blocker): Crash app, mất dữ liệu, bypass bảo mật, vi phạm RBAC nghiêm trọng -> Chặn hoàn toàn UAT.
      - Severity 2 (Critical): Luồng nghiệp vụ chính đứt gãy, không có workaround -> Chặn Wave tiếp theo.
      - Severity 3 (Major): Tính năng lỗi nhưng có thao tác thay thế tạm thời.
      - Severity 4 (Minor): Lỗi hiển thị UI, text, độ trễ không ảnh hưởng nghiệp vụ.
-  5. **Tiêu chuẩn Ký duyệt & Đóng UAT (Sign-Off Exit Criteria)**:
-     - 100% (10/10) kịch bản UAT đạt trạng thái ACCEPTED.
+  7. **Tiêu chuẩn Ký duyệt & Đóng UAT (Sign-Off Exit Criteria)**:
+     - 100% (10/10) kịch bản UAT đạt trạng thái ACCEPTED / PASS.
      - 0 lỗi Severity 1 (Blocker) và 0 lỗi Severity 2 (Critical) còn mở.
      - Biên bản nghiệm thu có đủ chữ ký của Business Sponsor, Product Owner, QA Lead và Tech Lead.
 - **Tác động**:

@@ -9,7 +9,10 @@
 - **Luồng Tích Hợp Kế Thừa (Integration Flow Mapping):** `FLOW-0X`
 - **Mức Độ Ưu Tiên (Priority):** `P0 (Critical)` / `P1 (High)` / `P2 (Medium)`
 - **Vai Trò Thực Hiện (Actor Role):** `EMPLOYEE` / `TEAM_LEADER` / `PROJECT_MANAGER` / `ADMIN`
+- **Kênh Thực Thi (Execution Channel):** MOBILE_UI / ADMIN_API / MOBILE_UI_PLUS_ADMIN_API
 - **Môi Trường Kiểm Thử (Environment):** Local Android Emulator / Android Device / Staging
+- **Điều Kiện Tiên Quyết Môi Trường (Environment Prerequisite):** [Ví dụ: Staging Backend HTTPS, Staging PostgreSQL, Signed Release APK, REST Client]
+- **Phạm Vi Loại Trừ Rõ Ràng (Explicit Exclusions):** [Liệt kê các tính năng ngoài scope canonical]
 - **Bản Build Kiểm Thử (Build Checkpoint):** `[Git Commit SHA]`
 - **Người Thực Hiện (Tester):** [Họ tên chuyên viên kiểm thử]
 - **Ngày Thực Hiện (Execution Date):** YYYY-MM-DD

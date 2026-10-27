@@ -28,24 +28,25 @@ Kế hoạch Kiểm thử Chấp nhận Người dùng (User Acceptance Test Pla
 
 ## 2. MA TRẬN 10 KỊCH BẢN UAT DOANH NGHIỆP (BUSINESS UAT SCENARIOS)
 
-| Mã Kịch Bản | Tên Kịch Bản Nghiệp Vụ | Vai Trò Thực Hiện (Actor) | Trọng Yếu | Mục Tiêu Chấp Nhận | Tiêu Chí Đạt (Acceptance Criteria) |
-| :--- | :--- | :--- | :---: | :--- | :--- |
-| **UAT-01** | Đăng nhập, duy trì phiên và Đăng xuất | `EMPLOYEE` | **P0** | Người dùng đăng nhập đúng tài khoản, truy cập Dashboard, duy trì phiên an toàn và đăng xuất xóa sạch token. | Đăng nhập thành công với 200 OK, lưu token an toàn trong Keychain, không lộ mật khẩu; Đăng xuất dọn sạch session. |
-| **UAT-02** | Khởi tạo Dự án & Phân bổ Thành viên | `PROJECT_MANAGER` | **P0** | Tạo dự án mới, gán thành viên phòng ban, phân công Project Role (`TEAM_LEADER`, `MEMBER`, `OBSERVER`), tạo Milestone. | Dự án hiển thị đúng phòng ban; phân quyền dự án phân định rõ quyền tạo task; không trùng mã dự án; hỗ trợ version locking. |
-| **UAT-03** | Giao việc, Phân bổ Subtask & Xét duyệt | `TEAM_LEADER` | **P0** | Trưởng nhóm tạo công việc, gán nhân viên, tạo subtasks, nhân viên cập nhật tiến độ, nộp xét duyệt và hoàn thành. | Trạng thái chuyển đổi tuần tự: `TODO` $\rightarrow$ `IN_PROGRESS` $\rightarrow$ `IN_REVIEW` $\rightarrow$ `DONE`; chống submit trùng lặp; ghi nhận lịch sử trạng thái. |
-| **UAT-04** | Nhân viên Gửi Yêu Cầu Dịch Vụ & Theo Dõi | `EMPLOYEE` | **P0** | Nhân viên gửi báo cáo sự cố cơ sở vật chất, theo dõi tiến độ xử lý và gửi đánh giá hài lòng sau khi hoàn thành. | Yêu cầu sinh mã `SR-YYYY-XXXXXX`; hiển thị danh mục hoạt động; nhận thông báo cập nhật; thực hiện đánh giá sao khi `RESOLVED`. |
-| **UAT-05** | Tiếp nhận, Phân công & Giải quyết Sự Cố | `ADMIN` | **P0** | Quản trị viên tiếp nhận yêu cầu, phân công kỹ thuật viên phụ trách, bắt đầu xử lý, điền giải pháp và đóng yêu cầu. | Chuyển đổi trạng thái máy nghiệp vụ chính xác; chặn kỹ thuật viên tự gán khi không đủ thẩm quyền; ghi nhận giải pháp xử lý. |
-| **UAT-06** | Tạo Tài Sản, Cấp Phát & Thu Hồi Thiết Bị | `ADMIN` | **P0** | Quản trị viên nhập tài sản mới, cấp phát cho nhân viên sử dụng, và thu hồi tài sản khi hoàn trả thiết bị. | Mã tài sản duy nhất; không cho phép cấp phát kép tài sản đang có người dùng; chặn thu hồi tài sản đang không hoạt động. |
-| **UAT-07** | Nhân Viên Xem Tài Sản Cấp & Báo Hỏng | `EMPLOYEE` | **P1** | Nhân viên vào "Quản lý tài sản", kiểm tra thiết bị đang mượn và thực hiện "Báo hỏng" liên kết trực tiếp sang Yêu cầu dịch vụ. | Màn hình lọc đúng tài sản của người dùng hiện tại; điều hướng mở sẵn form tạo Yêu cầu với thông tin thiết bị đã điền sẵn. |
-| **UAT-08** | Quản Trị Viên Ghi Nhận Lịch Sử Sửa Chữa | `ADMIN` | **P1** | Sau khi sửa chữa xong, Quản trị viên thêm bản ghi lịch sử sửa chữa (ngày, chi phí, đơn vị sửa chữa, giải pháp). | Bản ghi lưu vết kiểm toán; chi phí và đơn vị sửa chữa hợp lệ; hiển thị tức thì trong danh sách timeline lịch sử thiết bị. |
-| **UAT-09** | Nhận Thông Báo & Điều Hướng Ngữ Cảnh Chéo | `EMPLOYEE` | **P0** | Nhận thông báo sự kiện, xem huy hiệu chưa đọc trên Dashboard/More, bấm mở đúng màn hình chi tiết, bấm Back quay về danh sách. | Huy hiệu cập nhật tức thì; bấm item mở đúng màn hình chi tiết tương ứng (`Project`, `Task`, `ServiceRequest`, `Asset`); bấm Back không bị văng ra Dashboard. |
-| **UAT-10** | Chuyển Đổi Phiên, Cô Lập RBAC & Bảo Mật | Cả 4 vai trò | **P0** | Đăng nhập lần lượt 4 vai trò, kiểm tra tính cô lập dữ liệu, chặn truy cập tài nguyên trái phép và chặn back stack sau đăng xuất. | Nhân viên không thấy nút tạo dự án/tài sản; không rò rỉ dữ liệu giữa các phiên; không thể can thiệp dữ liệu người dùng khác (403/404). |
-
+| Mã Kịch Bản | Tên Kịch Bản Nghiệp Vụ Chuẩn | Kênh Thực Thi | Vai Trò (Actor) | Độ Ưu Tiên | Tiêu Chí Đạt (Acceptance Criteria) |
+| :--- | :--- | :---: | :---: | :---: | :--- |
+| **UAT-01** | Đăng nhập, Khôi phục Phiên, Đăng xuất và Phân định Vai trò | MOBILE_UI | EMPLOYEE | **P0** | Xác thực an toàn, không có self-registration, duy trì phiên, xoay vòng refresh token, đăng xuất dọn sạch session và chặn Android Back. |
+| **UAT-02** | Đổi Mật khẩu và Bảo vệ Phiên Xác thực | MOBILE_UI | EMPLOYEE | **P0** | Đổi mật khẩu thành công trên Mobile, đăng xuất phiên hiện tại, thu hồi token cũ, loại trừ dashboard đa thiết bị. |
+| **UAT-03** | Vòng đời Dự án, Phân bổ Thành viên & Mốc Tiến độ | MOBILE_UI | PROJECT_MANAGER | **P0** | Khởi tạo dự án, gán thành viên (TEAM_LEADER, MEMBER, OBSERVER), tạo milestone, quản lý tiến độ. |
+| **UAT-04** | Phân rã Công việc, Giao Task, Cập nhật Tiến độ & Báo cáo | MOBILE_UI | TEAM_LEADER / EMPLOYEE | **P0** | Giao việc, tạo subtasks, luồng trạng thái TODO $\rightarrow$ IN_PROGRESS $\rightarrow$ IN_REVIEW, bình luận tiến độ. |
+| **UAT-05** | Phê duyệt & Đánh giá Chất lượng Nhiệm vụ theo Phân cấp | MOBILE_UI | TEAM_LEADER / PROJECT_MANAGER | **P0** | Duyệt công việc hoàn thành (DONE) hoặc yêu cầu làm lại, ghi nhận lịch sử trạng thái và kiểm toán. |
+| **UAT-06** | Tạo, Tiếp nhận, Xử lý & Đánh giá Yêu cầu Dịch vụ Nội bộ | MOBILE_UI | EMPLOYEE / ADMIN | **P0** | Gửi yêu cầu, tiếp nhận, chuyển RESOLVED, nhân viên xác nhận và gửi đánh giá sao chuyển sang CLOSED. |
+| **UAT-07** | Quản lý Tài sản và Liên kết Yêu cầu Dịch vụ | MOBILE_UI | ADMIN / EMPLOYEE | **P1** | Chọn danh mục có sẵn trên Mobile, tạo tài sản, cấp phát, xem tài sản của tôi, báo hỏng liên kết SR; loại trừ Mobile Category CRUD. |
+| **UAT-08** | Quản trị Người dùng qua Admin API và Kiểm chứng RBAC trên Mobile | MOBILE_UI_PLUS_ADMIN_API | ADMIN (API) / 4 Vai trò (Mobile) | **P0** | Quản trị vòng đời user (tạo, cập nhật, khóa/mở khóa) qua Admin API; kiểm chứng đăng nhập và phân quyền trên Mobile. |
+| **UAT-09** | Trung tâm Thông báo Trong Ứng dụng và Điều hướng Ngữ cảnh | MOBILE_UI | EMPLOYEE | **P0** | Nhận thông báo trong app qua REST, xem huy hiệu chưa đọc, đọc tất cả, điều hướng ngữ cảnh; loại trừ FCM/Email. |
+| **UAT-10** | Cô lập Dữ liệu Người dùng, Gián đoạn Mạng và Retry An toàn | MOBILE_UI | Cả 4 vai trò | **P0** | Cô lập phiên tuyệt đối, xử lý mất mạng/timeout hiển thị banner thân thiện, retry an toàn; loại trừ offline-first sync. |
 ---
 
 ## 3. CHI TIẾT 10 KỊCH BẢN NGHIỆP VỤ (SCENARIOS SPECIFICATION)
 
-### KỊCH BẢN UAT-01: Đăng nhập, duy trì phiên và Đăng xuất
+### KỊCH BẢN UAT-01: Đăng nhập, Khôi phục Phiên, Đăng xuất và Phân định Vai trò
+- **Kênh thực thi:** MOBILE_UI
+- **Phạm vi loại trừ rõ ràng:** Tuyệt đối không có tự đăng ký (Self-registration) hay RegistrationScreen.
 - **Mục tiêu:** Kiểm tra khả năng xác thực an toàn, duy trì phiên và xóa sạch phiên làm việc trên thiết bị.
 - **Tiền điều kiện:** Ứng dụng WorkSphere đã cài đặt trên Android. Tài khoản `e2e_employee` đang ở trạng thái `ACTIVE`.
 - **Dữ liệu kiểm thử:** Username: `e2e_employee`, Mật khẩu chuẩn phiên.
@@ -61,7 +62,9 @@ Kế hoạch Kiểm thử Chấp nhận Người dùng (User Acceptance Test Pla
 
 ---
 
-### KỊCH BẢN UAT-02: Khởi tạo Dự án & Phân bổ Thành viên
+### KỊCH BẢN UAT-02: Đổi Mật khẩu và Bảo vệ Phiên Xác thực
+- **Kênh thực thi:** MOBILE_UI
+- **Phạm vi loại trừ rõ ràng:** Không có danh sách thiết bị/phiên, không có thu hồi đa thiết bị trên Mobile.
 - **Mục tiêu:** Quản lý dự án khởi tạo dự án mới, gán thành viên và thiết lập mốc tiến độ.
 - **Tiền điều kiện:** Đăng nhập tài khoản `e2e_pm` (System Role `PROJECT_MANAGER`).
 - **Dữ liệu kiểm thử:** Mã dự án: `UAT-PRJ-01`, Tên: "Triển khai Hệ thống Văn phòng Số", Phòng ban: "Công nghệ thông tin".
@@ -77,7 +80,8 @@ Kế hoạch Kiểm thử Chấp nhận Người dùng (User Acceptance Test Pla
 
 ---
 
-### KỊCH BẢN UAT-03: Giao việc, Phân bổ Subtask & Xét duyệt
+### KỊCH BẢN UAT-03: Vòng đời Dự án, Phân bổ Thành viên & Mốc Tiến độ
+- **Kênh thực thi:** MOBILE_UI
 - **Mục tiêu:** Trưởng nhóm phân công công việc, nhân viên cập nhật tiến độ và xét duyệt hoàn tất.
 - **Tiền điều kiện:** Đăng nhập tài khoản `e2e_leader` (System Role `TEAM_LEADER`).
 - **Dữ liệu kiểm thử:** Dự án `UAT-PRJ-01`, Tiêu đề công việc: "Cài đặt máy trạm làm việc", Người thực hiện: `e2e_employee`.
@@ -95,7 +99,8 @@ Kế hoạch Kiểm thử Chấp nhận Người dùng (User Acceptance Test Pla
 
 ---
 
-### KỊCH BẢN UAT-04: Nhân viên Gửi Yêu Cầu Dịch Vụ & Theo Dõi
+### KỊCH BẢN UAT-04: Phân rã Công việc, Giao Task, Cập nhật Tiến độ & Báo cáo Hoàn thành
+- **Kênh thực thi:** MOBILE_UI
 - **Mục tiêu:** Nhân viên gửi yêu cầu hỗ trợ văn phòng/IT và đánh giá chất lượng phục vụ sau khi sự cố được khắc phục.
 - **Tiền điều kiện:** Đăng nhập tài khoản `e2e_employee`.
 - **Dữ liệu kiểm thử:** Tiêu đề: "Điều hòa phòng họp tầng 3 không mát", Danh mục: "Cơ sở vật chất", Mức ưu tiên: "Cao".
@@ -112,7 +117,8 @@ Kế hoạch Kiểm thử Chấp nhận Người dùng (User Acceptance Test Pla
 
 ---
 
-### KỊCH BẢN UAT-05: Tiếp nhận, Phân công & Giải quyết Sự Cố
+### KỊCH BẢN UAT-05: Phê duyệt & Đánh giá Chất lượng Nhiệm vụ theo Phân cấp
+- **Kênh thực thi:** MOBILE_UI
 - **Mục tiêu:** Quản trị viên tiếp nhận yêu cầu, phân công người xử lý và ghi nhận giải pháp kỹ thuật.
 - **Tiền điều kiện:** Đăng nhập tài khoản `e2e_admin` (System Role `ADMIN`).
 - **Dữ liệu kiểm thử:** Yêu cầu dịch vụ đang ở trạng thái `NEW` từ Kịch bản UAT-04.
@@ -127,7 +133,8 @@ Kế hoạch Kiểm thử Chấp nhận Người dùng (User Acceptance Test Pla
 
 ---
 
-### KỊCH BẢN UAT-06: Tạo Tài Sản, Cấp Phát & Thu Hồi Thiết Bị
+### KỊCH BẢN UAT-06: Tạo, Tiếp nhận, Xử lý & Đánh giá Yêu cầu Dịch vụ Nội bộ
+- **Kênh thực thi:** MOBILE_UI
 - **Mục tiêu:** Quản trị viên nhập mới thiết bị, bàn giao cho nhân viên và thu hồi khi hết nhu cầu.
 - **Tiền điều kiện:** Đăng nhập tài khoản `e2e_admin`.
 - **Dữ liệu kiểm thử:** Mã tài sản: `UAT-AST-01`, Tên: "Dell Latitude 5540", Danh mục: "Thiết bị CNTT", Người nhận: `e2e_employee`.
@@ -143,7 +150,9 @@ Kế hoạch Kiểm thử Chấp nhận Người dùng (User Acceptance Test Pla
 
 ---
 
-### KỊCH BẢN UAT-07: Nhân Viên Xem Tài Sản Cấp & Báo Hỏng
+### KỊCH BẢN UAT-07: Quản lý Tài sản và Liên kết Yêu cầu Dịch vụ
+- **Kênh thực thi:** MOBILE_UI
+- **Phạm vi loại trừ rõ ràng:** Không thực hiện CRUD Danh mục tài sản trên Mobile (chọn từ danh mục có sẵn qua modal).
 - **Mục tiêu:** Nhân viên kiểm tra danh sách thiết bị được giao và báo hỏng nhanh qua ứng dụng.
 - **Tiền điều kiện:** Đăng nhập tài khoản `e2e_employee`, tài sản `UAT-AST-01` đang được cấp phát cho nhân viên này.
 - **Các bước thực hiện:**
@@ -157,7 +166,9 @@ Kế hoạch Kiểm thử Chấp nhận Người dùng (User Acceptance Test Pla
 
 ---
 
-### KỊCH BẢN UAT-08: Quản Trị Viên Ghi Nhận Lịch Sử Sửa Chữa
+### KỊCH BẢN UAT-08: Quản trị Người dùng qua Admin API và Kiểm chứng RBAC trên Mobile
+- **Kênh thực thi:** MOBILE_UI_PLUS_ADMIN_API
+- **Phạm vi loại trừ rõ ràng:** Không có màn hình Quản trị người dùng trên Mobile; không có xóa cứng người dùng.
 - **Mục tiêu:** Quản trị viên lưu vết chi phí, đơn vị sửa chữa và giải pháp bảo dưỡng thiết bị.
 - **Tiền điều kiện:** Đăng nhập tài khoản `e2e_admin`, tài sản `UAT-AST-01`.
 - **Dữ liệu kiểm thử:** Đơn vị sửa chữa: "Trung tâm bảo hành Dell", Chi phí: "1.500.000 VNĐ", Nội dung: "Thay cáp màn hình LCD".
@@ -171,7 +182,9 @@ Kế hoạch Kiểm thử Chấp nhận Người dùng (User Acceptance Test Pla
 
 ---
 
-### KỊCH BẢN UAT-09: Nhận Thông Báo & Điều Hướng Ngữ Cảnh Chéo
+### KỊCH BẢN UAT-09: Trung tâm Thông báo Trong Ứng dụng và Điều hướng Ngữ cảnh
+- **Kênh thực thi:** MOBILE_UI
+- **Phạm vi loại trừ rõ ràng:** Không có FCM, APNs, push tray ngoài, Email hay SMS (In-app only per D-067).
 - **Mục tiêu:** Kiểm tra hệ thống nhận thông báo sự kiện, cập nhật huy hiệu và điều hướng ngữ cảnh chéo.
 - **Tiền điều kiện:** Phát sinh sự kiện hệ thống (ví dụ: giao việc hoặc cập nhật trạng thái yêu cầu cho `e2e_employee`).
 - **Các bước thực hiện:**
@@ -186,7 +199,9 @@ Kế hoạch Kiểm thử Chấp nhận Người dùng (User Acceptance Test Pla
 
 ---
 
-### KỊCH BẢN UAT-10: Chuyển Đổi Phiên, Cô Lập RBAC & Bảo Mật
+### KỊCH BẢN UAT-10: Cô lập Dữ liệu Người dùng, Gián đoạn Mạng và Retry An toàn
+- **Kênh thực thi:** MOBILE_UI
+- **Phạm vi loại trừ rõ ràng:** Không phải offline-first; không có SQLite/mutation queue/offline sync.
 - **Mục tiêu:** Kiểm tra tính toàn vẹn bảo mật, cô lập dữ liệu liên người dùng và phản hồi phân quyền.
 - **Tiền điều kiện:** Chuẩn bị 4 tài khoản ứng với 4 vai trò.
 - **Các bước thực hiện:**
@@ -302,3 +317,34 @@ Quy trình thực thi UAT được chia thành 5 đợt sóng tuần tự có th
 ## 10. KẾT LUẬN & PHÊ DUYỆT
 
 Kế hoạch UAT và Hợp đồng Nghiệm thu Nghiệp vụ WorkSphere chính thức được **KHÓA TOÀN BỘ NỘI DUNG**. Toàn bộ các bên liên quan tuân thủ nghiêm ngặt quy chuẩn này khi tiến hành các phiên kiểm thử chấp nhận tiếp theo.
+
+---
+
+## 11. PHỤ LỤC TRUY VẾT NGUỒN GỐC & ĐIỀU KIỆN TIÊN QUYẾT (TRACEABILITY APPENDIX)
+
+| Kịch Bản | Kênh Thực Thi | Năng Lực Backend Hỗ Trợ | Năng Lực Mobile Hỗ Trợ | Phạm Vi Loại Trừ Rõ Ràng | Điều Kiện Môi Trường Bắt Buộc |
+| :--- | :---: | :--- | :--- | :--- | :--- |
+| **UAT-01** | MOBILE_UI | POST /auth/login, POST /auth/refresh, POST /auth/logout | LoginScreen, MainTabNavigator, AuthProvider | Không có Public Self-Registration, không có RegistrationScreen | Staging Backend HTTPS, Staging DB, Signed Release APK |
+| **UAT-02** | MOBILE_UI | PUT /me/password, POST /auth/refresh, POST /auth/logout-all | ChangePasswordScreen, ProfileScreen | Không có Device/Session list UI, không có thu hồi đa thiết bị | Staging Backend HTTPS, Signed Release APK |
+| **UAT-03** | MOBILE_UI | GET/POST /projects, GET /projects/{id}, POST /projects/{id}/members, POST /milestones | ProjectListScreen, ProjectDetailScreen, CreateProjectModal | Không có xóa vĩnh viễn dự án | Staging Backend HTTPS, Staging DB có dữ liệu phòng ban |
+| **UAT-04** | MOBILE_UI | GET/POST /tasks, PUT /tasks/{id}, POST /tasks/{id}/comments, POST /subtasks | TaskListScreen, TaskDetailScreen, CreateTaskModal | Không có xóa task, không có upload file nhị phân lớn | Staging Backend HTTPS, Dự án UAT-PRJ-01 |
+| **UAT-05** | MOBILE_UI | PUT /tasks/{id}/review, PUT /tasks/{id}/status | TaskDetailScreen action buttons | Không cho phép nhân viên tự phê duyệt | Staging Backend HTTPS, Task ở IN_REVIEW |
+| **UAT-06** | MOBILE_UI | GET/POST /service-requests, status workflow transitions, comments, rating | ServiceRequestListScreen, ServiceRequestDetailScreen, CreateServiceRequestScreen, ServiceRatingModal | Không có chỉnh sửa đánh giá sau khi đã gửi | Staging Backend HTTPS, Staging DB |
+| **UAT-07** | MOBILE_UI | GET/POST /assets, GET /asset-categories | AssetListScreen, AssetDetailScreen, CreateAssetScreen, AssetCategorySelectModal | Không có Mobile Asset Category CRUD | Staging Backend HTTPS, Danh mục tài sản sẵn có |
+| **UAT-08** | MOBILE_UI_PLUS_ADMIN_API | GET/POST/PUT /admin/users, PUT /admin/users/{id}/lock, PUT /admin/users/{id}/unlock | LoginScreen, ProfileScreen (Kiểm chứng kết quả đăng nhập và RBAC) | Không có Màn hình Quản trị người dùng trên Mobile; không có hard delete | Staging Backend HTTPS, REST Client đã cấu hình token Admin |
+| **UAT-09** | MOBILE_UI | GET /notifications, PUT /notifications/{id}/read, PUT /notifications/read-all | NotificationListScreen, Header Badge | Không có FCM, APNs, Push Tray, Email, SMS, WebSocket | Staging Backend HTTPS, Dữ liệu thông báo sinh ra |
+| **UAT-10** | MOBILE_UI | Spring Security RBAC + 401 token revocation | Toàn bộ ứng dụng Mobile và Error Banners | Không phải offline-first, không có cơ sở dữ liệu offline (SQLite/Realm) | Staging Backend HTTPS, Signed Release APK |
+
+---
+
+## 12. CÁC YẾU TỐ CHẶN MÔI TRƯỜNG THỰC THI (ENVIRONMENT BLOCKERS)
+
+Hiện tại, **Kế hoạch UAT đã được khóa chuẩn xác với mã nguồn (UAT_PLAN_CORRECTED)**, nhưng **Chưa đủ điều kiện bắt đầu thực thi UAT (UAT_ENVIRONMENT_NOT_READY, UAT_EXECUTION_NOT_STARTED)** do các yếu tố hạ tầng sau chưa sẵn sàng:
+1. **Staging Backend Host:** Chưa triển khai container backend lên máy chủ staging (cần thực hiện ở Roadmap Giai đoạn 17).
+2. **Giao thức HTTPS/TLS:** Chưa cấu hình tên miền bảo mật có chứng chỉ TLS hợp lệ cho staging API.
+3. **Staging PostgreSQL Database:** Chưa dựng cơ sở dữ liệu riêng biệt cho UAT đã chạy đầy đủ migrations V001–V017.
+4. **Bản Build Release Ký số:** Chưa đóng gói signed release APK/AAB với R8 minification và Release Keystore (cần CI/CD ở Roadmap Giai đoạn 18).
+5. **Kênh Phân Phối Nội Bộ:** Chưa cấu hình Firebase App Distribution hoặc Google Play Internal Track.
+6. **Danh Sách Tester & Người Ký Duyệt:** Chưa chỉ định cụ thể nhân sự đảm nhiệm 4 vai trò canonical và đại diện nghiệm thu.
+
+Do đó, **Hành động tiếp theo bắt buộc là chuyển sang các Giai đoạn Roadmap chuẩn (Giai đoạn 17: Docker và Môi trường Local / Staging)** thay vì vội vã thực thi UAT trên môi trường dev chưa chuẩn hóa.
