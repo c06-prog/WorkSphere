@@ -4,8 +4,13 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: GIAI ĐOẠN 16E — FLOW-06 NOTIFICATION LIFECYCLE, CROSS-MODULE CONTEXT NAVIGATION & REGRESSION WAVE
-- Status: Giai đoạn 16E HOÀN THÀNH TOÀN DIỆN. Đã xác thực 100% các đột biến sinh thông báo thật (PROJECT_MEMBER_ADDED, TASK_ASSIGNED, COMMENT_ADDED, SERVICE_REQUEST_UPDATED, ASSET_ASSIGNED), cách ly thông tin đa người dùng (cross-user mark read rejection HTTP 404), điều hướng màn hình ngữ cảnh liên module trên Android (ProjectDetail, TaskDetail, ServiceRequestDetail, AssetDetail), xử lý an toàn thông báo thiếu thực thể tham chiếu (banner thông báo không gây crash), tính năng Đọc tất cả (unreads -> 0), điều hướng từ More Menu và chuyển đổi phiên làm việc (e2e_emp -> e2e_admin) không rò rỉ state. Đã chạy full regression Mobile (1142/1142 tests PASS) và Backend (340/340 tests PASS, Checkstyle 0 violations). Toàn bộ dev processes và emulator đã được dừng và dọn dẹp sạch sẽ.
+- Current Task: PRE-UAT AUDIT, BUSINESS ACCEPTANCE CONTRACT & UAT EXECUTION PLAN FREEZE
+- Status: PRE-UAT AUDIT VÀ UAT PLAN FREEZE HOÀN THÀNH. Đã thiết lập Hợp đồng Nghiệm thu Nghiệp vụ (Business Acceptance Contract), chuyển đổi toàn diện 6 Technical Integration Flows thành 10 Business Acceptance Scenarios (UAT-01 đến UAT-10), khóa 4 vai trò nghiệp vụ canonical (EMPLOYEE, TEAM_LEADER, PROJECT_MANAGER, ADMIN), thiết lập chính sách dữ liệu UAT với tiền tố UAT-, chuẩn hóa 4 mức độ phân loại defect (Severity 1-4), định hình 5 đợt sóng thực thi UAT (Waves 1-5), và ban hành 2 mẫu báo cáo chuẩn hóa (UAT Scenario Template & UAT Defect Template). Toàn bộ mã nguồn backend và mobile được bảo toàn nguyên vẹn 100%. Sẵn sàng bước vào các giai đoạn DevOps/Hạ tầng hoặc thực thi đợt sóng UAT đầu tiên theo phân công.
+- Latest Decision: D-069 Khóa Kế Hoạch Kiểm Thử Chấp Nhận Người Dùng (UAT Plan Freeze) & Hợp Đồng Nghiệm Thu Doanh Nghiệp.
+- Pre-UAT Audit Report: `reports/PRE_UAT_AUDIT.md`
+- UAT Execution Plan Freeze: `reports/UAT_PLAN_FREEZE.md`
+- UAT Scenario Template: `reports/templates/UAT_SCENARIO_TEMPLATE.md`
+- UAT Defect Template: `reports/templates/UAT_DEFECT_TEMPLATE.md`
 - Canonical Test Plan: `reports/PHASE_16_SYSTEM_INTEGRATION_TEST_PLAN_FREEZE.md`
 - Subphase 16A Report: `reports/PHASE_16A_TEST_INFRASTRUCTURE_FIXTURE_FOUNDATION.md`
 - Subphase 16B Report: `reports/PHASE_16B_AUTH_SESSION_RBAC_E2E.md`

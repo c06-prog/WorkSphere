@@ -1451,3 +1451,44 @@ WorkSphere chính thức khóa Kế hoạch Kiểm thử Tích hợp & End-to-En
 6. **Ranh Giới An Toàn & Đóng Giai Đoạn**:
    - Mọi wave kiểm thử runtime phải dừng sạch nền tảng dev (backend, Metro, adb reverse, emulator).
    - Tiêu chí hoàn thành Giai đoạn 16: 100% 6 luồng canonical chạy thành công trên Android runtime thật, 0 lỗi P0/P1 tồn đọng, 100% RBAC rules đạt, bằng chứng đầy đủ trong `reports/`.
+
+
+---
+
+## D-069 Khóa Kế Hoạch Kiểm Thử Chấp Nhận Người Dùng (UAT Plan Freeze) & Hợp Đồng Nghiệm Thu Doanh Nghiệp
+
+- **Ngày quyết định**: 2026-10-27
+- **Tác giả**: Antigravity Assistant & Technical Architect
+- **Trạng thái**: Ratified / Authoritative Freeze
+- **Ngữ cảnh**:
+  - Giai đoạn 16 (Tích hợp và kiểm thử hệ thống) đã hoàn tất toàn diện với 100% 6 flows integration (FLOW-01 đến FLOW-06), 340/340 Backend tests, 1144/1144 Mobile tests, và xác minh runtime trên Android emulator với 4 roles canonical (EMPLOYEE, TEAM_LEADER, PROJECT_MANAGER, ADMIN).
+  - Trước khi bước vào các giai đoạn DevOps/Triển khai tiếp theo (Giai đoạn 17 Docker/Local Env, Giai đoạn 18 CI/CD, Giai đoạn 19 Giám sát/Backup) và Giai đoạn 21 Nghiệm thu dự án, cần thiết lập một Hợp đồng Nghiệm thu Nghiệp vụ (Business Acceptance Contract) và Khóa Kế hoạch Thực thi UAT (UAT Execution Plan Freeze) chính thức.
+- **Quyết định**:
+  1. **Chuyển dịch 6 Technical Integration Flows thành 10 Business Acceptance Scenarios**:
+     - UAT-01: Đăng ký, Đăng nhập, Duy trì Phiên & Phân định Vai trò (FLOW-01).
+     - UAT-02: Đổi Mật khẩu & Thu hồi Phiên Bảo mật Đa thiết bị (FLOW-01).
+     - UAT-03: Vòng đời Dự án, Phân bổ Nhân sự & Kiểm soát Kế hoạch (FLOW-02).
+     - UAT-04: Phân rã Công việc, Giao Task, Cập nhật Tiến độ & Báo cáo Hoàn thành (FLOW-03).
+     - UAT-05: Phê duyệt & Đánh giá Chất lượng Nhiệm vụ theo Phân cấp (FLOW-03).
+     - UAT-06: Tạo, Tiếp nhận & Xử lý Yêu cầu Dịch vụ Nội bộ (FLOW-04).
+     - UAT-07: Quản lý Danh mục Thiết bị & Gắn kết Tài sản với Yêu cầu Xử lý (FLOW-05 & FLOW-04).
+     - UAT-08: Quản trị Hệ thống, Vòng đời Người dùng & Phân quyền Truy cập (RBAC Matrix & FLOW-01).
+     - UAT-09: Trung tâm Thông báo Đa kênh & Điều hướng Ngữ cảnh Công việc (FLOW-06).
+     - UAT-10: Cô lập Dữ liệu Phân quyền & Tính Nhất quán Trạng thái Ngoại tuyến/Mạng Yếu.
+  2. **Khóa 4 Vai trò Canonical và Ma trận Nghiệp vụ**:
+     - Khóa cứng 4 vai trò: EMPLOYEE, TEAM_LEADER, PROJECT_MANAGER, ADMIN.
+     - Tuyệt đối cấm các vai trò ngoài tài liệu chuẩn như FACILITY_MANAGER.
+  3. **Chiến lược Môi trường & Dữ liệu UAT**:
+     - Môi trường UAT độc lập (Staging Server TLS/HTTPS, cơ sở dữ liệu riêng, Android release-candidate APK ký số nội bộ).
+     - Toàn bộ dữ liệu UAT sử dụng tiền tố chuẩn hóa UAT- để đảm bảo nhận diện và thu hồi an toàn.
+  4. **Phân loại Defect & Quy trình Retest (Severity 1-4)**:
+     - Severity 1 (Blocker): Crash app, mất dữ liệu, bypass bảo mật, vi phạm RBAC nghiêm trọng -> Chặn hoàn toàn UAT.
+     - Severity 2 (Critical): Luồng nghiệp vụ chính đứt gãy, không có workaround -> Chặn Wave tiếp theo.
+     - Severity 3 (Major): Tính năng lỗi nhưng có thao tác thay thế tạm thời.
+     - Severity 4 (Minor): Lỗi hiển thị UI, text, độ trễ không ảnh hưởng nghiệp vụ.
+  5. **Tiêu chuẩn Ký duyệt & Đóng UAT (Sign-Off Exit Criteria)**:
+     - 100% (10/10) kịch bản UAT đạt trạng thái ACCEPTED.
+     - 0 lỗi Severity 1 (Blocker) và 0 lỗi Severity 2 (Critical) còn mở.
+     - Biên bản nghiệm thu có đủ chữ ký của Business Sponsor, Product Owner, QA Lead và Tech Lead.
+- **Tác động**:
+  - Tạo hành lang nghiệm thu nghiệp vụ minh bạch, chuẩn hóa và đóng băng toàn diện phạm vi chấp nhận sản phẩm trước khi chuyển sang giai đoạn vận hành và triển khai hạ tầng.
