@@ -40,6 +40,7 @@
 - Subphase 16E Final Runtime Report: `reports/PHASE_16E_FINAL_ANDROID_BACK_HISTORY_EVIDENCE.md`
 - Subphase 16E Final Regression Patch Report: `reports/PHASE_16E_FINAL_REGRESSION_PATCH.md`
 - Subphase 16F Full System Release Readiness Report: `reports/PHASE_16F_FULL_SYSTEM_RELEASE_READINESS.md`
+- Subphase 16F Android Runtime Smoke Closure: `reports/PHASE_16F_ANDROID_RUNTIME_SMOKE_CLOSURE.md`
 - Phase 16 System Integration Memory Checkpoint: `reports/PHASE_16_SYSTEM_INTEGRATION_MEMORY_CHECKPOINT.md`
 - Next Action: READY FOR UAT / RELEASE CANDIDATE STAGING.
 - Working tree at checkpoint: clean
