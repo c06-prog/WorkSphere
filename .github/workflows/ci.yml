@@ -160,18 +160,12 @@ jobs:
       - name: Make Gradle Wrapper Executable
         working-directory: mobile/android
         run: |
-          pwd
-          ls -la
+          sed -i 's/\r$//' gradlew
           chmod +x gradlew
 
       - name: Build Android Debug APK
         working-directory: mobile/android
-        run: |
-          pwd
-          echo "Checking gradlew file..."
-          file gradlew || true
-          echo "Attempting to run gradlew..."
-          ./gradlew assembleDebug --no-daemon --stacktrace || bash -x ./gradlew assembleDebug --no-daemon --stacktrace
+        run: ./gradlew assembleDebug --no-daemon --stacktrace
 
       - name: Verify APK Exists
         run: |
