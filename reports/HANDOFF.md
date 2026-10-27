@@ -4,9 +4,10 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: UAT PLAN NARROW CORRECTION — SOURCE-ALIGNED BUSINESS SCENARIOS & D-069 RECONCILIATION
-- Status: HIỆU CHỈNH KẾ HOẠCH UAT KHỚP MÃ NGUỒN HOÀN THÀNH. Đã hoàn tất đối soát và điều chỉnh hẹp 10 kịch bản UAT (UAT-01 đến UAT-10), loại bỏ các điểm chệch hướng ngoài phạm vi mã nguồn (tự đăng ký public, thu hồi đa thiết bị trên Mobile, thông báo đa kênh, cơ chế ngoại tuyến offline-first, màn hình admin user trên Mobile và CRUD danh mục tài sản trên Mobile). Cập nhật Quyết định Kiến trúc D-069 ghi nhận đối soát kiểm toán minh bạch. Ban hành báo cáo UAT Scope Correction Report (`reports/UAT_SCOPE_CORRECTION.md`). Toàn bộ mã nguồn backend và mobile được bảo toàn nguyên vẹn 100%. Sẵn sàng chuyển tiếp sang Roadmap Giai đoạn 17 (Docker và Môi trường Local).
+- Current Task: PROJECT PROGRESS AUDIT MATHEMATICAL CORRECTION & FINAL BASELINE
+- Status: XÁC LẬP BẢN CĂN BẢN TIẾN ĐỘ DỰ ÁN HOÀN THÀNH. Đã hoàn tất đối soát và hiệu chỉnh toán học toàn bộ các chỉ số tiến độ: Unweighted Roadmap đạt 77.3% (17/22 giai đoạn), Weighted WBS đạt 82.0% (phần còn lại đúng 18.0%: Docker 5%, CI/CD 4%, Monitoring/Backup 3%, UAT Execution 2%, Reports/Slides 3%, Closure 1%). Thiết lập 3 mô hình vạch đích độc lập: Demo Readiness 80.0%, UAT Readiness 25.0%, Production Readiness 35.0%. Bãi bỏ khẳng định SpotBugs (thay bằng Checkstyle 0 violations), làm rõ kiểm thử runtime trên Android Emulator (không tuyên bố physical device), và phân định rõ ranh giới Docker local không phải Staging. Ban hành `reports/PROJECT_PROGRESS_BASELINE.md`. Toàn bộ mã nguồn backend và mobile được bảo toàn nguyên vẹn 100%. Sẵn sàng chuyển tiếp sang Roadmap Giai đoạn 17 (Docker và Môi trường Local).
 - Latest Decision: D-069 Khóa Kế Hoạch Kiểm Thử Chấp Nhận Người Dùng (UAT Plan Freeze) & Hợp Đồng Nghiệm Thu Doanh Nghiệp (Đã Đối Soát Khớp Mã Nguồn).
+- Progress Baseline Report: `reports/PROJECT_PROGRESS_BASELINE.md`
 - Pre-UAT Audit Report: `reports/PRE_UAT_AUDIT.md`
 - UAT Execution Plan Freeze: `reports/UAT_PLAN_FREEZE.md`
 - UAT Scope Correction Report: `reports/UAT_SCOPE_CORRECTION.md`
