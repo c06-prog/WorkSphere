@@ -48,6 +48,10 @@ data/
 *.db
 *.sqlite
 *.sqlite3
+backups/
+*.sql
+*.dump
+*.tar.gz
 
 # IDE and operating system
 .idea/

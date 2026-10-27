@@ -4,9 +4,11 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: ROADMAP-STAGE-17B — DOCKER COMPOSE ORCHESTRATION FOUNDATION
-- Status: HOÀN THÀNH GIAI ĐOẠN 17B. Đã cấu hình và kiểm chứng thành công compose.yaml cho multi-container orchestration (backend + postgres) với mạng cách ly worksphere-network, volumes độc lập (worksphere-postgres-data, worksphere-uploads), healthcheck phụ thuộc tự động chờ PostgreSQL sẵn sàng trước khi start Backend, tự động chạy Flyway migrate đầy đủ 17 migrations đến v017, bảo toàn hoàn toàn container/volume cũ (worksphere-dev-pg), xác minh tài khoản non-root 10001, test restart persistence và teardown sạch sẽ không mất volume. Sẵn sàng cho Stage 17C.
+- Current Task: ROADMAP-STAGE-17C — ENVIRONMENT CONTRACT, SAFE OPERATIONS RUNBOOK & RESET POLICY
+- Status: HOÀN THÀNH GIAI ĐOẠN 17C. Đã thiết lập fail-fast enforcement cho POSTGRES_PASSWORD và JWT_SECRET_KEY trong compose.yaml, loại bỏ hoàn toàn fallback mật khẩu yếu. Cập nhật .env.example đầy đủ phân loại biến môi trường. Bổ sung backups/ và các định dạng file dump vào .gitignore. Hoàn thiện tài liệu hướng dẫn vận hành chi tiết reports/runbooks/DOCKER_LOCAL_OPERATIONS.md cùng hai tiện ích scripts/docker-status.ps1 và scripts/docker-reset-local.ps1 (có dry-run và token bảo vệ). Đã chứng minh quy trình pg_dump thành công trên Compose Postgres. Bảo toàn tuyệt đối container worksphere-dev-pg và anonymous volume cũ. Sẵn sàng cho Stage 17D.
 - Latest Decision: D-069 Khóa Kế Hoạch Kiểm Thử Chấp Nhận Người Dùng (UAT Plan Freeze) & Hợp Đồng Nghiệm Thu Doanh Nghiệp (Đã Đối Soát Khớp Mã Nguồn).
+- Stage 17C Environment & Operations Report: `reports/ROADMAP_STAGE_17C_ENVIRONMENT_OPERATIONS.md`
+- Operations Runbook: `reports/runbooks/DOCKER_LOCAL_OPERATIONS.md`
 - Stage 17B Docker Compose Report: `reports/ROADMAP_STAGE_17B_COMPOSE_ORCHESTRATION.md`
 - Stage 17A Backend Dockerfile Report: `reports/ROADMAP_STAGE_17A_BACKEND_DOCKERFILE.md`
 - Progress Baseline Report: `reports/PROJECT_PROGRESS_BASELINE.md`
