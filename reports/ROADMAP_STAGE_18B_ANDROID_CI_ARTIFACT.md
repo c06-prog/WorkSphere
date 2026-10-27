@@ -73,3 +73,18 @@ Job mới `android-debug-build` được bổ sung trực tiếp vào workflow d
 - Quét mã nguồn và git diff: **0 secrets, 0 private keys, 0 keystores rò rỉ**.
 - Không tạo hoặc commit bất kỳ file `*.jks`, `*.keystore` hay `key.properties` nào.
 - Container `jenkins-lts` và `worksphere-dev-pg` được bảo toàn nguyên vẹn 100%.
+
+
+---
+
+## 6. Wrapper Jar Tracking & Remote Single-Patch Resolution
+
+- **Root Cause Phân Tích**: GitHub Actions Run #40513111941 thất bại tại step Build Android Debug APK với lỗi:
+  Error: Unable to access jarfile /home/runner/work/WorkSphere/WorkSphere/mobile/android/gradle/wrapper/gradle-wrapper.jar
+  Nguyên nhân gốc rễ là tệp .gitignore chứa quy tắc bao quát *.jar chặn việc theo dõi gradle-wrapper.jar.
+- **Giải Pháp Thực Hiện (Single-Patch)**:
+  1. Thêm ngoại lệ chính xác !mobile/android/gradle/wrapper/gradle-wrapper.jar vào .gitignore.
+  2. Xác minh tệp cục bộ (mobile/android/gradle/wrapper/gradle-wrapper.jar, 48,966 bytes) và kiểm tra tính toàn vẹn qua ./gradlew.bat --version (Gradle 9.4.1 verified).
+  3. Dọn dẹp các lệnh echo chẩn đoán tạm thời trong .github/workflows/ci.yml.
+  4. Track mobile/android/gradle/wrapper/gradle-wrapper.jar vào Git và commit 954b84c: ix(ci): include Gradle wrapper jar for Android build.
+  5. Push lên origin/main và kích hoạt remote workflow run #40531250648.
