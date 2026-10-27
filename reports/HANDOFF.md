@@ -4,9 +4,12 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: ROADMAP-STAGE-18C — DOCKER IMAGE CI BUILD & COMMIT-SHA TAGGING
-- Status: HOÀN TẤT & ĐÓNG GIAI ĐOẠN 18C. GitHub Actions Run #190 (ID 40535347747) thành công 100% trên 5/5 jobs (Validate Repository, Backend Quality, Mobile Quality, Android Debug Build, Docker Image Build). Dockerfile Stage 17A được tái sử dụng thành công; Docker image được build và gắn nhãn tất định worksphere-backend:ci và worksphere-backend:sha-<short-sha>, xác minh runtime non-root UID 10001, JRE 21, port 8080 và healthcheck. Image chỉ tồn tại trong runner CI, không push registry, không upload tarball. Cấu hình registry và release signing deferred sang Stage 18D. Toàn bộ working tree sạch. Sẵn sàng cho Stage 18D (Release Signing & Registry Publishing).
+- Current Task: ROADMAP-STAGE-18D — RELEASE SIGNING POLICY, BRANCH PROTECTION, SUPPLY-CHAIN HARDENING & CI GOVERNANCE
+- Status: HOÀN TẤT & ĐÓNG GIAI ĐOẠN 18D. Đã đối chiếu test count thực tế đạt 340 backend tests và 1144 mobile tests pass 100%. Đã cứng hóa chính sách Android release signing trong mobile/android/app/build.gradle loại bỏ nguy cơ fallback sang debug keystore (bắt buộc WORKSPHERE_RELEASE_STORE_FILE/PASSWORD/KEY_ALIAS/KEY_PASSWORD). Cứng hóa chuỗi cung ứng 100% GitHub official actions v4. Khóa checklist branch protection 5 status checks bắt buộc. Sẵn sàng cho Stage 18E (Release Pipeline & Deployment Automation).
 - Latest Decision: D-069 Khóa Kế Hoạch Kiểm Thử Chấp Nhận Người Dùng (UAT Plan Freeze) & Hợp Đồng Nghiệm Thu Doanh Nghiệp (Đã Đối Soát Khớp Mã Nguồn).
+- Stage 18D CI Governance Report: `reports/ROADMAP_STAGE_18D_CI_GOVERNANCE.md`
+- Android Release Signing Policy: `reports/runbooks/ANDROID_RELEASE_SIGNING_POLICY.md`
+- Branch Protection Checklist: `reports/runbooks/GITHUB_BRANCH_PROTECTION_CHECKLIST.md`
 - Stage 18C Docker CI Build Report: `reports/ROADMAP_STAGE_18C_DOCKER_CI_BUILD.md`
 - Stage 18B Android CI Artifact Report: `reports/ROADMAP_STAGE_18B_ANDROID_CI_ARTIFACT.md`
 - Stage 18A CI Foundation Report: `reports/ROADMAP_STAGE_18A_CI_FOUNDATION.md`

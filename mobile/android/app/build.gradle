@@ -120,6 +120,19 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        release {
+            def releaseStoreFile = project.findProperty("WORKSPHERE_RELEASE_STORE_FILE") ?: System.getenv("WORKSPHERE_RELEASE_STORE_FILE")
+            def releaseStorePassword = project.findProperty("WORKSPHERE_RELEASE_STORE_PASSWORD") ?: System.getenv("WORKSPHERE_RELEASE_STORE_PASSWORD")
+            def releaseKeyAlias = project.findProperty("WORKSPHERE_RELEASE_KEY_ALIAS") ?: System.getenv("WORKSPHERE_RELEASE_KEY_ALIAS")
+            def releaseKeyPassword = project.findProperty("WORKSPHERE_RELEASE_KEY_PASSWORD") ?: System.getenv("WORKSPHERE_RELEASE_KEY_PASSWORD")
+
+            if (releaseStoreFile && releaseStorePassword && releaseKeyAlias && releaseKeyPassword) {
+                storeFile file(releaseStoreFile)
+                storePassword releaseStorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+            }
+        }
     }
     buildTypes {
         debug {
@@ -129,9 +142,22 @@ android {
             buildConfigField "String", "API_BASE_URL", "\"${debugUrl}\""
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            def releaseStoreFile = project.findProperty("WORKSPHERE_RELEASE_STORE_FILE") ?: System.getenv("WORKSPHERE_RELEASE_STORE_FILE")
+            def releaseStorePassword = project.findProperty("WORKSPHERE_RELEASE_STORE_PASSWORD") ?: System.getenv("WORKSPHERE_RELEASE_STORE_PASSWORD")
+            def releaseKeyAlias = project.findProperty("WORKSPHERE_RELEASE_KEY_ALIAS") ?: System.getenv("WORKSPHERE_RELEASE_KEY_ALIAS")
+            def releaseKeyPassword = project.findProperty("WORKSPHERE_RELEASE_KEY_PASSWORD") ?: System.getenv("WORKSPHERE_RELEASE_KEY_PASSWORD")
+
+            if (releaseStoreFile && releaseStorePassword && releaseKeyAlias && releaseKeyPassword) {
+                signingConfig signingConfigs.release
+            } else if (isReleaseTaskRequested) {
+                throw new GradleException(
+                    "Release build signing failed: Release signing configuration is missing or incomplete.\n" +
+                    "Production release APK/AAB builds must not use debug signing.\n" +
+                    "Provide WORKSPHERE_RELEASE_STORE_FILE, WORKSPHERE_RELEASE_STORE_PASSWORD, WORKSPHERE_RELEASE_KEY_ALIAS, and WORKSPHERE_RELEASE_KEY_PASSWORD via Gradle properties or environment variables."
+                )
+            } else {
+                signingConfig null
+            }
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
 

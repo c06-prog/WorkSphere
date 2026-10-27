@@ -95,8 +95,8 @@ Tất cả các kiểm tra tự động đã chạy thành công trong CI pipeli
   - **Status / Conclusion**: `completed` / `success`
 - **Chi Tiết Trạng Thái Từng Job (Run #190)**:
   - `Validate Repository & Secret Audit`: SUCCESS
-  - `Backend Quality (Spring Boot)`: SUCCESS (176 tests pass, Checkstyle 0 violations, executable JAR uploaded)
-  - `Mobile Quality (React Native)`: SUCCESS (Lint, TypeScript, 72 unit tests pass)
+  - `Backend Quality (Spring Boot)`: SUCCESS (340 tests pass across 38 classes, Checkstyle 0 violations, executable JAR uploaded)
+  - `Mobile Quality (React Native)`: SUCCESS (Lint, TypeScript, 1,144 unit tests pass across 129 suites)
   - `Android Debug Build (React Native)`: SUCCESS (`worksphere-android-debug-apk` uploaded)
   - `Docker Image Build (Backend)`: SUCCESS (Multi-stage build, deterministic tagging, non-root UID 10001 pass)
 - **Kết Luận**: Toàn bộ 5/5 jobs đều đạt màu xanh hoàn hảo.
