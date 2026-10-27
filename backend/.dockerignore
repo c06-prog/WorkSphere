@@ -1,0 +1,36 @@
+# Version Control
+.git
+.gitignore
+
+# Build Output
+target/
+*.class
+*.jar
+*.war
+
+# Logs
+*.log
+logs/
+
+# Secrets & Environment
+.env
+.env.*
+!.env.example
+
+# IDE Configuration
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# OS Artifacts
+.DS_Store
+Thumbs.db
+
+# Temp & Cache
+tmp/
+temp/
+coverage/
+test-results/
+.mvn/wrapper/maven-wrapper.jar.asc

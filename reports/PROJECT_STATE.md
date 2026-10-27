@@ -24,8 +24,9 @@
 - Phase 17 Mobile Asset Management: CLOSED (MEMORY_CHECKPOINT_CLOSED).
 - Phase 18 Mobile Notification System: CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 18A..18E + 18E-Runtime-Corrective + Type-Safety Hardening CLOSED).
 - Memory Checkpoint: `reports/PHASE_18_MEMORY_CHECKPOINT.md`
-- Current Status: ROADMAP GIAI ĐOẠN 16 — CLOSED (16A–16F PASS). Project Progress Baseline RATIFIED (Unweighted 77.3%, WBS 82.0%, Demo 80.0%, UAT Readiness 25.0%, Prod Readiness 35.0%). Ready for Roadmap Giai đoạn 17 (Docker/Local Env).
+- Current Status: ROADMAP GIAI ĐOẠN 17A (Backend Multi-Stage Dockerfile Foundation) COMPLETED. Image `worksphere-backend:stage17a-local` built and verified (non-root worksphere UID 10001, Checkstyle 0 violations). Ready for Stage 17B (Compose Orchestration).
 - Latest Decision: D-069 Khóa Kế Hoạch Kiểm Thử Chấp Nhận Người Dùng (UAT Plan Freeze) & Hợp Đồng Nghiệm Thu Doanh Nghiệp (Đã Đối Soát Khớp Mã Nguồn).
+- Stage 17A Backend Dockerfile Report: `reports/ROADMAP_STAGE_17A_BACKEND_DOCKERFILE.md`
 - Progress Baseline Report: `reports/PROJECT_PROGRESS_BASELINE.md`
 - Pre-UAT Audit Report: `reports/PRE_UAT_AUDIT.md`
 - UAT Execution Plan Freeze: `reports/UAT_PLAN_FREEZE.md`

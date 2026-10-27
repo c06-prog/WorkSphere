@@ -4,9 +4,10 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: PROJECT PROGRESS AUDIT MATHEMATICAL CORRECTION & FINAL BASELINE
-- Status: XÁC LẬP BẢN CĂN BẢN TIẾN ĐỘ DỰ ÁN HOÀN THÀNH. Đã hoàn tất đối soát và hiệu chỉnh toán học toàn bộ các chỉ số tiến độ: Unweighted Roadmap đạt 77.3% (17/22 giai đoạn), Weighted WBS đạt 82.0% (phần còn lại đúng 18.0%: Docker 5%, CI/CD 4%, Monitoring/Backup 3%, UAT Execution 2%, Reports/Slides 3%, Closure 1%). Thiết lập 3 mô hình vạch đích độc lập: Demo Readiness 80.0%, UAT Readiness 25.0%, Production Readiness 35.0%. Bãi bỏ khẳng định SpotBugs (thay bằng Checkstyle 0 violations), làm rõ kiểm thử runtime trên Android Emulator (không tuyên bố physical device), và phân định rõ ranh giới Docker local không phải Staging. Ban hành `reports/PROJECT_PROGRESS_BASELINE.md`. Toàn bộ mã nguồn backend và mobile được bảo toàn nguyên vẹn 100%. Sẵn sàng chuyển tiếp sang Roadmap Giai đoạn 17 (Docker và Môi trường Local).
+- Current Task: ROADMAP-STAGE-17A — BACKEND MULTI-STAGE DOCKERFILE FOUNDATION
+- Status: HOÀN THÀNH GIAI ĐOẠN 17A. Đã xây dựng backend/Dockerfile đa tầng (Builder JDK 21 -> Runner JRE 21) và backend/.dockerignore an toàn. Biên dịch thành công Docker image worksphere-backend:stage17a-local với 0 lỗi Checkstyle, fat JAR Spring Boot 3 được đóng gói và kiểm chứng qua lệnh java -version. Chạy dưới quyền non-root user worksphere (UID 10001), tích hợp healthcheck probing /actuator/health, cấu hình upload dir /app/uploads. Bảo toàn tuyệt đối database container worksphere-dev-pg và volume dữ liệu cũ. Toàn bộ mã nguồn backend Java và mobile được giữ nguyên vẹn 100%. Sẵn sàng bước sang Stage 17B (Compose Orchestration).
 - Latest Decision: D-069 Khóa Kế Hoạch Kiểm Thử Chấp Nhận Người Dùng (UAT Plan Freeze) & Hợp Đồng Nghiệm Thu Doanh Nghiệp (Đã Đối Soát Khớp Mã Nguồn).
+- Stage 17A Backend Dockerfile Report: `reports/ROADMAP_STAGE_17A_BACKEND_DOCKERFILE.md`
 - Progress Baseline Report: `reports/PROJECT_PROGRESS_BASELINE.md`
 - Pre-UAT Audit Report: `reports/PRE_UAT_AUDIT.md`
 - UAT Execution Plan Freeze: `reports/UAT_PLAN_FREEZE.md`
