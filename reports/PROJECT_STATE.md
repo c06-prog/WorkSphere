@@ -24,8 +24,10 @@
 - Phase 17 Mobile Asset Management: CLOSED (MEMORY_CHECKPOINT_CLOSED).
 - Phase 18 Mobile Notification System: CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 18A..18E + 18E-Runtime-Corrective + Type-Safety Hardening CLOSED).
 - Memory Checkpoint: `reports/PHASE_18_MEMORY_CHECKPOINT.md`
-- Current Status: ROADMAP GIAI ĐOẠN 17C (Environment Contract, Safe Operations Runbook & Reset Policy) COMPLETED. Fail-fast secret enforcement verified in compose.yaml, .env.example updated with classified contract, safe operations runbook and automation scripts (docker-status.ps1, docker-reset-local.ps1) created, pg_dump backup demonstrated, legacy resources preserved. Ready for Stage 17D.
+- Current Status: ROADMAP GIAI ĐOẠN 17 (Docker và Môi Trường Local) CLOSED. Memory checkpoint established. Multi-stage Dockerfile, Compose orchestration (backend + postgres), healthcheck ordering, automatic Flyway migration v017, fail-fast environment contract, operations runbook, status/reset helper scripts, volume persistence, non-root user execution, and clean shutdown all verified. Ready for Roadmap Stage 18 (CI/CD Pipeline).
 - Latest Decision: D-069 Khóa Kế Hoạch Kiểm Thử Chấp Nhận Người Dùng (UAT Plan Freeze) & Hợp Đồng Nghiệm Thu Doanh Nghiệp (Đã Đối Soát Khớp Mã Nguồn).
+- Stage 17 Memory Checkpoint: `reports/ROADMAP_STAGE_17_MEMORY_CHECKPOINT.md`
+- Stage 17D Final Verification Report: `reports/ROADMAP_STAGE_17D_FINAL_VERIFICATION.md`
 - Stage 17C Environment & Operations Report: `reports/ROADMAP_STAGE_17C_ENVIRONMENT_OPERATIONS.md`
 - Operations Runbook: `reports/runbooks/DOCKER_LOCAL_OPERATIONS.md`
 - Stage 17B Docker Compose Report: `reports/ROADMAP_STAGE_17B_COMPOSE_ORCHESTRATION.md`

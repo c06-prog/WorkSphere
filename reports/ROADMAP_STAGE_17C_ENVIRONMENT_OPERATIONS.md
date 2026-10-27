@@ -64,7 +64,7 @@ error while interpolating services.postgres.environment.POSTGRES_PASSWORD: requi
 ```powershell
 docker exec worksphere-compose-postgres pg_dump -U worksphere_user -d worksphere -F p > .\backups\test_stage17c.sql
 ```
-- Kết quả: File SQL dump hợp lệ được sinh ra với kích thước `168,214` bytes chứa đầy đủ schema DDL và 17 migrations của Flyway.
+- Kết quả: File SQL dump hợp lệ được sinh ra với kích thước `168,214` bytes chứa lược đồ (schema) và dữ liệu kết quả, bao gồm bảng lịch sử `flyway_schema_history` ghi nhận 17 migrations (V001–V017) đã được áp dụng thành công.
 - Dọn dẹp: File dump tạm đã được dọn dẹp sạch sẽ sau kiểm thử. Thư mục `backups/` và các định dạng `*.sql`, `*.dump` đã được đưa vào [.gitignore](file:///d:/WorkSphere/.gitignore).
 
 ---
