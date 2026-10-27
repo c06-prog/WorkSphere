@@ -4,9 +4,10 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: ROADMAP-STAGE-17D — FINAL DOCKER LOCAL VERIFICATION, RUNBOOK REHEARSAL & MEMORY CHECKPOINT
-- Status: HOÀN THÀNH VÀ ĐÓNG GIAI ĐOẠN 17 (DOCKER VÀ MÔI TRƯỜNG LOCAL). Đã kiểm chứng toàn diện từ workspace sạch: khắc phục lỗi ignore SQL migration tiềm ẩn trong .gitignore, xác minh fail-fast secret enforcement, kiểm thử thứ tự khởi động healthy dependencies, tự động migrate 17 Flyway migrations, API contract 401 trên protected route, non-root UID 10001, tính bền vững volume /app/uploads qua restart, kiểm tra hoàn tất hai tiện ích docker-status.ps1 và docker-reset-local.ps1, xác nhận teardown sạch sẽ không mất volume, bảo toàn tuyệt đối container legacy worksphere-dev-pg. Thiết lập Memory Checkpoint cho Stage 17. Sẵn sàng cho Giai đoạn 18 (CI/CD Pipeline).
+- Current Task: ROADMAP-STAGE-18A — GITHUB ACTIONS CI FOUNDATION & BACKEND QUALITY GATES
+- Status: HOÀN THÀNH GIAI ĐOẠN 18A. Đã chuẩn hóa tệp workflow duy nhất .github/workflows/ci.yml, thiết lập GitHub Actions làm nền tảng CI canonical, phân quyền tối thiểu contents: read, cấu hình concurrency và timeouts hữu hạn. Bổ sung Backend Checkstyle quality gate (0 violations), full 340 tests PASS qua Testcontainers, package fat JAR (68.2MB), lưu trữ Surefire test reports và JAR artifact (14 ngày). Giữ nguyên toàn bộ Mobile quality gates (lint, typecheck, Jest 1144 tests). Đã xác minh thành công local-equivalent commands. Sẵn sàng cho Stage 18B (Mobile & Android Build Packaging).
 - Latest Decision: D-069 Khóa Kế Hoạch Kiểm Thử Chấp Nhận Người Dùng (UAT Plan Freeze) & Hợp Đồng Nghiệm Thu Doanh Nghiệp (Đã Đối Soát Khớp Mã Nguồn).
+- Stage 18A CI Foundation Report: `reports/ROADMAP_STAGE_18A_CI_FOUNDATION.md`
 - Stage 17 Memory Checkpoint: `reports/ROADMAP_STAGE_17_MEMORY_CHECKPOINT.md`
 - Stage 17D Final Verification Report: `reports/ROADMAP_STAGE_17D_FINAL_VERIFICATION.md`
 - Stage 17C Environment & Operations Report: `reports/ROADMAP_STAGE_17C_ENVIRONMENT_OPERATIONS.md`

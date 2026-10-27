@@ -24,8 +24,9 @@
 - Phase 17 Mobile Asset Management: CLOSED (MEMORY_CHECKPOINT_CLOSED).
 - Phase 18 Mobile Notification System: CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 18A..18E + 18E-Runtime-Corrective + Type-Safety Hardening CLOSED).
 - Memory Checkpoint: `reports/PHASE_18_MEMORY_CHECKPOINT.md`
-- Current Status: ROADMAP GIAI ĐOẠN 17 (Docker và Môi Trường Local) CLOSED. Memory checkpoint established. Multi-stage Dockerfile, Compose orchestration (backend + postgres), healthcheck ordering, automatic Flyway migration v017, fail-fast environment contract, operations runbook, status/reset helper scripts, volume persistence, non-root user execution, and clean shutdown all verified. Ready for Roadmap Stage 18 (CI/CD Pipeline).
+- Current Status: ROADMAP GIAI ĐOẠN 18A (GitHub Actions CI Foundation & Backend Quality Gates) COMPLETED. ci.yml updated with permissions, concurrency, timeouts, backend checkstyle gate, Testcontainers full tests (340/340), fat JAR packaging, test reports and jar artifact uploads, mobile quality gates retained. Local validation verified. Ready for Stage 18B (Mobile & Android Build Packaging).
 - Latest Decision: D-069 Khóa Kế Hoạch Kiểm Thử Chấp Nhận Người Dùng (UAT Plan Freeze) & Hợp Đồng Nghiệm Thu Doanh Nghiệp (Đã Đối Soát Khớp Mã Nguồn).
+- Stage 18A CI Foundation Report: `reports/ROADMAP_STAGE_18A_CI_FOUNDATION.md`
 - Stage 17 Memory Checkpoint: `reports/ROADMAP_STAGE_17_MEMORY_CHECKPOINT.md`
 - Stage 17D Final Verification Report: `reports/ROADMAP_STAGE_17D_FINAL_VERIFICATION.md`
 - Stage 17C Environment & Operations Report: `reports/ROADMAP_STAGE_17C_ENVIRONMENT_OPERATIONS.md`

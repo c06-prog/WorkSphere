@@ -4,16 +4,23 @@ on:
   push:
     branches:
       - main
-      - develop
   pull_request:
     branches:
       - main
-      - develop
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  validate-repository:
+  repository-validation:
     name: Validate Repository & Secret Audit
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -42,10 +49,11 @@ jobs:
           fi
           echo "Secret audit passed."
 
-  backend-ci-skeleton:
-    name: Backend CI Skeleton (Spring Boot)
+  backend-ci:
+    name: Backend Quality (Spring Boot)
     runs-on: ubuntu-latest
-    needs: validate-repository
+    timeout-minutes: 20
+    needs: repository-validation
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -55,16 +63,45 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '21'
+          cache: 'maven'
+          cache-dependency-path: 'backend/pom.xml'
 
-      - name: Check Backend Directory
-        run: |
-          echo "Backend structure ready for Stage 2 initialization."
-          test -d backend
+      - name: Make Maven Wrapper Executable
+        working-directory: backend
+        run: chmod +x mvnw
 
-  mobile-ci:
+      - name: Backend Checkstyle Quality Gate
+        working-directory: backend
+        run: ./mvnw checkstyle:check -Dcheckstyle.config.location=checkstyle.xml -B
+
+      - name: Run Backend Tests (Unit & Testcontainers)
+        working-directory: backend
+        run: ./mvnw clean test -B
+
+      - name: Package Executable JAR
+        working-directory: backend
+        run: ./mvnw package -DskipTests -B
+
+      - name: Upload Surefire Test Reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backend-test-reports
+          path: backend/target/surefire-reports/**
+          retention-days: 14
+
+      - name: Upload Backend Executable JAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-executable-jar
+          path: backend/target/backend-*.jar
+          retention-days: 14
+
+  mobile-quality:
     name: Mobile Quality (React Native)
     runs-on: ubuntu-latest
-    needs: validate-repository
+    timeout-minutes: 15
+    needs: repository-validation
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
