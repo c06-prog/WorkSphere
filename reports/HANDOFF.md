@@ -4,9 +4,10 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: ROADMAP-STAGE-18B — ANDROID DEBUG BUILD & CI ARTIFACT PACKAGING
-- Status: HOÀN TẤT & ĐÓNG GIAI ĐOẠN 18B. GitHub Actions Run #188 (ID 40531452855) thành công 100% trên toàn bộ jobs (Validate Repository, Backend Quality, Mobile Quality, Android Debug Build, Verify APK, Upload Artifact). Lịch sử: Run #186 thất bại vì thiếu gradle-wrapper.jar do rule *.jar trong .gitignore; Run #187 bị cancel bởi concurrency do push commit tài liệu; Run #188 thành công sau fix commit 954b84c. Artifact worksphere-android-debug-apk (51.3MB zip) tồn tại và hợp lệ. Bản build APK là DEBUG ONLY; release signing deferred sang Stage 18D. Toàn bộ working tree sạch. Sẵn sàng cho Stage 18C (Docker Build & Version Tagging).
+- Current Task: ROADMAP-STAGE-18C — DOCKER IMAGE CI BUILD & COMMIT-SHA TAGGING
+- Status: HOÀN TẤT & ĐÓNG GIAI ĐOẠN 18C. GitHub Actions Run #190 (ID 40535347747) thành công 100% trên 5/5 jobs (Validate Repository, Backend Quality, Mobile Quality, Android Debug Build, Docker Image Build). Dockerfile Stage 17A được tái sử dụng thành công; Docker image được build và gắn nhãn tất định worksphere-backend:ci và worksphere-backend:sha-<short-sha>, xác minh runtime non-root UID 10001, JRE 21, port 8080 và healthcheck. Image chỉ tồn tại trong runner CI, không push registry, không upload tarball. Cấu hình registry và release signing deferred sang Stage 18D. Toàn bộ working tree sạch. Sẵn sàng cho Stage 18D (Release Signing & Registry Publishing).
 - Latest Decision: D-069 Khóa Kế Hoạch Kiểm Thử Chấp Nhận Người Dùng (UAT Plan Freeze) & Hợp Đồng Nghiệm Thu Doanh Nghiệp (Đã Đối Soát Khớp Mã Nguồn).
+- Stage 18C Docker CI Build Report: `reports/ROADMAP_STAGE_18C_DOCKER_CI_BUILD.md`
 - Stage 18B Android CI Artifact Report: `reports/ROADMAP_STAGE_18B_ANDROID_CI_ARTIFACT.md`
 - Stage 18A CI Foundation Report: `reports/ROADMAP_STAGE_18A_CI_FOUNDATION.md`
 - Stage 17 Memory Checkpoint: `reports/ROADMAP_STAGE_17_MEMORY_CHECKPOINT.md`
