@@ -177,3 +177,95 @@ jobs:
           path: mobile/android/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
           if-no-files-found: error
+  docker-image-build:
+    name: Docker Image Build (Backend)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs:
+      - repository-validation
+      - backend-ci
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Compute Short SHA
+        id: vars
+        run: echo "short_sha=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+
+      - name: Build Backend Docker Image
+        run: |
+          docker build \
+            --file backend/Dockerfile \
+            --tag worksphere-backend:ci \
+            --tag worksphere-backend:sha-${{ steps.vars.outputs.short_sha }} \
+            --label org.opencontainers.image.revision=${{ github.sha }} \
+            --label org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }} \
+            backend
+
+      - name: Inspect Docker Image Metadata
+        run: |
+          docker image inspect worksphere-backend:ci
+          docker history --no-trunc worksphere-backend:ci
+
+      - name: Verify Image Tags and Configuration
+        run: |
+          CI_ID=$(docker image inspect --format '{{.Id}}' worksphere-backend:ci)
+          SHA_ID=$(docker image inspect --format '{{.Id}}' worksphere-backend:sha-${{ steps.vars.outputs.short_sha }})
+          if [ "$CI_ID" != "$SHA_ID" ]; then
+            echo "Error: Tag worksphere-backend:ci and sha tag have different IDs!"
+            exit 1
+          fi
+          echo "Verified both tags point to image ID: $CI_ID"
+
+          CONFIG_USER=$(docker image inspect --format '{{.Config.User}}' worksphere-backend:ci)
+          if [ "$CONFIG_USER" != "worksphere" ] && [ "$CONFIG_USER" != "10001" ]; then
+            echo "Error: Image user is '$CONFIG_USER', expected worksphere or 10001!"
+            exit 1
+          fi
+          echo "Verified image user: $CONFIG_USER"
+
+          EXPOSED_PORT=$(docker image inspect --format '{{json .Config.ExposedPorts}}' worksphere-backend:ci)
+          echo "Exposed ports: $EXPOSED_PORT"
+          echo "$EXPOSED_PORT" | grep '8080/tcp' || (echo 'Port 8080/tcp not exposed!' && exit 1)
+
+          HEALTHCHECK_TEST=$(docker image inspect --format '{{json .Config.Healthcheck.Test}}' worksphere-backend:ci)
+          echo "Healthcheck: $HEALTHCHECK_TEST"
+          if [ -z "$HEALTHCHECK_TEST" ] || [ "$HEALTHCHECK_TEST" = "null" ]; then
+            echo "Error: Healthcheck missing!"
+            exit 1
+          fi
+
+          ENTRYPOINT=$(docker image inspect --format '{{json .Config.Entrypoint}}' worksphere-backend:ci)
+          echo "Entrypoint: $ENTRYPOINT"
+          echo "$ENTRYPOINT" | grep 'app.jar' || (echo 'Entrypoint app.jar missing!' && exit 1)
+
+          REVISION_LABEL=$(docker image inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' worksphere-backend:ci)
+          echo "Revision label: $REVISION_LABEL"
+          if [ "$REVISION_LABEL" != "${{ github.sha }}" ]; then
+            echo "Error: Revision label mismatch!"
+            exit 1
+          fi
+
+      - name: Verify Non-root Runtime UID and GID
+        run: |
+          RUN_ID=$(docker run --rm --entrypoint id worksphere-backend:ci)
+          echo "Runtime user id: $RUN_ID"
+          echo "$RUN_ID" | grep 'uid=10001' || (echo 'UID 10001 mismatch!' && exit 1)
+          echo "$RUN_ID" | grep 'gid=10001' || (echo 'GID 10001 mismatch!' && exit 1)
+
+      - name: Verify Java 21 Runtime in Image
+        run: |
+          docker run --rm --entrypoint java worksphere-backend:ci -version
+
+      - name: Audit Layer & Secret Hygiene
+        run: |
+          echo "Auditing history and env for secret leak patterns..."
+          ENV_JSON=$(docker image inspect --format '{{json .Config.Env}}' worksphere-backend:ci)
+          echo "$ENV_JSON"
+          for PATTERN in 'PASSWORD=' 'SECRET=' 'KEY=' 'TOKEN=' 'PRIVATE KEY'; do
+            if echo "$ENV_JSON" | grep -i "$PATTERN"; then
+              echo "Error: Sensitive pattern '$PATTERN' detected in environment!"
+              exit 1
+            fi
+          done
+          echo "Secret and layer audit passed cleanly."
