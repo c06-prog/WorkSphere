@@ -112,7 +112,23 @@ Toàn bộ các bước kiểm tra chất lượng Mobile được bảo toàn n
 
 ---
 
-## 6. Bảo Vệ Tài Nguyên Legacy & Bảo Mật
+## 7. Remote GitHub Actions CI Verification
 
-- **Bảo Mật**: Quét workflow và git diff: 0 secrets, 0 credentials rò rỉ.
-- **Tài Nguyên Cục Bộ**: Container `jenkins-lts` và `worksphere-dev-pg` được giữ nguyên vẹn 100%, không bị tác động. Không có daemon service nào chạy nền.
+Push commit `0d920818a16a43f10ab38554a781613e56070951` đã kích hoạt workflow thực tế trên GitHub Actions:
+- **Run ID**: `40505688772`
+- **Run URL**: [https://github.com/c06-prog/WorkSphere/actions/runs/40505688772](https://github.com/c06-prog/WorkSphere/actions/runs/40505688772)
+- **Trạng thái**: `completed` | **Kết luận**: **`success`** (Xanh 100%)
+
+Chi tiết các Jobs trên GitHub Actions:
+| Tên Job | Trạng thái | Kết quả | Thời gian / Ghi chú |
+| :--- | :--- | :--- | :--- |
+| **Validate Repository & Secret Audit** | `completed` | **`success`** | Kiểm tra 10 tài liệu canonical và quét tệp bí mật PASS |
+| **Backend Quality (Spring Boot)** | `completed` | **`success`** | Checkstyle 0 violations, 340 tests PASS qua Testcontainers, package JAR thành công |
+| **Mobile Quality (React Native)** | `completed` | **`success`** | `npm ci`, ESLint, TypeScript `typecheck`, 1144 Jest tests PASS |
+
+Chi tiết Artifacts sinh ra từ Run:
+| Tên Artifact | Kích thước (bytes) | Expired | Mục đích |
+| :--- | :--- | :--- | :--- |
+| `backend-executable-jar` | 61,538,355 bytes | `False` | Fat JAR Spring Boot sẵn sàng cho containerization |
+| `backend-test-reports` | 292,801 bytes | `False` | Surefire XML reports lưu trữ bằng chứng kiểm thử |
+
