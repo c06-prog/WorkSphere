@@ -1,0 +1,35 @@
+flowchart LR
+    Root[RootNavigator]
+    Root -->|Chưa đăng nhập| AuthNav[AuthNavigator]
+    Root -->|Đã đăng nhập| MainTab[MainTabNavigator]
+
+    subgraph AuthStack["Auth Stack"]
+        Login[LoginScreen]
+        Forgot[ForgotPasswordScreen]
+        Reset[ResetPasswordScreen]
+        Login --> Forgot --> Reset
+    end
+
+    subgraph MainTabs["Bottom Tabs"]
+        TabDash[DashboardScreen]
+        TabProj[ProjectsScreen]
+        TabTask[TasksScreen]
+        TabSR[ServiceRequestsScreen]
+        TabMore[MoreScreen]
+    end
+
+    AuthNav --> Login
+    MainTab --> TabDash
+    MainTab --> TabProj
+    MainTab --> TabTask
+    MainTab --> TabSR
+    MainTab --> TabMore
+
+    TabProj --> ProjDetail[ProjectDetailScreen]
+    ProjDetail --> ProjMembers[ProjectMembersScreen]
+    ProjDetail --> ProjMilestones[ProjectMilestonesScreen]
+    ProjDetail --> EditProj[EditProjectScreen]
+
+    TabTask --> TaskDetail[TaskDetailScreen]
+    TaskDetail --> TaskComments[TaskCommentsScreen]
+    TaskDetail --> Subtasks[SubtaskListScreen]

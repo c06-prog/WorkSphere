@@ -14,6 +14,9 @@
 - Stage 20B Verification Report: `reports/ROADMAP_STAGE_20B_ADVANCED_PROGRAMMING_REPORT.md`
 - Stage 20B Document Quality Audit: `reports/ROADMAP_STAGE_20B_DOCUMENT_QUALITY_AUDIT.md`
 - Stage 20B Rendered PDF (60 pages): `reports/stage20/advanced-programming/BAO_CAO_KY_NANG_LAP_TRINH_NANG_CAO_WORKSPHERE.pdf`
+- Stage 20C Mobile Report (DOCX): `reports/stage20/mobile-development/BAO_CAO_PHAT_TRIEN_UNG_DUNG_DI_DONG_WORKSPHERE.docx`
+- Stage 20C Mobile Rendered PDF (30 pages): `reports/stage20/mobile-development/BAO_CAO_PHAT_TRIEN_UNG_DUNG_DI_DONG_WORKSPHERE.pdf`
+- Stage 20C Verification Report: `reports/ROADMAP_STAGE_20C_MOBILE_DEVELOPMENT_REPORT.md`
 - Stage 19 Memory Checkpoint: `reports/ROADMAP_STAGE_19_MEMORY_CHECKPOINT.md`
 - Stage 19F Final Operability Report: `reports/ROADMAP_STAGE_19F_FINAL_OPERABILITY.md`
 - Stage 19E Rollback Readiness Report: `reports/ROADMAP_STAGE_19E_ROLLBACK_READINESS.md`

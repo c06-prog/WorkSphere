@@ -1,0 +1,25 @@
+flowchart TD
+    subgraph UI_Presentation["Presentation Tier (React Native Components)"]
+        Screens["Screens (LoginScreen, ProjectsScreen, TasksScreen, ...)"]
+        Components["Shared Components (Button, Input, Card, Header, Modal)"]
+    end
+
+    subgraph Navigation_State["Navigation & State Management"]
+        Nav["React Navigation 7 (RootNavigator -> Auth / Main Tab Navigator)"]
+        ContextStore["Context / Storage (AuthProvider, Redux Toolkit Slices)"]
+    end
+
+    subgraph Data_Networking["Networking & Data Persistence"]
+        ApiClient["Axios apiClient.ts (Interceptors: X-Request-ID, 401 Auto-Refresh)"]
+        KeyStore["Secure Storage (react-native-keychain - Refresh Token)"]
+        RamStore["In-Memory Store (accessTokenStore.ts - Access Token)"]
+        AsyncStore["Local Storage (@react-native-async-storage - Theme/Settings)"]
+    end
+
+    Screens --> Components
+    Screens --> Nav
+    Screens --> ContextStore
+    ContextStore --> ApiClient
+    ApiClient --> RamStore
+    ApiClient --> KeyStore
+    ContextStore --> AsyncStore

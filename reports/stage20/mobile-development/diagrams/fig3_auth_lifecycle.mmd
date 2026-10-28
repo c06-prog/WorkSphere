@@ -1,0 +1,21 @@
+sequenceDiagram
+    autonumber
+    actor User as Người dùng
+    participant Screen as LoginScreen
+    participant AuthContext as AuthContext
+    participant Api as apiClient.ts
+    participant RAM as accessTokenStore (RAM)
+    participant Keychain as secureStorage (Keychain)
+    participant Backend as Spring Boot API
+
+    User->>Screen: Nhập username/password & Bấm "Đăng nhập"
+    Screen->>AuthContext: login(username, password)
+    AuthContext->>Api: POST /api/v1/auth/login
+    Backend-->>Api: 200 OK { accessToken, refreshToken, user }
+    Api->>RAM: setAccessToken(accessToken)
+    Note over RAM: Lưu Access Token trong RAM (15 phút)
+    Api->>Keychain: setRefreshToken(refreshToken)
+    Note over Keychain: Lưu Refresh Token mã hóa phần cứng (7 ngày)
+    AuthContext-->>Screen: Login Success
+    Note over AuthContext: Cập nhật isAuthenticated = true
+    Screen->>User: Điều hướng tự động vào MainTabNavigator (Dashboard)

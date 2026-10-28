@@ -32,6 +32,9 @@
 - Stage 20B Verification Report: `reports/ROADMAP_STAGE_20B_ADVANCED_PROGRAMMING_REPORT.md`
 - Stage 20B Document Quality Audit: `reports/ROADMAP_STAGE_20B_DOCUMENT_QUALITY_AUDIT.md`
 - Stage 20B Rendered PDF (60 pages): `reports/stage20/advanced-programming/BAO_CAO_KY_NANG_LAP_TRINH_NANG_CAO_WORKSPHERE.pdf`
+- Stage 20C Mobile Report (DOCX): `reports/stage20/mobile-development/BAO_CAO_PHAT_TRIEN_UNG_DUNG_DI_DONG_WORKSPHERE.docx`
+- Stage 20C Mobile Rendered PDF (30 pages): `reports/stage20/mobile-development/BAO_CAO_PHAT_TRIEN_UNG_DUNG_DI_DONG_WORKSPHERE.pdf`
+- Stage 20C Verification Report: `reports/ROADMAP_STAGE_20C_MOBILE_DEVELOPMENT_REPORT.md`
 - Current Status: ROADMAP STAGE 20A (Course-to-Code Evidence Map, Team Study Guide & Content Contract Freeze) CHÍNH THỨC HOÀN TẤT. Trạng thái: ROADMAP_STAGE_20A_CONTENT_CONTRACT_COMPLETE_READY_FOR_20B. Đã ánh xạ toàn diện 4 môn học sang mã nguồn thật; thiết lập cẩm nang tự học và chiến lược bảo vệ cho 6 thành viên; phân công giữ nhãn PROPOSED_ASSIGNMENT_PENDING_USER_APPROVAL; 4 thư mục học liệu gốc được giữ nguyên vẹn và KHÔNG commit vào Git; sẵn sàng cho Stage 20B.
 - Stage 19 Memory Checkpoint: `reports/ROADMAP_STAGE_19_MEMORY_CHECKPOINT.md`
 - Stage 19F Final Operability Report: `reports/ROADMAP_STAGE_19F_FINAL_OPERABILITY.md`
