@@ -1,0 +1,42 @@
+flowchart LR
+    A1["<b>ACT-01</b><br/>Khảo sát & Charter<br/>ES:0 | EF:3<br/>LS:0 | LF:3<br/>Slack: 0"]
+    A2["<b>ACT-02</b><br/>Đặc tả SOW<br/>ES:3 | EF:7<br/>LS:3 | LF:7<br/>Slack: 0"]
+    A3["<b>ACT-03</b><br/>WBS & Từ điển<br/>ES:7 | EF:11<br/>LS:7 | LF:11<br/>Slack: 0"]
+    A4["<b>ACT-04</b><br/>Kiến trúc & API<br/>ES:11 | EF:16<br/>LS:11 | LF:16<br/>Slack: 0"]
+
+    A5["<b>ACT-05</b><br/>CSDL & Flyway<br/>ES:16 | EF:20<br/>LS:18 | LF:22<br/>Slack: 2"]
+    A6["<b>ACT-06</b><br/>Backend Modules<br/>ES:20 | EF:32<br/>LS:22 | LF:34<br/>Slack: 2"]
+    A9["<b>ACT-09</b><br/>Backend Tests<br/>ES:32 | EF:37<br/>LS:35 | LF:40<br/>Slack: 3"]
+
+    A7["<b>ACT-07</b><br/>UI/UX Mobile<br/>ES:16 | EF:21<br/>LS:16 | LF:21<br/>Slack: 0"]
+    A8["<b>ACT-08</b><br/>React Native App<br/>ES:21 | EF:35<br/>LS:21 | LF:35<br/>Slack: 0"]
+    A10["<b>ACT-10</b><br/>Mobile Tests<br/>ES:35 | EF:41<br/>LS:35 | LF:41<br/>Slack: 0"]
+
+    A11["<b>ACT-11</b><br/>E2E Integration<br/>ES:35 | EF:39<br/>LS:36 | LF:40<br/>Slack: 1"]
+
+    A12["<b>ACT-12</b><br/>Docker & CI/CD<br/>ES:41 | EF:45<br/>LS:41 | LF:45<br/>Slack: 0"]
+    A13["<b>ACT-13</b><br/>Diễn tập Vận hành<br/>ES:45 | EF:48<br/>LS:45 | LF:48<br/>Slack: 0"]
+    A14["<b>ACT-14</b><br/>Nghiệm thu & Đóng<br/>ES:48 | EF:51<br/>LS:48 | LF:51<br/>Slack: 0"]
+
+    A1 ==> A2 ==> A3 ==> A4
+    A4 --> A5 --> A6 --> A9 --> A12
+    A4 ==> A7 ==> A8 ==> A10 ==> A12
+    A6 --> A11
+    A8 --> A11 --> A12
+    A12 ==> A13 ==> A14
+
+    style A1 fill:#ffebee,stroke:#c62828,stroke-width:2px
+    style A2 fill:#ffebee,stroke:#c62828,stroke-width:2px
+    style A3 fill:#ffebee,stroke:#c62828,stroke-width:2px
+    style A4 fill:#ffebee,stroke:#c62828,stroke-width:2px
+    style A7 fill:#ffebee,stroke:#c62828,stroke-width:2px
+    style A8 fill:#ffebee,stroke:#c62828,stroke-width:2px
+    style A10 fill:#ffebee,stroke:#c62828,stroke-width:2px
+    style A12 fill:#ffebee,stroke:#c62828,stroke-width:2px
+    style A13 fill:#ffebee,stroke:#c62828,stroke-width:2px
+    style A14 fill:#ffebee,stroke:#c62828,stroke-width:2px
+
+    style A5 fill:#e3f2fd,stroke:#1565c0,stroke-width:1px
+    style A6 fill:#e3f2fd,stroke:#1565c0,stroke-width:1px
+    style A9 fill:#e3f2fd,stroke:#1565c0,stroke-width:1px
+    style A11 fill:#e3f2fd,stroke:#1565c0,stroke-width:1px

@@ -1,0 +1,47 @@
+graph TD
+    WS["Dự án WorkSphere<br/>(Quản trị Công việc & Vận hành Doanh nghiệp)"]
+
+    %% Cấp 1
+    C1["1.0 Khởi tạo & Quản lý Dự án"]
+    C2["2.0 Nền tảng Backend Platform"]
+    C3["3.0 Ứng dụng Di động Mobile Client"]
+    C4["4.0 Kiểm thử & Đảm bảo Chất lượng"]
+    C5["5.0 Đóng gói, CI/CD & Vận hành"]
+    C6["6.0 Nghiệm thu & Chuyển giao"]
+
+    WS --> C1
+    WS --> C2
+    WS --> C3
+    WS --> C4
+    WS --> C5
+    WS --> C6
+
+    %% Cấp 2 & Cấp 3
+    C1 --> G11["1.1 Định nghĩa Dự án"]
+    G11 --> W111["1.1.1 Khảo sát hiện trạng & Charter"]
+    G11 --> W112["1.1.2 Đặc tả SOW & Nghiệm thu"]
+    C1 --> G12["1.2 Kế hoạch Dự án"]
+    G12 --> W121["1.2.1 Phân rã WBS & Từ điển WBS"]
+
+    C2 --> G21["2.1 Kiến trúc & Dữ liệu"]
+    G21 --> W211["2.1.1 Kiến trúc hệ thống & API Contract"]
+    G21 --> W212["2.1.2 Thiết kế CSDL & Flyway Migrations"]
+    C2 --> G22["2.2 Phát triển Dịch vụ"]
+    G22 --> W221["2.2.1 Phát triển Backend Modules"]
+
+    C3 --> G31["3.1 Giao diện & Trải nghiệm"]
+    G31 --> W311["3.1.1 Thiết kế UI/UX & Flow Mobile"]
+    G31 --> W312["3.1.2 Phát triển React Native Client"]
+
+    C4 --> G41["4.1 Kiểm thử Đơn vị & Tích hợp"]
+    G41 --> W411["4.1.1 Backend Testcontainers Tests"]
+    G41 --> W412["4.1.2 Mobile 1,144 Jest Tests"]
+    C4 --> G42["4.2 Kiểm thử Đầu cuối"]
+    G42 --> W421["4.2.1 Kiểm thử tích hợp E2E"]
+
+    C5 --> G51["5.1 Tự động hóa & Khả năng Vận hành"]
+    G51 --> W511["5.1.1 Docker Compose & Pipeline CI"]
+    G51 --> W512["5.1.2 Diễn tập Vận hành & Phục hồi"]
+
+    C6 --> G61["6.1 Đóng dự án"]
+    G61 --> W611["6.1.1 Nghiệm thu Kỹ thuật & Tổng kết"]

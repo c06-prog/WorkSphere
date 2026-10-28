@@ -1,0 +1,32 @@
+classDiagram
+    class ProjectManager {
+        +Nguyễn Minh Hiếu (BIT247729)
+        +Điều phối phạm vi & tiến độ
+        +Quản trị rủi ro & chất lượng
+        +Chủ trì họp & nghiệm thu
+    }
+    class LeadArchitect_Mobile {
+        +Nguyễn Văn Cường (BIT240048)
+        +Kiến trúc hệ thống tổng thể
+        +Phát triển ứng dụng Mobile
+        +Định chuẩn React Navigation & API
+    }
+    class BackendLead_DevOps {
+        +Hoàng Bảo Long (BIT240142)
+        +Thiết kế CSDL & Flyway
+        +Phát triển Spring Boot Modules
+        +Đóng gói Docker & CI/CD Pipeline
+    }
+    class QALead_TestEngineer {
+        +Vũ Thị Thu Hướng (BIT240113)
+        +Thiết kế Test Cases & Kiểm thử
+        +Bộ test Jest 1,144 tests & Testcontainers
+        +Quản trị chất lượng & hồi quy
+    }
+
+    ProjectManager --> LeadArchitect_Mobile : Phân công & Giám sát
+    ProjectManager --> BackendLead_DevOps : Phân công & Giám sát
+    ProjectManager --> QALead_TestEngineer : Phân công & Giám sát
+    LeadArchitect_Mobile <--> BackendLead_DevOps : Thống nhất API Contract
+    QALead_TestEngineer --> LeadArchitect_Mobile : Báo cáo lỗi Mobile
+    QALead_TestEngineer --> BackendLead_DevOps : Báo cáo lỗi Backend
