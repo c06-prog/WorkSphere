@@ -1,10 +1,10 @@
 # HƯỚNG DẪN VẬN HÀNH: CHÍNH SÁCH LOGGING & CORRELATION
 ## (LOGGING & CORRELATION POLICY RUNBOOK)
 
-**Document Version:** 1.0  
-**Date:** 2026-10-28  
-**Module:** Backend (`backend`)  
-**Status:** CANONICAL GOVERNANCE ENFORCED  
+**Document Version:** 2.0 (Verified Runtime)
+**Date:** 2026-10-28
+**Module:** Backend (`backend`)
+**Status:** CANONICAL GOVERNANCE ENFORCED
 
 ---
 
@@ -18,14 +18,14 @@
 3. **MDC Injection & Response Propagation**:
    - Request ID được nạp vào Slf4j MDC với khóa `requestId` ngay từ đầu vòng đời xử lý request (`@Order(Ordered.HIGHEST_PRECEDENCE)`).
    - `X-Request-ID` luôn được gắn vào HTTP Response Header gửi lại client.
-   - Trường `traceId` trong JSON `ApiResponse<T>` tự động nạp giá trị từ MDC `requestId` hiện hành.
+   - Trường `traceId` trong JSON `ApiResponse<T>` tự động nạp giá trị từ MDC `requestId` hiện hành. Trong phạm vi Modular Monolith hiện tại, `requestId` đóng vai trò là `traceId`.
    - Khóa `requestId` được dọn dẹp sạch sẽ khỏi MDC trong khối `finally` ngay sau khi hoàn tất request để tránh rò rỉ ngữ cảnh giữa các luồng tái sử dụng (ThreadLocal pool).
 
 ---
 
 ## 2. Định Dạng Cấu Trúc Log (Structured Log Pattern)
 
-Hệ thống sử dụng tệp cấu hình canonical `backend/src/main/resources/logback-spring.xml` xuất log ra `stdout` tiêu chuẩn của container với định dạng:
+Hệ thống sử dụng tệp cấu hình canonical `backend/src/main/resources/logback-spring.xml` xuất log ra `stdout` tiêu chuẩn của container với định dạng **Structured Key-Value Console Output**:
 
 ```text
 %d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} %5p [requestId=%X{requestId:-none}] --- [%15.15t] %-40.40logger{39} : %m%n%wEx
@@ -38,6 +38,9 @@ Hệ thống sử dụng tệp cấu hình canonical `backend/src/main/resources
 - `thread`: Tên luồng thực thi (`[%15.15t]`).
 - `logger`: Tên lớp phát sinh log (`%-40.40logger{39}`).
 - `message`: Nội dung log có cấu trúc.
+
+> [!NOTE]
+> Định dạng log hiện tại là Structured Key-Value console pattern phục vụ tối ưu cho container stdout và log parser. Hệ thống chưa xuất log thô dạng single-line JSON; phân tán tracing toàn diện (OpenTelemetry/W3C traceparent) chưa được kích hoạt ở giai đoạn này.
 
 ---
 

@@ -5,7 +5,7 @@
 - Repository: D:\WorkSphere
 - Branch: main
 - Current Task: ROADMAP-STAGE-19A — REQUEST CORRELATION, STRUCTURED LOGGING & SENSITIVE-DATA SAFETY
-- Status: HOÀN TẤT & ĐÓNG GIAI ĐOẠN 19A. Đã thiết lập RequestCorrelationFilter nạp X-Request-ID và MDC requestId, ApiResponse.traceId tự động gắn kết qua MDC, cấu hình logback-spring.xml in log stdout có cấu trúc và an toàn dữ liệu nhạy cảm. 6 tests mới và 346 tests backend tổng thể đạt 100% PASS, Checkstyle 0 violations. Sẵn sàng cho Stage 19B (Actuator Endpoints Hardening & Prometheus Metrics).
+- Status: HOÀN TẤT, RUNTIME VERIFIED & ĐÓNG GIAI ĐOẠN 19A. GitHub Actions Run #195 (ID 40613361768) thành công 100% trên cả 5 jobs. Đã thực hiện Docker Compose runtime rehearsal: container stdout ghi nhận chính xác requestId, method, path, status, durationMs; 401 response trả đúng X-Request-ID và traceId; không log raw body/token. Dữ liệu named volumes bảo toàn nguyên vẹn. Baseline mới: 346 backend tests pass, Checkstyle 0. Sẵn sàng cho Stage 19B (Actuator Endpoints Hardening & Prometheus Metrics).
 - Latest Decision: D-069 Khóa Kế Hoạch Kiểm Thử Chấp Nhận Người Dùng (UAT Plan Freeze) & Hợp Đồng Nghiệm Thu Doanh Nghiệp (Đã Đối Soát Khớp Mã Nguồn).
 - Stage 19A Request Logging Report: `reports/ROADMAP_STAGE_19A_REQUEST_LOGGING.md`
 - Logging & Correlation Policy Runbook: `reports/runbooks/LOGGING_AND_CORRELATION_POLICY.md`
