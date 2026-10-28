@@ -4,8 +4,10 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: ROADMAP-STAGE-19A — REQUEST CORRELATION, STRUCTURED LOGGING & SENSITIVE-DATA SAFETY
-- Status: HOÀN TẤT, RUNTIME VERIFIED & ĐÓNG GIAI ĐOẠN 19A. GitHub Actions Run #195 (ID 40613361768) thành công 100% trên cả 5 jobs. Đã thực hiện Docker Compose runtime rehearsal: container stdout ghi nhận chính xác requestId, method, path, status, durationMs; 401 response trả đúng X-Request-ID và traceId; không log raw body/token. Dữ liệu named volumes bảo toàn nguyên vẹn. Baseline mới: 346 backend tests pass, Checkstyle 0. Sẵn sàng cho Stage 19B (Actuator Endpoints Hardening & Prometheus Metrics).
+- Current Task: ROADMAP-STAGE-19B — ACTUATOR HARDENING, MICROMETER PROMETHEUS METRICS & MONITORING READINESS
+- Status: HOÀN TẤT & ĐÃ ĐÓNG GIAI ĐOẠN 19B. Prometheus metrics exporter (io.micrometer:micrometer-registry-prometheus) tích hợp và cấu hình an toàn qua Spring Security; Actuator endpoints thu hẹp còn health, info, prometheus; /actuator/env và beans bảo vệ trả 401; local Docker Compose runtime rehearsal thành công xác nhận UP status và Prometheus metrics output. Dữ liệu named volumes bảo toàn nguyên vẹn. Baseline mới: 351 backend tests pass, Checkstyle 0. Sẵn sàng cho Stage 19C (Backup/Restore Database & File Storage).
+- Stage 19B Metrics & Monitoring Report: `reports/ROADMAP_STAGE_19B_METRICS_MONITORING.md`
+- Metrics & Monitoring Policy Runbook: `reports/runbooks/METRICS_AND_MONITORING_POLICY.md`
 - Latest Decision: D-069 Khóa Kế Hoạch Kiểm Thử Chấp Nhận Người Dùng (UAT Plan Freeze) & Hợp Đồng Nghiệm Thu Doanh Nghiệp (Đã Đối Soát Khớp Mã Nguồn).
 - Stage 19A Request Logging Report: `reports/ROADMAP_STAGE_19A_REQUEST_LOGGING.md`
 - Logging & Correlation Policy Runbook: `reports/runbooks/LOGGING_AND_CORRELATION_POLICY.md`

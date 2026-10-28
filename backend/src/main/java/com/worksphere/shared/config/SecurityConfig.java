@@ -55,8 +55,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/refresh").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/forgot-password").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/reset-password").permitAll()
-                        // Actuator health
-                        .requestMatchers("/actuator/health").permitAll()
+                        // Actuator health and metrics
+                        .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
+                        .requestMatchers("/actuator/info", "/actuator/prometheus").permitAll()
                         // Swagger UI
                         .requestMatchers(
                                 "/swagger-ui/**",

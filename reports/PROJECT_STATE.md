@@ -24,7 +24,9 @@
 - Phase 17 Mobile Asset Management: CLOSED (MEMORY_CHECKPOINT_CLOSED).
 - Phase 18 Mobile Notification System: CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 18A..18E + 18E-Runtime-Corrective + Type-Safety Hardening CLOSED).
 - Memory Checkpoint: `reports/PHASE_18_MEMORY_CHECKPOINT.md`
-- Current Status: ROADMAP GIAI ĐOẠN 19A (Request Correlation, Structured Logging & Sensitive-Data Safety) HOÀN TẤT, RUNTIME VERIFIED & ĐÃ ĐÓNG (Remote CI Run #195 ID 40613361768 SUCCESS, Docker stdout rehearsal PASS). Baseline mới: 346 backend tests. RequestCorrelationFilter nạp X-Request-ID và MDC requestId, ApiResponse.traceId tự động liên kết, logback-spring.xml xuất log structured key-value console ra stdout. Sẵn sàng cho Stage 19B (Actuator Endpoints Hardening & Prometheus Metrics).
+- Current Status: ROADMAP GIAI ĐOẠN 19B (Actuator Hardening, Micrometer Prometheus Metrics & Monitoring Readiness) HOÀN TẤT & ĐÃ ĐÓNG (351 backend tests PASS, Checkstyle 0, Docker Compose runtime rehearsal PASS, Prometheus scrape endpoint và Docker healthcheck UP, endpoints nhạy cảm 401). Sẵn sàng cho Stage 19C (Backup/Restore Database & File Storage).
+- Stage 19B Metrics & Monitoring Report: `reports/ROADMAP_STAGE_19B_METRICS_MONITORING.md`
+- Metrics & Monitoring Policy Runbook: `reports/runbooks/METRICS_AND_MONITORING_POLICY.md`
 - Stage 19A Request Logging Report: `reports/ROADMAP_STAGE_19A_REQUEST_LOGGING.md`
 - Logging & Correlation Policy Runbook: `reports/runbooks/LOGGING_AND_CORRELATION_POLICY.md`
 - Stage 18 Memory Checkpoint: `reports/ROADMAP_STAGE_18_MEMORY_CHECKPOINT.md`

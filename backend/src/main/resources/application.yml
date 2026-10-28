@@ -16,3 +16,15 @@ worksphere:
       enabled: true
     task-deadline-scan-delay: PT15M
     task-deadline-batch-size: 100
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+      probes:
+        enabled: true
+    prometheus:
+      enabled: true
