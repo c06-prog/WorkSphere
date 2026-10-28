@@ -22,7 +22,7 @@ Roadmap Stage 19E establishes a formal rollback and recovery policy for WorkSphe
   - Total `DROP TABLE` / `ALTER TABLE DROP`: **0 occurrences**.
   - Total `RENAME`: **0 occurrences**.
   - Migrations V001 through V017 are strictly additive (new tables, indexes, constraints, and nullable columns).
-  - Verdict for current version history: **`APP_ROLLBACK_SAFE`**. Earlier application releases can execute against the V017 schema without crashing on missing columns.
+  - Verdict for current version history: **`APP_ROLLBACK_SAFE_FOR_VERIFIED_PAIR`** (specifically verified for current image `38795ee` rollback to previous image `e231a79` on schema V017). Each future release pair requires a fresh compatibility assessment; future destructive migrations (DROP/RENAME) may invalidate application-only rollback and necessitate a full database restore.
 
 ## 4. Local Rollback Rehearsal Evidence
 - **Environment**: Completely isolated network (`worksphere-restore-test-rollback-net`) and isolated PostgreSQL container/volume restored via Stage 19D tooling.

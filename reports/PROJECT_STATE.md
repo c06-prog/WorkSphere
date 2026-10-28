@@ -24,7 +24,9 @@
 - Phase 17 Mobile Asset Management: CLOSED (MEMORY_CHECKPOINT_CLOSED).
 - Phase 18 Mobile Notification System: CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 18A..18E + 18E-Runtime-Corrective + Type-Safety Hardening CLOSED).
 - Memory Checkpoint: `reports/PHASE_18_MEMORY_CHECKPOINT.md`
-- Current Status: ROADMAP GIAI ĐOẠN 19E (Application Rollback, Image Retention, Schema Compatibility & Safe Recovery Policy) HOÀN TẤT & VERIFIED (Xây dựng phân loại rollback, checklist tương thích schema Flyway V001-V017 xác nhận APP_ROLLBACK_SAFE, mẫu Deployment Checkpoint, kịch bản rollback-local.ps1 bảo vệ fail-fast; diễn tập hoán đổi container backend giữa 2 image tags trong môi trường cô lập thành công, database và uploads bảo toàn nguyên vẹn; dọn dẹp sạch sẽ test resources). REGISTRY_PUBLICATION_REQUIRED_BEFORE_STAGING_ROLLBACK, RPO/RTO = DECISION_REQUIRED. Sẵn sàng cho Stage 19F (Final Operational Verification, Operability Reconciliation & Stage 19 Memory Checkpoint).
+- Current Status: ROADMAP GIAI ĐOẠN 19 (Logging, Monitoring, Backup & Rollback) CHÍNH THỨC HOÀN TẤT & ĐÓNG (Stage 19A-19F toàn bộ canonical criteria đạt, diễn tập liên hoàn integrated operability pass; 351 backend tests pass, Checkstyle 0; Request correlation X-Request-ID và structured logging hoạt động; Actuator Prometheus metrics an toàn; Backup pg_dump custom format và uploads tar.gz với SHA-256 manifests; Phục hồi và rollback diễn tập thành công trên môi trường cô lập; dọn dẹp sạch sẽ tài nguyên test và bảo toàn tuyệt đối canonical/legacy volumes). LOCAL_OPERABILITY_READY = TRUE, STAGING_READY = FALSE, PRODUCTION_READY = FALSE. Sẵn sàng cho Stage 20 (Dự án Tổng kết & Chuyển giao).
+- Stage 19 Memory Checkpoint: `reports/ROADMAP_STAGE_19_MEMORY_CHECKPOINT.md`
+- Stage 19F Final Operability Report: `reports/ROADMAP_STAGE_19F_FINAL_OPERABILITY.md`
 - Stage 19E Rollback Readiness Report: `reports/ROADMAP_STAGE_19E_ROLLBACK_READINESS.md`
 - Rollback Operations Runbook: `reports/runbooks/ROLLBACK_OPERATIONS.md`
 - Deployment Checkpoint Template: `reports/templates/DEPLOYMENT_CHECKPOINT_TEMPLATE.md`
