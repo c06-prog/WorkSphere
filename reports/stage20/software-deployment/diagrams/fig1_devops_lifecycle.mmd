@@ -1,0 +1,9 @@
+graph LR
+    Plan["1. Lập Kế Hoạch<br/>(WBS & Git Issues)"] --> Code["2. Lập Trình & SCM<br/>(Git & Wrappers)"]
+    Code --> Build["3. Đóng Gói Tự Động<br/>(Maven / Gradle / Docker)"]
+    Build --> Test["4. Kiểm Thử Đa Tầng<br/>(351 Backend & 1,144 Jest)"]
+    Test --> Release["5. Phát Hành Cục Bộ<br/>(Docker Image & Debug APK)"]
+    Release --> Deploy["6. Khởi Chạy Local<br/>(Docker Compose Local)"]
+    Deploy --> Operate["7. Vận Hành & Phục Hồi<br/>(Backup / Restore / Rollback)"]
+    Operate --> Monitor["8. Giám Sát Quan Sát<br/>(Actuator & Prometheus)"]
+    Monitor -. Phản hồi cải tiến .-> Plan

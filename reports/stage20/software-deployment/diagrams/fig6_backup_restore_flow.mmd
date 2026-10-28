@@ -1,0 +1,16 @@
+flowchart TD
+    subgraph BackupProcess["Quy trình Sao lưu (backup-local.ps1)"]
+        B1["1. Đọc cấu hình DB & Khởi tạo thư mục"] --> B2["2. pg_dump tạo file SQL/tar nén"]
+        B2 --> B3["3. Tính toán mã băm SHA-256"]
+        B3 --> B4["4. Ghi Manifest JSON (Metadata, Checksum)"]
+    end
+
+    subgraph RestoreProcess["Quy trình Phục hồi (restore-local.ps1)"]
+        R1["1. Kiểm tra Manifest & Xác minh SHA-256"] --> R2{"Mã băm khớp?"}
+        R2 -- Không --> R_Fail["Hủy thao tác: File hỏng hoặc bị sửa"]
+        R2 -- Có --> R3["2. Khởi tạo DB tạm thời (Isolated Test DB)"]
+        R3 --> R4["3. Nạp dữ liệu qua psql & Chạy Smoke Test"]
+        R4 --> R5["4. Hoàn tất & Ghi nhật ký phục hồi"]
+    end
+
+    B4 -. Tệp sao lưu & Manifest .-> R1

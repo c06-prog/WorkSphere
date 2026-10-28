@@ -1,0 +1,18 @@
+sequenceDiagram
+    autonumber
+    actor Client as Client (Mobile / Web)
+    participant Filter as RequestCorrelationFilter
+    participant Controller as Spring Boot REST Controller
+    participant Actuator as Spring Boot Actuator
+    participant Prometheus as Prometheus (Scrape Engine)
+
+    Client->>Filter: HTTP Request (Optional: X-Request-ID)
+    Note over Filter: Tự sinh UUID nếu thiếu X-Request-ID
+    Filter->>Filter: Ghi vào MDC (Mapped Diagnostic Context)
+    Filter->>Controller: Chuyển tiếp Request
+    Controller-->>Client: HTTP Response (Kèm Header X-Request-ID)
+    Note over Controller,Actuator: Ghi log cấu trúc Key-Value & Cập nhật Micrometer Metrics
+    loop Định kỳ mỗi 15 giây
+        Prometheus->>Actuator: GET /actuator/prometheus
+        Actuator-->>Prometheus: Trả về JVM, HTTP, HikariCP Metrics (Plain text)
+    end

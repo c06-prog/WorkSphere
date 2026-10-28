@@ -1,0 +1,21 @@
+classDiagram
+    class DockerCompose_Local {
+        +Service: backend
+        +Service: postgres
+        +Named Volumes
+        +Bridge Network
+        +Environment File (.env)
+        +Khởi chạy đơn máy (Single Host)
+    }
+
+    class Kubernetes_Conceptual {
+        +Deployment: worksphere-backend (Replicas >= 2)
+        +StatefulSet: postgresql (HA Cluster)
+        +PersistentVolumeClaim (PVC)
+        +ClusterIP / Ingress Controller
+        +ConfigMap & Kubernetes Secret
+        +Hỗ trợ Multi-node & Auto-scaling
+    }
+
+    DockerCompose_Local ..> Kubernetes_Conceptual : Ánh xạ khái niệm tương đương (CONCEPT_ONLY)
+    note for Kubernetes_Conceptual "TRẠNG THÁI: CONCEPT_ONLY\nChưa triển khai thực tế trên cụm K8s"

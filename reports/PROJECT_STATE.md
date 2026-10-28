@@ -35,7 +35,12 @@
 - Stage 20C Mobile Report (DOCX): `reports/stage20/mobile-development/BAO_CAO_PHAT_TRIEN_UNG_DUNG_DI_DONG_WORKSPHERE.docx`
 - Stage 20C Mobile Rendered PDF (30 pages): `reports/stage20/mobile-development/BAO_CAO_PHAT_TRIEN_UNG_DUNG_DI_DONG_WORKSPHERE.pdf`
 - Stage 20C Verification Report: `reports/ROADMAP_STAGE_20C_MOBILE_DEVELOPMENT_REPORT.md`
-- Current Status: ROADMAP STAGE 20A (Course-to-Code Evidence Map, Team Study Guide & Content Contract Freeze) CHÍNH THỨC HOÀN TẤT. Trạng thái: ROADMAP_STAGE_20A_CONTENT_CONTRACT_COMPLETE_READY_FOR_20B. Đã ánh xạ toàn diện 4 môn học sang mã nguồn thật; thiết lập cẩm nang tự học và chiến lược bảo vệ cho 6 thành viên; phân công giữ nhãn PROPOSED_ASSIGNMENT_PENDING_USER_APPROVAL; 4 thư mục học liệu gốc được giữ nguyên vẹn và KHÔNG commit vào Git; sẵn sàng cho Stage 20B.
+- Stage 20D Verification Report: `reports/ROADMAP_STAGE_20D_IT_PROJECT_MANAGEMENT_REPORT.md`
+- Stage 20D Document Quality Audit: `reports/ROADMAP_STAGE_20D_DOCUMENT_QUALITY_AUDIT.md`
+- Stage 20E Software Deployment Report (DOCX): `reports/stage20/software-deployment/BAO_CAO_TRIEN_KHAI_PHAN_MEM_WORKSPHERE.docx`
+- Stage 20E Software Deployment Rendered PDF (32 pages): `reports/stage20/software-deployment/BAO_CAO_TRIEN_KHAI_PHAN_MEM_WORKSPHERE.pdf`
+- Stage 20E Verification Report: `reports/ROADMAP_STAGE_20E_SOFTWARE_DEPLOYMENT_REPORT.md`
+- Current Status: ROADMAP STAGE 20E (Software Deployment & DevOps Technical Handbook) HOÀN TẤT. Sổ tay kỹ thuật DevOps và báo cáo học thuật hoàn thành (32 trang PDF, 12 chương bám sát 9 bài giảng, 8 sơ đồ kiến trúc nguồn Mermaid và PNG render, phân định rạch ròi Kubernetes/Cloud là CONCEPT_ONLY, Monitoring local-internal, CI implemented, CD partial). Sẵn sàng chuyển tiếp sang Stage 20F.
 - Stage 19 Memory Checkpoint: `reports/ROADMAP_STAGE_19_MEMORY_CHECKPOINT.md`
 - Stage 19F Final Operability Report: `reports/ROADMAP_STAGE_19F_FINAL_OPERABILITY.md`
 - Stage 19E Rollback Readiness Report: `reports/ROADMAP_STAGE_19E_ROLLBACK_READINESS.md`

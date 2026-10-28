@@ -1,0 +1,14 @@
+flowchart TD
+    Incident["Phát hiện Sự Cố Nghiêm Trọng Sau Triển Khai"] --> CheckPair{"Có cặp Release Verified trước đó?<br/>(Cùng Schema DB & Không phá vỡ Migration)"}
+
+    CheckPair -- Không có --> ForwardFix["Chỉ được Forward-Fix:<br/>Phát triển bản sửa lỗi mới & Deploy tiến lên"]
+    CheckPair -- Có --> CheckDB{"Lược đồ CSDL có bị thay đổi?"}
+
+    CheckDB -- Có migration mới --> MigrateCheck{"Có script rollback an toàn không?"}
+    MigrateCheck -- Không --> ForwardFix
+    MigrateCheck -- Có --> RunRollback["Chạy script rollback-local.ps1:<br/>Khôi phục DB snapshot & Chuyển container image cũ"]
+
+    CheckDB -- Không đổi DB --> FastRollback["Rollback Container Nhanh:<br/>Chuyển docker tag về phiên bản ổn định trước đó"]
+
+    RunRollback --> Verify["Kiểm tra Health Endpoint 200 OK & Khôi phục Dịch vụ"]
+    FastRollback --> Verify

@@ -1,0 +1,29 @@
+flowchart TD
+    subgraph Host["Host Machine (Windows / Developer Workstation)"]
+        Browser["Trình duyệt Web / Dev Tools<br/>http://localhost:8080"]
+        AdminTool["PostgreSQL GUI / psql<br/>localhost:5432"]
+        PrometheusUI["Prometheus GUI (Internal)<br/>http://localhost:9090"]
+    end
+
+    subgraph DockerNet["Docker Bridge Network: worksphere-network (172.x)"]
+        PG["Container: worksphere-compose-postgres<br/>Image: postgres:15-alpine<br/>Port nội bộ: 5432"]
+        Backend["Container: worksphere-compose-backend<br/>Image: worksphere-backend:stage17-local<br/>Port nội bộ: 8080"]
+        Prom["Container: worksphere-compose-prometheus<br/>Image: prom/prometheus:latest<br/>Port nội bộ: 9090"]
+    end
+
+    subgraph NamedVolumes["Docker Named Volumes (Dữ liệu bền vững)"]
+        VolPG["worksphere-postgres-data<br/>(/var/lib/postgresql/data)"]
+        VolUpload["worksphere-backend-uploads<br/>(/app/uploads)"]
+        VolProm["worksphere-prometheus-data<br/>(/prometheus)"]
+    end
+
+    Browser -->|127.0.0.1:8080| Backend
+    AdminTool -->|127.0.0.1:5432| PG
+    PrometheusUI -->|127.0.0.1:9090| Prom
+
+    Backend -->|DNS: postgres:5432| PG
+    Prom -->|Scrape metrics: backend:8080| Backend
+
+    PG --- VolPG
+    Backend --- VolUpload
+    Prom --- VolProm

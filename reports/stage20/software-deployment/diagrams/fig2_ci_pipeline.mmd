@@ -1,0 +1,11 @@
+flowchart TD
+    Push["Git Push / Pull Request (main)"] --> J1["Job 1: repository-validation<br/>(Git, Secret Audit, ShellCheck)"]
+
+    J1 --> J2["Job 2: backend-ci<br/>(Java 21, Checkstyle, 351 Tests)"]
+    J1 --> J3["Job 3: mobile-quality<br/>(Node 24, 129 Suites, 1,144 Tests)"]
+
+    J3 --> J4["Job 4: android-debug-build<br/>(Gradle 9.4, Debug APK Artifact)"]
+    J2 --> J5["Job 5: docker-image-build<br/>(Multi-stage, Non-root UID 10001)"]
+
+    J4 --> ArtifactAPK["Bàn giao: app-debug.apk<br/>(Lưu trữ 7 ngày)"]
+    J5 --> ImageVerify["Kiểm tra: Docker build pass<br/>(Không publish registry)"]

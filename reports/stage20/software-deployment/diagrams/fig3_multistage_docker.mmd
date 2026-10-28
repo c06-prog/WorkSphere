@@ -1,0 +1,14 @@
+flowchart LR
+    subgraph Stage1["Stage 1: Builder (eclipse-temurin:21-jdk)"]
+        Src["Mã nguồn backend/<br/>+ pom.xml + mvnw"] --> MvnBuild["Chạy: ./mvnw clean package<br/>-DskipTests"]
+        MvnBuild --> FatJar["Sản phẩm: backend.jar (~60MB)"]
+    end
+
+    subgraph Stage2["Stage 2: Runner (eclipse-temurin:21-jre)"]
+        BaseJRE["JRE 21 Minimal Runtime"] --> UserSec["Tạo User/Group: worksphere<br/>UID/GID 10001 (Non-root)"]
+        UserSec --> CopyJar["Copy JAR từ Builder<br/>/app/app.jar"]
+        CopyJar --> Health["HEALTHCHECK: curl /actuator/health"]
+        Health --> RunCMD["ENTRYPOINT: java -jar /app/app.jar"]
+    end
+
+    FatJar -->|Chỉ copy file JAR, bỏ JDK và công cụ biên dịch| CopyJar

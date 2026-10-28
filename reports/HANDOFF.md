@@ -4,8 +4,13 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: ROADMAP-STAGE-20A — COURSE-TO-CODE EVIDENCE MAP, TEAM STUDY GUIDE & CONTENT CONTRACT FREEZE
-- Status: HOÀN TẤT & KHÓA HỢP ĐỒNG NỘI DUNG STAGE 20A (`ROADMAP_STAGE_20A_CONTENT_CONTRACT_COMPLETE_READY_FOR_20B`). Đã tạo đầy đủ 2 tài liệu Markdown chuẩn tắc: STAGE_20_COURSE_CODE_EVIDENCE_MAP.md và STAGE_20_TEAM_STUDY_AND_DEFENSE_GUIDE.md. Ánh xạ toàn diện 4 môn học sang mã nguồn thật (Backend, Mobile, Database, CI/CD, Tests). Phân công thành viên giữ nhãn PROPOSED_ASSIGNMENT_PENDING_USER_APPROVAL. Bốn thư mục học liệu gốc được giữ nguyên và KHÔNG commit vào Git repository. Sẵn sàng chuyển giao sang Stage 20B.
+- Current Task: ROADMAP-STAGE-20E — SOFTWARE DEPLOYMENT & DEVOPS TECHNICAL HANDBOOK (TRIỂN KHAI PHẦN MỀM)
+- Status: HOÀN TẤT BÁO CÁO MÔN TRIỂN KHAI PHẦN MỀM (`ROADMAP_STAGE_20E_SOFTWARE_DEPLOYMENT_REPORT_COMPLETE_READY_FOR_20F`). Đã tạo tài liệu Markdown nguồn và file DOCX/PDF chuẩn (32 trang PDF) bao gồm 12 chương bám sát 9 bài giảng học phần. Hoàn thiện 8 sơ đồ kiến trúc nguồn Mermaid và hình ảnh PNG. Khẳng định ranh giới kỹ thuật trung thực: Kubernetes và Cloud Computing là CONCEPT_ONLY, Monitoring local-internal, CI implemented, CD partial. 4 thư mục học liệu gốc được bảo lưu và KHÔNG commit vào Git repository. Sẵn sàng chuyển giao sang Stage 20F.
+- Stage 20D Verification Report: `reports/ROADMAP_STAGE_20D_IT_PROJECT_MANAGEMENT_REPORT.md`
+- Stage 20D Document Quality Audit: `reports/ROADMAP_STAGE_20D_DOCUMENT_QUALITY_AUDIT.md`
+- Stage 20E Software Deployment Report (DOCX): `reports/stage20/software-deployment/BAO_CAO_TRIEN_KHAI_PHAN_MEM_WORKSPHERE.docx`
+- Stage 20E Software Deployment Rendered PDF (32 pages): `reports/stage20/software-deployment/BAO_CAO_TRIEN_KHAI_PHAN_MEM_WORKSPHERE.pdf`
+- Stage 20E Verification Report: `reports/ROADMAP_STAGE_20E_SOFTWARE_DEPLOYMENT_REPORT.md`
 - Stage 20A Content Contract Report: `reports/ROADMAP_STAGE_20A_CONTENT_CONTRACT.md`
 - Stage 20 Course-to-Code Evidence Map: `reports/STAGE_20_COURSE_CODE_EVIDENCE_MAP.md`
 - Stage 20 Team Study & Defense Guide: `reports/STAGE_20_TEAM_STUDY_AND_DEFENSE_GUIDE.md`
