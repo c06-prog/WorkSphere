@@ -4,8 +4,11 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: ROADMAP-STAGE-19F — FINAL OPERABILITY REHEARSAL, SECURITY RECONCILIATION & MEMORY CHECKPOINT
-- Status: HOÀN TẤT & CHÍNH THỨC ĐÓNG STAGE 19. Toàn bộ chu trình vận hành liên hoàn (Logging -> Metrics -> Backup -> Restore -> Rollback) đã diễn tập thành công trên runtime Docker; dữ liệu và Flyway migrations đối soát 100% toàn vẹn; tài nguyên test dọn dẹp sạch sẽ, volumes/containers canonical và legacy bảo toàn tuyệt đối; kiểm toán security 0 secret rò rỉ; đóng cổng Stage 19; LOCAL_OPERABILITY_READY = TRUE, STAGING_READY = FALSE, PRODUCTION_READY = FALSE. Sẵn sàng cho Stage 20 (Dự án Tổng kết & Chuyển giao).
+- Current Task: ROADMAP-STAGE-20A — COURSE-TO-CODE EVIDENCE MAP, TEAM STUDY GUIDE & CONTENT CONTRACT FREEZE
+- Status: HOÀN TẤT & KHÓA HỢP ĐỒNG NỘI DUNG STAGE 20A (`ROADMAP_STAGE_20A_CONTENT_CONTRACT_COMPLETE_READY_FOR_20B`). Đã tạo đầy đủ 2 tài liệu Markdown chuẩn tắc: STAGE_20_COURSE_CODE_EVIDENCE_MAP.md và STAGE_20_TEAM_STUDY_AND_DEFENSE_GUIDE.md. Ánh xạ toàn diện 4 môn học sang mã nguồn thật (Backend, Mobile, Database, CI/CD, Tests). Phân công thành viên giữ nhãn PROPOSED_ASSIGNMENT_PENDING_USER_APPROVAL. Bốn thư mục học liệu gốc được giữ nguyên và KHÔNG commit vào Git repository. Sẵn sàng chuyển giao sang Stage 20B.
+- Stage 20A Content Contract Report: `reports/ROADMAP_STAGE_20A_CONTENT_CONTRACT.md`
+- Stage 20 Course-to-Code Evidence Map: `reports/STAGE_20_COURSE_CODE_EVIDENCE_MAP.md`
+- Stage 20 Team Study & Defense Guide: `reports/STAGE_20_TEAM_STUDY_AND_DEFENSE_GUIDE.md`
 - Stage 19 Memory Checkpoint: `reports/ROADMAP_STAGE_19_MEMORY_CHECKPOINT.md`
 - Stage 19F Final Operability Report: `reports/ROADMAP_STAGE_19F_FINAL_OPERABILITY.md`
 - Stage 19E Rollback Readiness Report: `reports/ROADMAP_STAGE_19E_ROLLBACK_READINESS.md`

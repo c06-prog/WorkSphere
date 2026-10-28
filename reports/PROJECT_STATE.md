@@ -24,7 +24,10 @@
 - Phase 17 Mobile Asset Management: CLOSED (MEMORY_CHECKPOINT_CLOSED).
 - Phase 18 Mobile Notification System: CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 18A..18E + 18E-Runtime-Corrective + Type-Safety Hardening CLOSED).
 - Memory Checkpoint: `reports/PHASE_18_MEMORY_CHECKPOINT.md`
-- Current Status: ROADMAP GIAI ĐOẠN 19 (Logging, Monitoring, Backup & Rollback) CHÍNH THỨC HOÀN TẤT & ĐÓNG (Stage 19A-19F toàn bộ canonical criteria đạt, diễn tập liên hoàn integrated operability pass; 351 backend tests pass, Checkstyle 0; Request correlation X-Request-ID và structured logging hoạt động; Actuator Prometheus metrics an toàn; Backup pg_dump custom format và uploads tar.gz với SHA-256 manifests; Phục hồi và rollback diễn tập thành công trên môi trường cô lập; dọn dẹp sạch sẽ tài nguyên test và bảo toàn tuyệt đối canonical/legacy volumes). LOCAL_OPERABILITY_READY = TRUE, STAGING_READY = FALSE, PRODUCTION_READY = FALSE. Sẵn sàng cho Stage 20 (Dự án Tổng kết & Chuyển giao).
+- Stage 20A Content Contract Report: `reports/ROADMAP_STAGE_20A_CONTENT_CONTRACT.md`
+- Stage 20 Course-to-Code Evidence Map: `reports/STAGE_20_COURSE_CODE_EVIDENCE_MAP.md`
+- Stage 20 Team Study & Defense Guide: `reports/STAGE_20_TEAM_STUDY_AND_DEFENSE_GUIDE.md`
+- Current Status: ROADMAP STAGE 20A (Course-to-Code Evidence Map, Team Study Guide & Content Contract Freeze) CHÍNH THỨC HOÀN TẤT. Trạng thái: ROADMAP_STAGE_20A_CONTENT_CONTRACT_COMPLETE_READY_FOR_20B. Đã ánh xạ toàn diện 4 môn học sang mã nguồn thật; thiết lập cẩm nang tự học và chiến lược bảo vệ cho 6 thành viên; phân công giữ nhãn PROPOSED_ASSIGNMENT_PENDING_USER_APPROVAL; 4 thư mục học liệu gốc được giữ nguyên vẹn và KHÔNG commit vào Git; sẵn sàng cho Stage 20B.
 - Stage 19 Memory Checkpoint: `reports/ROADMAP_STAGE_19_MEMORY_CHECKPOINT.md`
 - Stage 19F Final Operability Report: `reports/ROADMAP_STAGE_19F_FINAL_OPERABILITY.md`
 - Stage 19E Rollback Readiness Report: `reports/ROADMAP_STAGE_19E_ROLLBACK_READINESS.md`
