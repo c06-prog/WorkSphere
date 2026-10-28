@@ -4,8 +4,10 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: ROADMAP-STAGE-19C — POSTGRESQL & FILE-STORAGE BACKUP FOUNDATION, CHECKSUMS, MANIFESTS & RETENTION
-- Status: HOÀN TẤT & VERIFIED. Bộ công cụ sao lưu cục bộ (backup-local.ps1, verify-backup.ps1) đã hoàn thiện và diễn tập thành công trên Docker Compose runtime; pg_dump format custom, uploads archive tar.gz, SHA-256 checksums, manifest.json, cơ chế retention kiểm soát an toàn; ports 8080/5433 giải phóng, volumes bảo toàn; RPO/RTO = DECISION_REQUIRED, BACKUP_ENCRYPTION = NOT_IMPLEMENTED, BACKUP_CREATED != RESTORE_VERIFIED. Sẵn sàng cho Stage 19D (Disaster Recovery & Restore Rehearsal).
+- Current Task: ROADMAP-STAGE-19D — ISOLATED RESTORE REHEARSAL, DATA INTEGRITY VERIFICATION & SAFE CLEANUP
+- Status: HOÀN TẤT & VERIFIED. Bộ công cụ restore cô lập (restore-local.ps1) đã hoàn thiện và diễn tập thành công; phục hồi PostgreSQL database và uploads volume vào môi trường riêng biệt (worksphere-restore-test-*); đối soát 100% khớp dữ liệu gốc và 17 Flyway migrations; backend độc lập chạy trên port 18080 đạt health UP và 401 trên protected API; dọn dẹp sạch toàn bộ tài nguyên tạm thời và bảo toàn canonical volumes; RESTORE_VERIFIED_LOCALLY = TRUE, STAGING_DISASTER_RECOVERY_READY = FALSE. Sẵn sàng cho Stage 19E (Application & Database Rollback Foundation / Memory Checkpoint).
+- Stage 19D Restore Rehearsal Report: `reports/ROADMAP_STAGE_19D_RESTORE_REHEARSAL.md`
+- Restore Operations Runbook: `reports/runbooks/RESTORE_OPERATIONS.md`
 - Stage 19C Backup Foundation Report: `reports/ROADMAP_STAGE_19C_BACKUP_FOUNDATION.md`
 - Backup Operations Runbook: `reports/runbooks/BACKUP_OPERATIONS.md`
 - Stage 19B Metrics & Monitoring Report: `reports/ROADMAP_STAGE_19B_METRICS_MONITORING.md`
