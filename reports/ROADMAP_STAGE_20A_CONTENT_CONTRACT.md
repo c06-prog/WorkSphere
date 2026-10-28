@@ -58,7 +58,7 @@ Roadmap Stage 20A đã thiết lập nguồn chân lý vững chắc bằng Mark
    - Theme / Onboarding: `NON_SENSITIVE_ASYNC_STORAGE` (lưu qua `@react-native-async-storage/async-storage`).
 5. **Audit Cross-cutting Concern**:
    - Không có custom `@Aspect` class nào trong mã nguồn.
-   - Cross-cutting Logging & MDC correlation ID được xử lý ở rìa web bằng `RequestCorrelationFilter` (`OncePerRequestFilter`).
+   - Cross-cutting Logging & MDC requestId được xử lý ở rìa web bằng `RequestCorrelationFilter` (`OncePerRequestFilter`).
    - Transaction boundary được quản lý bởi Spring AOP qua `@Transactional`.
 6. **Audit Đường dẫn mã nguồn (Source Paths)**:
    - 100% đường dẫn tệp được kiểm tra tồn tại thực tế trên ổ đĩa.

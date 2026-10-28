@@ -3,7 +3,7 @@
 **Trạng thái đề xuất phân công:** PROPOSED_ASSIGNMENT_PENDING_USER_APPROVAL
 **Giai đoạn lộ trình:** Stage 20A — Course-to-Code Evidence Map & Team Study Guide
 **Mục đích:** Tài liệu hướng dẫn tự học, nắm vững kiến trúc, đối thoại phản biện và bảo vệ dự án WorkSphere dành cho cả 6 thành viên trong nhóm đối với 4 môn học chuyên ngành.
-> **Tài liệu tham chiếu chung**: [WORKSPHERE_PROJECT_OVERVIEW_AND_RUN_GUIDE.md](file:///d:/WorkSphere/reports/WORKSPHERE_PROJECT_OVERVIEW_AND_RUN_GUIDE.md) (Hướng dẫn tổng quan & vận hành dự án)
+> **Tài liệu tham chiếu chung**: [WORKSPHERE_PROJECT_OVERVIEW_AND_RUN_GUIDE.md](WORKSPHERE_PROJECT_OVERVIEW_AND_RUN_GUIDE.md) (Hướng dẫn tổng quan & vận hành dự án)
 
 ---
 
@@ -40,7 +40,7 @@
   1. **Backend Modular Monolith**: Nền tảng Spring Boot 4.1.1 (Java 21) phân tách module nghiêm ngặt qua Maven multi-module (identity, project, 	ask, service-request, sset,
 otification, shared).
   2. **Mobile App Đa Nền Tảng**: React Native 0.88 (React 19, TypeScript) hỗ trợ Android và iOS với giao diện hiện đại, xác thực hai lớp an toàn, quản lý trạng thái đồng bộ và trải nghiệm mượt mà.
-  3. **DevOps & CI/CD Tự Động Hóa Toàn Diện**: Docker Compose, GitHub Actions 5 luồng song song, Checkstyle, Flyway Database Migrations (20 migrations), sao lưu và phục hồi dữ liệu tự động.
+  3. **DevOps & CI/CD Tự Động Hóa Toàn Diện**: Docker Compose, GitHub Actions 5 luồng song song, Checkstyle, Flyway Database Migrations (17 migrations (V001–V017)), sao lưu và phục hồi dữ liệu tự động.
 - **Quy mô và chỉ số kỹ thuật**:
   - **4 Role chuẩn doanh nghiệp**: EMPLOYEE, TEAM_LEADER, PROJECT_MANAGER, ADMIN.
   - **6 Module nghiệp vụ lõi**: Identity & IAM, Project Management, Task Management, Service Request, Asset Lifecycle, Notification.
@@ -54,17 +54,17 @@ otification, shared).
   - Giao tiếp giữa các module được bảo vệ bằng boundary rules, hạn chế tối đa circular dependency.
 - **Cơ sở dữ liệu & Quản lý Schema (Database & Flyway)**:
   - PostgreSQL 15 phân tầng quan hệ rõ ràng với khóa ngoại toàn vẹn, index hiệu năng cao trên các trường truy vấn chính (created_at, ssignee_id, status).
-  - Toàn bộ thay đổi cơ sở dữ liệu được phiên bản hóa qua 20 tệp Flyway migration (V001 đến V020), cam kết không sửa đổi migration đã chạy và hỗ trợ audit trail toàn diện.
+  - Toàn bộ thay đổi cơ sở dữ liệu được phiên bản hóa qua 20 tệp Flyway migration (V001 đến V017), cam kết không sửa đổi migration đã chạy và hỗ trợ audit trail toàn diện.
 - **Bảo mật & Quản lý danh tính (Security & IAM)**:
   - Cơ chế Stateless Authentication bằng JWT: Token ngắn hạn (15 phút) lưu hoàn toàn trong bộ nhớ (IN_MEMORY), Refresh Token dài hạn (7 ngày) lưu trong phân vùng bảo mật phần cứng (SECURE_STORAGE qua Keychain/Keystore).
   - RBAC (Role-Based Access Control) chặt chẽ bằng Spring Security Method Security (@PreAuthorize) kết hợp bảng phân quyền cơ sở dữ liệu (
 oles_permissions).
 - **Trải nghiệm di động (Mobile Architecture)**:
   - Tổ chức code theo Feature-driven (mobile/src/features/*), tách biệt rõ rỗi giữa UI Screens, State Hooks, API Service, và Data Types.
-  - Sử dụng Redux Toolkit cho Global Client State và React Query (Axios interceptor) cho Server State, tự động inject correlation ID và refresh token khi phiên hết hạn.
+  - Sử dụng Redux Toolkit cho Global Client State và React Query (Axios interceptor) cho Server State, tự động inject X-Request-ID và refresh token khi phiên hết hạn.
 - **Vận hành & Giám sát (Operability & Monitoring)**:
   - Spring Boot Actuator kết hợp Micrometer Prometheus cung cấp metrics chuẩn OpenMetrics (/actuator/prometheus).
-  - Structured Logging với Correlation ID (X-Correlation-Id) xuyên suốt từ Mobile -> Gateway -> Backend -> Logs.
+  - Structured Logging với Correlation ID (X-Request-ID) xuyên suốt từ Mobile -> Gateway -> Backend -> Logs.
   - Bộ công cụ Backup & Restore tự động hóa cao: pg_dump nén tar, SHA-256 checksum, manifest JSON, và kịch bản diễn tập phục hồi cô lập (Stage 19D rehearsal).
 
 # PHẦN II: LỘ TRÌNH TỰ HỌC 14 BƯỚC CHO THÀNH VIÊN (LEARNING PATH)
@@ -81,19 +81,19 @@ oles_permissions).
 | **6** | **Nghiệp vụ Project & Task Lifecycle** | Nắm State Machine của Task (TODO -> IN_PROGRESS -> DONE) | ackend/src/main/java/com/worksphere/task/domain/Task.java, TaskService.java |
 | **7** | **Nghiệp vụ Service Request & Asset** | Hiểu quy trình mượn tài sản và tạo phiếu yêu cầu | ackend/src/main/java/com/worksphere/asset/domain/Asset.java, ackend/src/main/java/com/worksphere/service_request/... |
 | **8** | **Kiến trúc Mobile React Native & Redux** | Nắm cấu trúc thư mục feature, navigation và store | mobile/src/navigation/RootNavigator.tsx, mobile/src/store/index.ts |
-| **9** | **Mobile Auth & Storage Model** | Phân biệt lưu trữ In-Memory và Secure Keychain | mobile/src/features/auth/services/authService.ts, mobile/src/services/api/client.ts |
+| **9** | **Mobile Auth & Storage Model** | Phân biệt lưu trữ In-Memory và Secure Keychain | mobile/src/features/auth/services/authService.ts, mobile/src/shared/api/apiClient.ts |
 | **10** | **Mobile Screens & UX Workflow** | Duyệt qua 6 luồng màn hình chính trên ứng dụng | mobile/src/features/projects/screens/, 	asks/screens/, v.v. |
 | **11** | **Backend Testing Strategy** | Hiểu cấu trúc 351 tests (Unit, Service, Controller) | ackend/src/test/java/com/worksphere/identity/service/AuthenticationServiceTest.java, v.v. |
 | **12** | **Docker Compose & Containerization** | Nắm cách chạy Postgres, Backend container cục bộ | compose.yaml, Dockerfile |
 | **13** | **CI/CD Pipeline với GitHub Actions** | Hiểu 5 jobs tự động hóa kiểm thử và build Docker | .github/workflows/ci.yml |
-| **14** | **Logging, Metrics, Backup & Restore** | Hiểu MDC correlation ID, Actuator Prometheus, Backup tool | ackend/src/main/resources/logback-spring.xml, scripts/backup.ps1 |
+| **14** | **Logging, Metrics, Backup & Restore** | Hiểu MDC requestId, Actuator Prometheus, Backup tool | ackend/src/main/resources/logback-spring.xml, scripts/backup.ps1 |
 
 ## 2. Từ điển thuật ngữ cốt lõi (Terminology Dictionary)
 
 1. **Modular Monolith**: Kiến trúc đóng gói toàn bộ ứng dụng trong một deployment unit duy nhất nhưng bên trong được chia thành các module nghiệp vụ độc lập, có ranh giới rõ ràng.
 2. **Flyway Migration**: Công cụ quản lý và kiểm soát phiên bản cơ sở dữ liệu thông qua các tệp script SQL được đánh số thứ tự (V001, V002,...).
-3. **Correlation ID (X-Correlation-Id)**: Một chuỗi định danh duy nhất (UUID) được gắn vào mỗi HTTP Request để theo dõi luồng xử lý qua tất cả các tầng log và dịch vụ.
-4. **MDC (Mapped Diagnostic Context)**: Cơ chế của SLF4J/Logback cho phép lưu trữ thông tin theo từng luồng xử lý (thread-local), tự động chèn dữ liệu như correlationId vào mọi dòng log.
+3. **Correlation ID (X-Request-ID)**: Một chuỗi định danh duy nhất (UUID) được gắn vào mỗi HTTP Request để theo dõi luồng xử lý qua tất cả các tầng log và dịch vụ.
+4. **MDC (Mapped Diagnostic Context)**: Cơ chế của SLF4J/Logback cho phép lưu trữ thông tin theo từng luồng xử lý (thread-local), tự động chèn dữ liệu như requestId vào mọi dòng log.
 5. **RBAC (Role-Based Access Control)**: Mô hình kiểm soát truy cập dựa trên vai trò của người dùng (EMPLOYEE, TEAM_LEADER, PROJECT_MANAGER, ADMIN).
 6. **In-Memory Token Storage**: Kỹ thuật lưu trữ Access Token chỉ trong RAM của ứng dụng di động; khi tắt app, token biến mất, chống tấn công đánh cắp token từ bộ nhớ flash.
 7. **Secure Storage (Keychain / Keystore)**: Vùng lưu trữ phần cứng mã hóa an toàn trên thiết bị di động, dùng để lưu Refresh Token nhạy cảm.
@@ -129,7 +129,7 @@ oles_permissions).
     - **I (Interface Segregation)**: Các interface repository và service được phân tách theo từng domain context riêng biệt thay vì tạo một god-interface.
     - **D (Dependency Inversion)**: Các Controller phụ thuộc vào Service abstraction/interface, và các Service phụ thuộc vào Repository interface được Spring IoC Container inject."
 - **Câu hỏi 2: Tại sao dự án không sử dụng Custom `@Aspect` cho Cross-cutting concern mà dùng Filter?**
-  - *Đáp án mẫu*: "Trong kiến trúc Web của Spring Boot, việc thu thập thông tin định danh request (`X-Correlation-Id`) và thiết lập MDC cần diễn ra ở rìa ngoài cùng của hệ thống trước khi request chạm tới bất kỳ DispatcherServlet hay Controller nào. Sử dụng `RequestCorrelationFilter` kế thừa `OncePerRequestFilter` bảo đảm rằng 100% request (kể cả request lỗi 404 hoặc bị từ chối ở tầng Security) đều được gán Correlation ID chuẩn xác, điều mà `@Aspect` ở tầng Service/Controller không bao quát hết được."
+  - *Đáp án mẫu*: "Trong kiến trúc Web của Spring Boot, việc thu thập thông tin định danh request (`X-Request-ID`) và thiết lập MDC cần diễn ra ở rìa ngoài cùng của hệ thống trước khi request chạm tới bất kỳ DispatcherServlet hay Controller nào. Sử dụng `RequestCorrelationFilter` kế thừa `OncePerRequestFilter` bảo đảm rằng 100% request (kể cả request lỗi 404 hoặc bị từ chối ở tầng Security) đều được gán Correlation ID chuẩn xác, điều mà `@Aspect` ở tầng Service/Controller không bao quát hết được."
 
 ---
 
@@ -143,8 +143,8 @@ oles_permissions).
 - Bảo mật thiết bị di động: Phân tầng lưu trữ Token (In-Memory + Hardware Keychain), không lưu mật khẩu.
 
 ### Các bước Demo trực tiếp mã nguồn:
-1. Mở `mobile/src/services/api/client.ts`:
-   - Cho hội đồng xem request interceptor tự động chèn `X-Correlation-Id` và header `Authorization: Bearer <token>`.
+1. Mở `mobile/src/shared/api/apiClient.ts`:
+   - Cho hội đồng xem request interceptor tự động chèn `X-Request-ID` và header `Authorization: Bearer <token>`.
    - Xem response interceptor tự động bắt mã lỗi 401, gọi API refresh token và retry request bị gián đoạn.
 2. Mở `mobile/src/features/auth/services/authService.ts`:
    - Chứng minh Access Token được lưu trong RAM biến bộ nhớ, còn Refresh Token được lưu an toàn qua thư viện `react-native-keychain`.
@@ -155,7 +155,7 @@ oles_permissions).
 - **Câu hỏi 1: Tại sao nhóm không lưu Access Token trong `AsyncStorage` cho tiện?**
   - *Đáp án mẫu*: "`AsyncStorage` trên thiết bị di động chỉ là tệp lưu trữ plain-text không mã hóa (XML/SQLite trên Android, plist trên iOS). Nếu thiết bị bị root/jailbreak hoặc dính malware, token sẽ dễ dàng bị trích xuất. Do đó, nhóm áp dụng giải pháp bảo mật cấp ngân hàng: Access Token có hạn ngắn (15 phút) lưu hoàn toàn trong bộ nhớ RAM (In-Memory). Refresh Token có hạn dài (7 ngày) được lưu trong phân vùng bảo mật phần cứng được mã hóa (Keystore/Keychain) thông qua `react-native-keychain`."
 - **Câu hỏi 2: Ứng dụng xử lý ra sao khi mạng chập chờn hoặc request mất nhiều thời gian?**
-  - *Đáp án mẫu*: "Axios client được cấu hình timeout hữu hạn (10-15s). Ứng dụng hiển thị Skeleton loading và hỗ trợ cơ chế Pull-to-refresh trên tất cả các màn hình danh sách (`ProjectListScreen`, `TaskListScreen`). Khi xảy ra lỗi mạng, hệ thống bắt lỗi tại tầng UI thông qua Toast notification thân thiện, ghi log correlation ID tương ứng và cho phép người dùng thử lại."
+  - *Đáp án mẫu*: "Axios client được cấu hình timeout hữu hạn (10-15s). Ứng dụng hiển thị Skeleton loading và hỗ trợ cơ chế Pull-to-refresh trên tất cả các màn hình danh sách (`ProjectListScreen`, `TaskListScreen`). Khi xảy ra lỗi mạng, hệ thống bắt lỗi tại tầng UI thông qua Toast notification thân thiện, ghi log X-Request-ID tương ứng và cho phép người dùng thử lại."
 
 ---
 
@@ -248,7 +248,7 @@ oles_permissions).
   - `backend/src/main/java/com/worksphere/shared/exception/GlobalExceptionHandler.java`.
   - 351 Backend Tests trong `backend/src/test/java/`.
 - **Nội dung thuyết trình chính (5-7 phút)**:
-  - Trình bày thiết kế cơ sở dữ liệu quan hệ PostgreSQL, ràng buộc toàn vẹn và 20 migration Flyway.
+  - Trình bày thiết kế cơ sở dữ liệu quan hệ PostgreSQL, ràng buộc toàn vẹn và 17 migration Flyway (V001–V017).
   - Trình bày việc áp dụng nguyên lý SOLID, Clean Architecture và Design Patterns trong tầng Service và Domain.
   - Trình bày cơ chế xử lý lỗi tập trung, giao dịch (`@Transactional`) và kiểm soát concurrency.
 - **Top 5 câu hỏi trọng tâm phải trả lời xuất sắc**:
@@ -265,7 +265,7 @@ oles_permissions).
 - **Môn học phụ trách bảo vệ chính**: **Phát Triển Ứng Dụng Di Động**.
 - **Các module & tệp mã nguồn cần nắm vững nhất**:
   - Cấu trúc Navigation: `mobile/src/navigation/RootNavigator.tsx`, `AppNavigator.tsx`, `AuthNavigator.tsx`.
-  - Cơ chế Auth & API Client: `mobile/src/services/api/client.ts`, `mobile/src/features/auth/services/authService.ts`.
+  - Cơ chế Auth & API Client: `mobile/src/shared/api/apiClient.ts`, `mobile/src/features/auth/services/authService.ts`.
   - Quản lý trạng thái: `mobile/src/store/index.ts`, `mobile/src/store/slices/*`.
   - Các màn hình chính: `mobile/src/features/projects/screens/`, `tasks/screens/`, `assets/screens/`.
 - **Nội dung thuyết trình chính (5-7 phút)**:
@@ -318,7 +318,7 @@ oles_permissions).
 - **Top 5 câu hỏi trọng tâm phải trả lời xuất sắc**:
   1. *Lợi ích của Multi-stage build trong Dockerfile của dự án là gì? Kích thước image giảm được bao nhiêu?*
   2. *Trình bày luồng hoạt động của 5 jobs trong GitHub Actions. Nếu 1 job thất bại thì chuyện gì xảy ra?*
-  3. *Correlation ID (`X-Correlation-Id`) hoạt động thế nào trong việc truy vết sự cố hệ thống?*
+  3. *Correlation ID (`X-Request-ID`) hoạt động thế nào trong việc truy vết sự cố hệ thống?*
   4. *Tại sao nhóm thực hiện sao lưu cả Database và Thư mục uploads riêng biệt? Kế hoạch phục hồi ra sao?*
   5. *Làm thế nào để ứng dụng cập nhật phiên bản mới (Deployment) mà giảm thiểu thời gian gián đoạn dịch vụ?*
 
@@ -387,7 +387,7 @@ Khi Hội đồng đặt câu hỏi, nhóm trưởng (Nguyễn Minh Hiếu) là 
    - Trả lời bằng cách gắn liền với kiến trúc thực tế của WorkSphere: *"Dạ thưa Thầy/Cô, về mặt lý thuyết thuần túy em xin phép được tra cứu thêm, nhưng trong phạm vi dự án WorkSphere, nhóm em đã hiện thực hóa nguyên lý này tại lớp [Tên Class/File] bằng cách [Trình bày giải pháp cụ thể]."*
 3. **Khi ứng dụng gặp sự cố trong lúc demo trực tiếp**:
    - Giữ bình tĩnh, mở ngay màn hình Log (`logback` hoặc Terminal console).
-   - Chỉ ra mã lỗi và `correlationId`: *"Hệ thống có cơ chế bắt lỗi chi tiết, tại đây console đang báo lỗi kết nối [Mã lỗi/Exception], em xin phép 30 giây để kiểm tra lại service hoặc khởi động lại container."* Điều này biến một sự cố demo thành cơ hội vàng chứng minh năng lực Logging và Debug chuyên nghiệp của nhóm.
+   - Chỉ ra mã lỗi và `requestId`: *"Hệ thống có cơ chế bắt lỗi chi tiết, tại đây console đang báo lỗi kết nối [Mã lỗi/Exception], em xin phép 30 giây để kiểm tra lại service hoặc khởi động lại container."* Điều này biến một sự cố demo thành cơ hội vàng chứng minh năng lực Logging và Debug chuyên nghiệp của nhóm.
 
 ---
 *Tài liệu này là nguồn chân lý cho toàn bộ hoạt động ôn tập, diễn tập và phân công bảo vệ dự án WorkSphere trong khuôn khổ Roadmap Stage 20.*

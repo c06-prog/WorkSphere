@@ -5,14 +5,14 @@
 > **Trạng thái**: Hoàn tất, đối soát thực tế mã nguồn (`SOURCE_VERIFIED`, `RUNTIME_VERIFIED`)
 > **Đối tượng độc giả**: Thành viên mới gia nhập nhóm, Thành viên chuẩn bị bảo vệ đồ án, Giảng viên chấm thi, Kỹ sư tiếp nhận & bảo trì hệ thống.
 > **Tài liệu liên kết**:
-> - [STAGE_20_COURSE_CODE_EVIDENCE_MAP.md](file:///d:/WorkSphere/reports/STAGE_20_COURSE_CODE_EVIDENCE_MAP.md) (Ma trận minh chứng 4 môn học)
-> - [STAGE_20_TEAM_STUDY_AND_DEFENSE_GUIDE.md](file:///d:/WorkSphere/reports/STAGE_20_TEAM_STUDY_AND_DEFENSE_GUIDE.md) (Cẩm nang tự học & phản biện nhóm)
-> - [DOCKER_LOCAL_OPERATIONS.md](file:///d:/WorkSphere/reports/runbooks/DOCKER_LOCAL_OPERATIONS.md) (Sổ tay vận hành Docker cục bộ)
-> - [LOGGING_AND_CORRELATION_POLICY.md](file:///d:/WorkSphere/reports/runbooks/LOGGING_AND_CORRELATION_POLICY.md) (Chính sách Logging & Correlation ID)
-> - [METRICS_AND_MONITORING_POLICY.md](file:///d:/WorkSphere/reports/runbooks/METRICS_AND_MONITORING_POLICY.md) (Chính sách Metrics & Giám sát Actuator)
-> - [BACKUP_OPERATIONS.md](file:///d:/WorkSphere/reports/runbooks/BACKUP_OPERATIONS.md) (Sổ tay sao lưu dữ liệu)
-> - [RESTORE_OPERATIONS.md](file:///d:/WorkSphere/reports/runbooks/RESTORE_OPERATIONS.md) (Sổ tay phục hồi dữ liệu diễn tập)
-> - [ROLLBACK_OPERATIONS.md](file:///d:/WorkSphere/reports/runbooks/ROLLBACK_OPERATIONS.md) (Sổ tay rollback ứng dụng)
+> - [STAGE_20_COURSE_CODE_EVIDENCE_MAP.md](STAGE_20_COURSE_CODE_EVIDENCE_MAP.md) (Ma trận minh chứng 4 môn học)
+> - [STAGE_20_TEAM_STUDY_AND_DEFENSE_GUIDE.md](STAGE_20_TEAM_STUDY_AND_DEFENSE_GUIDE.md) (Cẩm nang tự học & phản biện nhóm)
+> - [DOCKER_LOCAL_OPERATIONS.md](runbooks/DOCKER_LOCAL_OPERATIONS.md) (Sổ tay vận hành Docker cục bộ)
+> - [LOGGING_AND_CORRELATION_POLICY.md](runbooks/LOGGING_AND_CORRELATION_POLICY.md) (Chính sách Logging & Correlation ID)
+> - [METRICS_AND_MONITORING_POLICY.md](runbooks/METRICS_AND_MONITORING_POLICY.md) (Chính sách Metrics & Giám sát Actuator)
+> - [BACKUP_OPERATIONS.md](runbooks/BACKUP_OPERATIONS.md) (Sổ tay sao lưu dữ liệu)
+> - [RESTORE_OPERATIONS.md](runbooks/RESTORE_OPERATIONS.md) (Sổ tay phục hồi dữ liệu diễn tập)
+> - [ROLLBACK_OPERATIONS.md](runbooks/ROLLBACK_OPERATIONS.md) (Sổ tay rollback ứng dụng)
 
 ---
 
@@ -43,7 +43,7 @@
    - 20. Chế độ chạy C — Ứng dụng Di động Android
    - 21. Thực thi kiểm thử (Running Tests)
    - 22. Kiểm tra Health & Giám sát Actuator/Prometheus
-   - 23. Kiểm tra Logs & Mã định danh yêu cầu (X-Correlation-Id)
+   - 23. Kiểm tra Logs & Mã định danh yêu cầu (X-Request-ID)
    - 24. Thực thi Sao lưu, Xác minh, Phục hồi và Rollback
    - 25. Dừng hệ thống & Dọn dẹp an toàn (Stop & Cleanup)
 4. [PART IV — DEMO, XỬ LÝ SỰ CỐ & THAM KHẢO (DEMO, TROUBLESHOOTING & REFERENCE)](#part-iv--demo-xử-lý-sự-cố--tham-khảo-demo-troubleshooting--reference)
@@ -76,7 +76,7 @@
 - **Docker & Đóng gói**: Docker Compose chuẩn (`compose.yaml`) gồm `worksphere-backend` (Multi-stage build JDK 21 / JRE alpine siêu nhẹ, chạy dưới user phi đặc quyền UID 10001) và `worksphere-postgres` (PostgreSQL 15-alpine), kèm healthcheck tự động.
 - **CI/CD Pipeline**: GitHub Actions 5 jobs chạy song song (`ci.yml`): Secret Audit, Backend Quality, Mobile Quality, Android Debug Build, Docker Image Build. Toàn bộ jobs đạt trạng thái xanh (SUCCESS).
 - **Khả năng vận hành (Operability)**:
-  - Structured Logging với Correlation ID (`X-Correlation-Id` / MDC) xuyên suốt mọi request.
+  - Structured Logging với Correlation ID (`X-Request-ID` / MDC) xuyên suốt mọi request.
   - Hardened Spring Boot Actuator (`health`, `info`, `prometheus`).
   - Sao lưu tự động (PostgreSQL custom format dump + tar.gz uploads với SHA-256 manifests) và diễn tập phục hồi cô lập thành công (Stage 19D / Stage 19F).
 - **Ranh giới hiện tại**:
@@ -116,7 +116,7 @@ Dự án tuân thủ nghiêm ngặt 4 vai trò chuẩn (khởi tạo trong migra
 |  - State: Redux Toolkit (Client UI State) | Axios Interceptor (Auto Correlation ID)    |
 +---------------------------------------------------------------------------------------+
                                            |  HTTPS / HTTP JSON REST API
-                                           |  (Headers: Authorization, X-Correlation-Id)
+                                           |  (Headers: Authorization, X-Request-ID)
                                            v
 +---------------------------------------------------------------------------------------+
 |                                  APPLICATION TIER                                     |
@@ -134,7 +134,7 @@ Dự án tuân thủ nghiêm ngặt 4 vai trò chuẩn (khởi tạo trong migra
 |                                                                                       |
 |  [Operability & Observability]                                                        |
 |  - Spring Boot Actuator (/actuator/health, /actuator/info, /actuator/prometheus)       |
-|  - Structured JSON Logging (Logback + MDC correlationId)                              |
+|  - Structured JSON Logging (Logback + MDC requestId)                              |
 +---------------------------------------------------------------------------------------+
                      |                                              |
      JDBC / SQL      |                                              | Filesystem I/O
@@ -142,14 +142,14 @@ Dự án tuân thủ nghiêm ngặt 4 vai trò chuẩn (khởi tạo trong migra
 +----------------------------------------+     +----------------------------------------+
 |             DATABASE TIER              |     |              STORAGE TIER              |
 |  PostgreSQL 15-alpine (Port 5432/5433) |     |  Named Volume: worksphere-uploads      |
-|  - 20 Flyway Migrations (V001 -> V020) |     |  - User attachments & documents        |
+|  - 17 Flyway Migrations (V001 -> V017) |     |  - User attachments & documents        |
 |  - RBAC seed data, relational schema   |     |  - Backed up via tar.gz + SHA-256      |
 +----------------------------------------+     +----------------------------------------+
 ```
 
 ## 6. Quick Start ưu tiên (Chạy ngay với Docker Compose)
 
-> **Mục tiêu**: Khởi động toàn bộ Backend và Cơ sở dữ liệu trong vòng 2 phút bằng Docker Compose.
+> **Mục tiêu**: Khởi động toàn bộ Backend và Cơ sở dữ liệu nhanh chóng bằng Docker Compose (thời gian khởi động phụ thuộc vào cache Docker và cấu hình phần cứng).
 > **Trạng thái lệnh**: `RUNTIME_VERIFIED`
 
 ### Bước 1: Sao chép tệp cấu hình môi trường
@@ -271,7 +271,7 @@ Dự án áp dụng giải pháp bảo mật Stateful Token Rotation kết hợp
   - **Redux Toolkit**: Quản lý trạng thái giao diện toàn cục (thông tin người dùng hiện tại, trạng thái tải, cài đặt giao diện sáng/tối).
   - **Server State & Caching**: Quản lý thông qua các custom hooks bao bọc Axios calls với xử lý phân trang và caching.
 - **Xử lý lỗi mạng & Tự động thử lại (Resilience)**:
-  - Axios Interceptor tự động chèn header `X-Correlation-Id` vào mọi request.
+  - Axios Interceptor tự động chèn header `X-Request-ID` vào mọi request.
   - Cơ chế tự động bắt mã 401 và làm mới phiên làm việc ngầm (Transparent Token Refresh).
   - Skeleton Loading và Pull-to-refresh trên toàn bộ danh sách dữ liệu.
 
@@ -330,7 +330,7 @@ Dự án áp dụng kim tự tháp kiểm thử nghiêm ngặt:
 ## 14. Vận hành & Giám sát (Operability, Metrics & DR)
 
 - **Định danh yêu cầu xuyên suốt (Request Correlation)**:
-  - Mỗi request từ Mobile hoặc Client được gán một header `X-Correlation-Id` (UUID).
+  - Mỗi request từ Mobile hoặc Client được gán một header `X-Request-ID` (UUID).
   - Tầng `RequestCorrelationFilter` trích xuất ID này và đưa vào **MDC (Mapped Diagnostic Context)** của SLF4J/Logback.
   - Mọi dòng log sinh ra trong quá trình xử lý request đều tự động mang theo Correlation ID này, giúp việc điều tra sự cố diễn ra tức thì.
 - **Hardened Spring Boot Actuator**:
@@ -458,7 +458,7 @@ cd D:\WorkSphereackend
 ```
 *(Trên Linux/macOS, sử dụng `./mvnw spring-boot:run -Dspring-boot.run.profiles=dev`).*
 
-- Backend sẽ tự động kết nối vào PostgreSQL tại `127.0.0.1:5433`, kích hoạt Flyway chạy 20 migration và lắng nghe tại `http://localhost:8080`.
+- Backend sẽ tự động kết nối vào PostgreSQL tại `127.0.0.1:5433`, kích hoạt Flyway chạy 17 migration (V001–V017) và lắng nghe tại `http://localhost:8080`.
 - **Dừng Backend**: Bấm `Ctrl + C` trên terminal.
 - **Dừng Postgres Docker**: `docker compose stop postgres`.
 
@@ -541,10 +541,10 @@ Hệ thống cung cấp các endpoint giám sát chuẩn mực OpenMetrics đã 
 > [!WARNING]
 > **BẢO MẬT ACTUATOR**: Các endpoint nhạy cảm như `/actuator/env`, `/beans`, `/configprops`, `/heapdump` và `/shutdown` đã bị khóa hoàn toàn. Không mở công khai ra Internet các cổng giám sát này.
 
-## 23. Kiểm tra Logs & Mã định danh yêu cầu (X-Correlation-Id)
+## 23. Kiểm tra Logs & Mã định danh yêu cầu (X-Request-ID)
 
 - **Cơ chế hoạt động**:
-  - Khi một request được gửi đi từ Mobile hoặc cURL, header `X-Correlation-Id: <UUID>` được gắn kèm.
+  - Khi một request được gửi đi từ Mobile hoặc cURL, header `X-Request-ID: <UUID>` được gắn kèm.
   - Backend ghi nhận ID này vào MDC. Toàn bộ log phát sinh trong cùng một vòng đời request đều chứa chuỗi định danh duy nhất này.
 - **Xem logs trong Docker**:
   ```powershell
@@ -552,7 +552,7 @@ Hệ thống cung cấp các endpoint giám sát chuẩn mực OpenMetrics đã 
   ```
 - **Ví dụ một dòng log chuẩn**:
   ```text
-  2026-10-28 10:15:32.124 [http-nio-8080-exec-3] INFO  c.w.s.s.RequestCorrelationFilter [correlationId=c4a8f921-8b20-4a88-91cd-939e93b1e770] - Inbound request POST /api/v1/auth/login from 127.0.0.1
+  2026-10-28 10:15:32.124 [http-nio-8080-exec-3] INFO  c.w.s.s.RequestCorrelationFilter [requestId=c4a8f921-8b20-4a88-91cd-939e93b1e770] - Inbound request POST /api/v1/auth/login from 127.0.0.1
   ```
 - **Chính sách dữ liệu nhạy cảm**: Tuyệt đối không in mật khẩu, refresh token, hoặc số thẻ vào log. Mọi trường nhạy cảm đều được mặt nạ hóa (Masked) tự động.
 
@@ -615,7 +615,7 @@ Trước khi bắt đầu buổi bảo vệ hoặc trình chiếu thử nghiệm
 
 - [ ] **Môi trường Backend**: Đã chạy `docker compose up -d` và nhận `{"status":"UP"}` từ `http://localhost:8080/actuator/health`.
 - [ ] **Môi trường Mobile**: Android Emulator đã mở sẵn, Metro bundler đang chạy, ứng dụng WorkSphere đã nạp xong JavaScript bundle.
-- [ ] **Cơ sở dữ liệu mẫu**: 20 migrations của Flyway đã chạy xong; dữ liệu mẫu về các phòng ban, người dùng và quyền hạn đã được nạp sẵn.
+- [ ] **Cơ sở dữ liệu mẫu**: 17 migrations của Flyway (V001–V017) đã chạy xong; dữ liệu mẫu về các phòng ban, người dùng và quyền hạn đã được nạp sẵn.
 - [ ] **Tài khoản kiểm thử mẫu (Placeholder accounts)**:
   - Tài khoản Quản trị: `admin` (Role: `ADMIN`)
   - Tài khoản Quản lý dự án: `pm_user` (Role: `PROJECT_MANAGER`)
@@ -639,7 +639,7 @@ Trước khi bắt đầu buổi bảo vệ hoặc trình chiếu thử nghiệm
    - Quản lý duyệt phiếu yêu cầu trên hệ thống.
    - Tài sản tự động cập nhật trạng thái từ `AVAILABLE` sang `IN_USE`.
 4. **Minh chứng Vận hành & Giám sát**:
-   - Mở terminal chỉ ra Correlation ID trong log: `X-Correlation-Id`.
+   - Mở terminal chỉ ra Correlation ID trong log: `X-Request-ID`.
    - Mở trình duyệt xem chỉ số Prometheus tại `http://localhost:8080/actuator/prometheus`.
 
 ### Các tính năng nằm ngoài phạm vi demo hiện tại (Unsupported / Out-of-Scope):
@@ -743,7 +743,7 @@ Mọi nội dung trong bản hướng dẫn này đều được ánh xạ trự
 2. **Kiến trúc hệ thống & Màn hình**: `docs/04_SYSTEM_ARCHITECTURE.md`, `docs/03_MOBILE_SCREEN_MAP.md`.
 3. **Cấu hình Container & Hạ tầng**: `compose.yaml`, `backend/Dockerfile`, `.env.example`.
 4. **Mã nguồn Backend & Quản lý Schema**: `backend/pom.xml`, `backend/src/main/resources/db/migration/V001__...` đến `V020__...`.
-5. **Mã nguồn Mobile & Gói thư viện**: `mobile/package.json`, `mobile/.node-version`, `mobile/src/services/api/client.ts`.
+5. **Mã nguồn Mobile & Gói thư viện**: `mobile/package.json`, `mobile/.node-version`, `mobile/src/shared/api/apiClient.ts`.
 6. **Đường ống Tự động hóa CI/CD**: `.github/workflows/ci.yml`.
 7. **Sổ tay Vận hành Chuyên sâu**: Thư mục `reports/runbooks/` (`DOCKER_LOCAL_OPERATIONS.md`, `LOGGING_AND_CORRELATION_POLICY.md`, `METRICS_AND_MONITORING_POLICY.md`, `BACKUP_OPERATIONS.md`, `RESTORE_OPERATIONS.md`, `ROLLBACK_OPERATIONS.md`).
 8. **Tài liệu Hỗ trợ Học liệu 4 Môn**: `reports/STAGE_20_COURSE_CODE_EVIDENCE_MAP.md` và `reports/STAGE_20_TEAM_STUDY_AND_DEFENSE_GUIDE.md`.
