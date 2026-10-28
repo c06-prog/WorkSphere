@@ -40,7 +40,9 @@
 - Stage 20E Software Deployment Report (DOCX): `reports/stage20/software-deployment/BAO_CAO_TRIEN_KHAI_PHAN_MEM_WORKSPHERE.docx`
 - Stage 20E Software Deployment Rendered PDF (22 pages): `reports/stage20/software-deployment/BAO_CAO_TRIEN_KHAI_PHAN_MEM_WORKSPHERE.pdf`
 - Stage 20E Verification Report: `reports/ROADMAP_STAGE_20E_SOFTWARE_DEPLOYMENT_REPORT.md`
-- Current Status: ROADMAP STAGE 20E (Software Deployment & DevOps Technical Handbook) HOÀN TẤT. Sổ tay kỹ thuật DevOps và báo cáo học thuật hoàn thành (22 trang PDF, 12 chương bám sát 9 bài giảng, 8 sơ đồ kiến trúc nguồn Mermaid và PNG render, phân định rạch ròi Kubernetes/Cloud là CONCEPT_ONLY, Monitoring local-internal, CI implemented, CD partial). Sẵn sàng chuyển tiếp sang Stage 20F.
+- Stage 20F Presentation Decks: `reports/stage20/presentations/` (4 PPTX decks, 65 slides total, 100% speaker notes)
+- Stage 20F Verification Report: `reports/ROADMAP_STAGE_20F_PRESENTATION_DECKS.md`
+- Current Status: ROADMAP STAGE 20F (Four-Course Presentation Decks, Speaker Notes & Defense Narratives) HOÀN TẤT. Đã hoàn thành 4 bộ slide thuyết trình chuyên nghiệp (65 slides) chuẩn 16:9 widescreen, đầy đủ ghi chú thuyết minh, dự báo câu hỏi và câu trả lời an toàn cho cả 4 môn học. Bốn thư mục học liệu tiếp tục duy trì local-only. Sẵn sàng chuyển tiếp sang Stage 20G.
 - Stage 19 Memory Checkpoint: `reports/ROADMAP_STAGE_19_MEMORY_CHECKPOINT.md`
 - Stage 19F Final Operability Report: `reports/ROADMAP_STAGE_19F_FINAL_OPERABILITY.md`
 - Stage 19E Rollback Readiness Report: `reports/ROADMAP_STAGE_19E_ROLLBACK_READINESS.md`
