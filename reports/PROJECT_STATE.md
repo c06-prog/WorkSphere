@@ -24,7 +24,9 @@
 - Phase 17 Mobile Asset Management: CLOSED (MEMORY_CHECKPOINT_CLOSED).
 - Phase 18 Mobile Notification System: CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 18A..18E + 18E-Runtime-Corrective + Type-Safety Hardening CLOSED).
 - Memory Checkpoint: `reports/PHASE_18_MEMORY_CHECKPOINT.md`
-- Current Status: ROADMAP GIAI ĐOẠN 18 (CI/CD) HOÀN TẤT, ĐỐI SOÁT & CHÍNH THỨC ĐÓNG (MEMORY_CHECKPOINT_CLOSED). Toàn bộ 5 jobs CI (Validation, Backend Quality 340 tests, Mobile Quality 1144 tests, Android Debug Build, Docker Image Build) xanh 100%. Artifact và retention đã khóa. Release signing fail-fast bảo vệ tuyệt đối. Branch protection trạng thái BRANCH_PROTECTION_CONFIGURATION_PENDING chờ Admin repo kích hoạt. Sẵn sàng cho Roadmap Giai đoạn 19 (Logging, Monitoring, Backup & Rollback).
+- Current Status: ROADMAP GIAI ĐOẠN 19A (Request Correlation, Structured Logging & Sensitive-Data Safety) HOÀN TẤT & ĐÃ ĐÓNG (346 backend tests pass, Checkstyle 0). RequestCorrelationFilter thiết lập X-Request-ID và MDC requestId, ApiResponse.traceId tự động liên kết, logback-spring.xml cấu hình logging có cấu trúc ra stdout. Sẵn sàng cho Stage 19B (Actuator Endpoints Hardening & Prometheus Metrics).
+- Stage 19A Request Logging Report: `reports/ROADMAP_STAGE_19A_REQUEST_LOGGING.md`
+- Logging & Correlation Policy Runbook: `reports/runbooks/LOGGING_AND_CORRELATION_POLICY.md`
 - Stage 18 Memory Checkpoint: `reports/ROADMAP_STAGE_18_MEMORY_CHECKPOINT.md`
 - Stage 18E Final Verification Report: `reports/ROADMAP_STAGE_18E_FINAL_VERIFICATION.md`
 - Stage 18D Final Verification Report: `reports/ROADMAP_STAGE_18D_FINAL_VERIFICATION.md`

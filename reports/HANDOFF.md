@@ -4,9 +4,11 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: ROADMAP GIAI ĐOẠN 18 — CI/CD
-- Status: HOÀN TẤT, ĐỐI SOÁT TOÀN DIỆN & CHÍNH THỨC ĐÓNG TOÀN BỘ GIAI ĐOẠN 18 (MEMORY_CHECKPOINT_CLOSED). Toàn bộ 5 jobs trên GitHub Actions canonical workflow xanh 100% (Run #192 ID 40540505139): 340 backend tests, 1144 mobile tests, Android Debug Build sinh app-debug.apk (51.3MB zip), Docker image multi-stage build & sha tagging non-root UID 10001. Ranh giới ký phát hành Android release fail-fast an toàn tuyệt đối. Chuỗi cung ứng 100% first-party actions. Branch protection ở trạng thái BRANCH_PROTECTION_CONFIGURATION_PENDING chờ Admin repo áp dụng. Sẵn sàng cho Roadmap Giai đoạn 19 (Logging, Monitoring, Backup & Rollback).
+- Current Task: ROADMAP-STAGE-19A — REQUEST CORRELATION, STRUCTURED LOGGING & SENSITIVE-DATA SAFETY
+- Status: HOÀN TẤT & ĐÓNG GIAI ĐOẠN 19A. Đã thiết lập RequestCorrelationFilter nạp X-Request-ID và MDC requestId, ApiResponse.traceId tự động gắn kết qua MDC, cấu hình logback-spring.xml in log stdout có cấu trúc và an toàn dữ liệu nhạy cảm. 6 tests mới và 346 tests backend tổng thể đạt 100% PASS, Checkstyle 0 violations. Sẵn sàng cho Stage 19B (Actuator Endpoints Hardening & Prometheus Metrics).
 - Latest Decision: D-069 Khóa Kế Hoạch Kiểm Thử Chấp Nhận Người Dùng (UAT Plan Freeze) & Hợp Đồng Nghiệm Thu Doanh Nghiệp (Đã Đối Soát Khớp Mã Nguồn).
+- Stage 19A Request Logging Report: `reports/ROADMAP_STAGE_19A_REQUEST_LOGGING.md`
+- Logging & Correlation Policy Runbook: `reports/runbooks/LOGGING_AND_CORRELATION_POLICY.md`
 - Stage 18 Memory Checkpoint: `reports/ROADMAP_STAGE_18_MEMORY_CHECKPOINT.md`
 - Stage 18E Final Verification Report: `reports/ROADMAP_STAGE_18E_FINAL_VERIFICATION.md`
 - Stage 18D Final Verification Report: `reports/ROADMAP_STAGE_18D_FINAL_VERIFICATION.md`
