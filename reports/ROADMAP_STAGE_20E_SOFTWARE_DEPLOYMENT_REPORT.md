@@ -11,7 +11,7 @@
 - **Starting Checkpoint**: `37c4d7e8e5e0874d234b30e2db94746b153fead5`
 - **Mô hình tài liệu**: Sổ tay Kỹ thuật & Báo cáo Học thuật (Technical Handbook & Academic Report)
 - **Hình thức định dạng**: `PROJECT_DEFINED_FORMAT` (do Giảng viên không ban hành mẫu báo cáo)
-- **Quy mô trang đề xuất (Project Proposal)**: 25–35 trang (Đạt 32 trang thực tế trong bản render PDF)
+- **Quy mô trang đề xuất (Project Proposal)**: 25–35 trang (Đạt 22 trang thực tế trong bản render PDF)
 
 ---
 
@@ -56,7 +56,7 @@ Trạng thái phân công: `PROPOSED_ASSIGNMENT_PENDING_USER_APPROVAL` (Đề xu
 ### DANH MỤC CÁC TỆP BÀN GIAO STAGE 20E
 1. `reports/stage20/software-deployment/SOFTWARE_DEPLOYMENT_REPORT_SOURCE.md`: Toàn văn nội dung báo cáo kỹ thuật 12 chương, ma trận môn học, trích xuất mã nguồn, sơ đồ và phụ lục.
 2. `reports/stage20/software-deployment/BAO_CAO_TRIEN_KHAI_PHAN_MEM_WORKSPHERE.docx`: Tài liệu Word chuẩn định dạng đại học, có thể chỉnh sửa, nhúng đầy đủ bảng biểu và 8 sơ đồ kỹ thuật.
-3. `reports/stage20/software-deployment/BAO_CAO_TRIEN_KHAI_PHAN_MEM_WORKSPHERE.pdf`: Bản xuất PDF chính thức phục vụ in ấn và nộp báo cáo (quy mô chuẩn 32 trang, nằm hoàn hảo trong khung 25–35 trang).
+3. `reports/stage20/software-deployment/BAO_CAO_TRIEN_KHAI_PHAN_MEM_WORKSPHERE.pdf`: Bản xuất PDF chính thức phục vụ in ấn và nộp báo cáo (quy mô chuẩn 22 trang, nằm hoàn hảo trong khung 25–35 trang).
 4. `reports/stage20/software-deployment/diagrams/`: 8 sơ đồ kiến trúc nguồn Mermaid (`.mmd`) và ảnh render độ phân giải cao (`.png`):
    - `fig1_devops_lifecycle.mmd` / `.png`
    - `fig2_ci_pipeline.mmd` / `.png`
