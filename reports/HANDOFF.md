@@ -4,8 +4,10 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: ROADMAP-STAGE-19B — ACTUATOR HARDENING, MICROMETER PROMETHEUS METRICS & MONITORING READINESS
-- Status: HOÀN TẤT, RUNTIME VERIFIED & ĐÃ ĐÓNG GIAI ĐOẠN 19B. GitHub Actions Run #197 (ID 40617577293) thành công 100% trên cả 5 jobs (Backend 351 tests, 0 failures, 0 errors, Checkstyle 0). Prometheus metrics exporter (io.micrometer:micrometer-registry-prometheus) tích hợp và cấu hình an toàn qua Spring Security; Actuator endpoints thu hẹp còn health, info, prometheus; /actuator/env và beans bảo vệ trả 401; local Docker Compose runtime rehearsal thành công xác nhận UP status và Prometheus metrics output. Ports 8080 và 5433 đã free, temporary .env đã xóa, named volumes bảo toàn. MONITORING_SCOPE = LOCAL_INTERNAL_ONLY, GRAFANA = DEFERRED, ALERTING = DEFERRED, STAGING_SECURITY_POLICY = NOT YET IMPLEMENTED. Sẵn sàng cho Stage 19C (Backup/Restore Database & File Storage).
+- Current Task: ROADMAP-STAGE-19C — POSTGRESQL & FILE-STORAGE BACKUP FOUNDATION, CHECKSUMS, MANIFESTS & RETENTION
+- Status: HOÀN TẤT & VERIFIED. Bộ công cụ sao lưu cục bộ (backup-local.ps1, verify-backup.ps1) đã hoàn thiện và diễn tập thành công trên Docker Compose runtime; pg_dump format custom, uploads archive tar.gz, SHA-256 checksums, manifest.json, cơ chế retention kiểm soát an toàn; ports 8080/5433 giải phóng, volumes bảo toàn; RPO/RTO = DECISION_REQUIRED, BACKUP_ENCRYPTION = NOT_IMPLEMENTED, BACKUP_CREATED != RESTORE_VERIFIED. Sẵn sàng cho Stage 19D (Disaster Recovery & Restore Rehearsal).
+- Stage 19C Backup Foundation Report: `reports/ROADMAP_STAGE_19C_BACKUP_FOUNDATION.md`
+- Backup Operations Runbook: `reports/runbooks/BACKUP_OPERATIONS.md`
 - Stage 19B Metrics & Monitoring Report: `reports/ROADMAP_STAGE_19B_METRICS_MONITORING.md`
 - Metrics & Monitoring Policy Runbook: `reports/runbooks/METRICS_AND_MONITORING_POLICY.md`
 - Latest Decision: D-069 Khóa Kế Hoạch Kiểm Thử Chấp Nhận Người Dùng (UAT Plan Freeze) & Hợp Đồng Nghiệm Thu Doanh Nghiệp (Đã Đối Soát Khớp Mã Nguồn).

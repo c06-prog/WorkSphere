@@ -24,7 +24,9 @@
 - Phase 17 Mobile Asset Management: CLOSED (MEMORY_CHECKPOINT_CLOSED).
 - Phase 18 Mobile Notification System: CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 18A..18E + 18E-Runtime-Corrective + Type-Safety Hardening CLOSED).
 - Memory Checkpoint: `reports/PHASE_18_MEMORY_CHECKPOINT.md`
-- Current Status: ROADMAP GIAI ĐOẠN 19B (Actuator Hardening, Micrometer Prometheus Metrics & Monitoring Readiness) HOÀN TẤT, RUNTIME VERIFIED & ĐÃ ĐÓNG (Remote CI Run #197 ID 40617577293 SUCCESS cả 5 jobs, 351 backend tests PASS, Checkstyle 0, Docker Compose runtime rehearsal PASS, Prometheus scrape endpoint và Docker healthcheck UP, endpoints nhạy cảm 401). MONITORING_SCOPE = LOCAL_INTERNAL_ONLY, GRAFANA = DEFERRED, ALERTING = DEFERRED, STAGING_SECURITY_POLICY = NOT YET IMPLEMENTED. Sẵn sàng cho Stage 19C (Backup/Restore Database & File Storage).
+- Current Status: ROADMAP GIAI ĐOẠN 19C (PostgreSQL & File-Storage Backup Foundation, Checksums, Manifests & Retention) HOÀN TẤT & VERIFIED (Tự động hóa backup pg_dump custom format, archive file storage uploads, manifest JSON + SHA256SUMS, retention an toàn; diễn tập local rehearsal PASS, verify-backup tool PASS; ports 8080/5433 free, named volumes và legacy dev-pg bảo toàn). RPO/RTO = DECISION_REQUIRED, BACKUP_ENCRYPTION = NOT_IMPLEMENTED, BACKUP_CREATED != RESTORE_VERIFIED. Sẵn sàng cho Stage 19D (Disaster Recovery & Restore Rehearsal).
+- Stage 19C Backup Foundation Report: `reports/ROADMAP_STAGE_19C_BACKUP_FOUNDATION.md`
+- Backup Operations Runbook: `reports/runbooks/BACKUP_OPERATIONS.md`
 - Stage 19B Metrics & Monitoring Report: `reports/ROADMAP_STAGE_19B_METRICS_MONITORING.md`
 - Metrics & Monitoring Policy Runbook: `reports/runbooks/METRICS_AND_MONITORING_POLICY.md`
 - Stage 19A Request Logging Report: `reports/ROADMAP_STAGE_19A_REQUEST_LOGGING.md`
