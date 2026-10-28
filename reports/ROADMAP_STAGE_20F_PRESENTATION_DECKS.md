@@ -10,7 +10,7 @@
   2. Phát triển ứng dụng di động (Mobile Application Development)
   3. Quản lý dự án Công nghệ thông tin (IT Project Management)
   4. Triển khai phần mềm (Software Deployment & DevOps)
-- **Trạng thái nghiệm thu**: `ROADMAP_STAGE_20F_PRESENTATION_DECKS_COMPLETE_READY_FOR_20G`
+- **Trạng thái nghiệm thu**: `ROADMAP_STAGE_20F_PRESENTATION_DECKS_AUDITED_READY_FOR_20G`
 - **Starting Checkpoint**: `8a8a7ae9f57097827a4c65eb00bdb0d2ff031376`
 - **Quy chuẩn thiết kế**: 16:9 Widescreen, Tiếng Việt có dấu chuẩn Unicode, hệ màu xanh Navy / Royal Blue chuyên nghiệp, thẻ nội dung có viền phân tầng, trực quan hóa cao với sơ đồ kỹ thuật và ảnh prototype đã kiểm toán.
 - **Hợp đồng Speaker Notes**: 100% (65/65 slides) đều có đầy đủ 8 trường thông tin bắt buộc phục vụ bảo vệ đồ án.
@@ -41,7 +41,7 @@ Toàn bộ sơ đồ và hình ảnh sử dụng trên các slide đều có ngu
 Toàn bộ 65 slides của cả 4 bộ slide đều được trang bị phần ghi chú thuyết trình (Speaker Notes) chi tiết theo đúng cấu trúc tiêu chuẩn 8 phần:
 1. **Mục tiêu slide**: Định hướng thông điệp cốt lõi cần truyền tải.
 2. **Lời thuyết minh gợi ý**: Bài nói mẫu bằng tiếng Việt tự nhiên, ngắn gọn, súc tích, giải thích "tại sao" thay vì chỉ đọc lại chữ trên slide.
-3. **Thời lượng dự kiến**: Đánh dấu nhãn `PROJECT_PROPOSAL` (từ 1 đến 2 phút/slide, bảo đảm bài thuyết trình vừa vặn khung thời gian 15–20 phút của buổi bảo vệ).
+3. **Thời lượng dự kiến**: Đánh dấu nhãn `PROJECT_PROPOSAL` với phân bổ thời lượng cụ thể theo từng loại slide (từ 20s đến 80s/slide; tổng thời lượng Deck 1: 17.4 phút, Deck 2: 14.6 phút, Deck 3: 11.7 phút, Deck 4: 19.7 phút), bảo đảm bài thuyết trình vừa vặn khung thời gian 15–20 phút của buổi bảo vệ.
 4. **Người thuyết trình**: Đánh dấu nhãn `PROPOSED_ASSIGNMENT_PENDING_USER_APPROVAL`, phân bổ đều đặn cho tất cả các thành viên trong nhóm.
 5. **Căn cứ minh chứng**: Trích dẫn chính xác đường dẫn tệp mã nguồn hoặc tài liệu đối soát trong repository WorkSphere.
 6. **Câu hỏi Hội đồng dự kiến**: Dự báo các câu hỏi hóc búa của giảng viên phản biện.
