@@ -4,8 +4,11 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: ROADMAP-STAGE-19D — ISOLATED RESTORE REHEARSAL, DATA INTEGRITY VERIFICATION & SAFE CLEANUP
-- Status: HOÀN TẤT & VERIFIED. Bộ công cụ restore cô lập (restore-local.ps1) đã hoàn thiện và diễn tập thành công; phục hồi PostgreSQL database và uploads volume vào môi trường riêng biệt (worksphere-restore-test-*); đối soát 100% khớp dữ liệu gốc và 17 Flyway migrations; backend độc lập chạy trên port 18080 đạt health UP và 401 trên protected API; dọn dẹp sạch toàn bộ tài nguyên tạm thời và bảo toàn canonical volumes; RESTORE_VERIFIED_LOCALLY = TRUE, STAGING_DISASTER_RECOVERY_READY = FALSE. Sẵn sàng cho Stage 19E (Application & Database Rollback Foundation / Memory Checkpoint).
+- Current Task: ROADMAP-STAGE-19E — APPLICATION ROLLBACK, IMAGE RETENTION, SCHEMA COMPATIBILITY & SAFE RECOVERY POLICY
+- Status: HOÀN TẤT & VERIFIED. Chính sách rollback và checklist tương thích schema đã hoàn thiện; Flyway V001-V017 xác nhận an toàn APP_ROLLBACK_SAFE (0 DROP/RENAME); bộ công cụ rollback-local.ps1 và mẫu Deployment Checkpoint đã sẵn sàng; diễn tập hoán đổi backend container an toàn trong môi trường cô lập, xác minh Actuator health và Spring Security nguyên vẹn; ports giải phóng, volumes bảo toàn; REGISTRY_PUBLICATION_REQUIRED_BEFORE_STAGING_ROLLBACK, RPO/RTO = DECISION_REQUIRED. Sẵn sàng cho Stage 19F (Final Operational Verification, Operability Reconciliation & Stage 19 Memory Checkpoint).
+- Stage 19E Rollback Readiness Report: `reports/ROADMAP_STAGE_19E_ROLLBACK_READINESS.md`
+- Rollback Operations Runbook: `reports/runbooks/ROLLBACK_OPERATIONS.md`
+- Deployment Checkpoint Template: `reports/templates/DEPLOYMENT_CHECKPOINT_TEMPLATE.md`
 - Stage 19D Restore Rehearsal Report: `reports/ROADMAP_STAGE_19D_RESTORE_REHEARSAL.md`
 - Restore Operations Runbook: `reports/runbooks/RESTORE_OPERATIONS.md`
 - Stage 19C Backup Foundation Report: `reports/ROADMAP_STAGE_19C_BACKUP_FOUNDATION.md`

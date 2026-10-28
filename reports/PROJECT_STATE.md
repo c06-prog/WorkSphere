@@ -24,7 +24,10 @@
 - Phase 17 Mobile Asset Management: CLOSED (MEMORY_CHECKPOINT_CLOSED).
 - Phase 18 Mobile Notification System: CLOSED (MEMORY_CHECKPOINT_CLOSED) (Subphases 18A..18E + 18E-Runtime-Corrective + Type-Safety Hardening CLOSED).
 - Memory Checkpoint: `reports/PHASE_18_MEMORY_CHECKPOINT.md`
-- Current Status: ROADMAP GIAI ĐOẠN 19D (Isolated Restore Rehearsal, Data Integrity Verification & Safe Cleanup) HOÀN TẤT & VERIFIED (Tự động hóa restore qua restore-local.ps1 vào container/volume cô lập worksphere-restore-test-*; đối soát toàn vẹn dữ liệu và Flyway 100% khớp nguồn; khởi chạy backend độc lập trên port 18080 xác nhận health/liveness/readiness UP; dọn dẹp sạch sẽ tài nguyên test và bảo toàn tuyệt đối volumes/containers canonical). RESTORE_VERIFIED_LOCALLY = TRUE, STAGING_DISASTER_RECOVERY_READY = FALSE. Sẵn sàng cho Stage 19E (Application & Database Rollback Foundation / Memory Checkpoint).
+- Current Status: ROADMAP GIAI ĐOẠN 19E (Application Rollback, Image Retention, Schema Compatibility & Safe Recovery Policy) HOÀN TẤT & VERIFIED (Xây dựng phân loại rollback, checklist tương thích schema Flyway V001-V017 xác nhận APP_ROLLBACK_SAFE, mẫu Deployment Checkpoint, kịch bản rollback-local.ps1 bảo vệ fail-fast; diễn tập hoán đổi container backend giữa 2 image tags trong môi trường cô lập thành công, database và uploads bảo toàn nguyên vẹn; dọn dẹp sạch sẽ test resources). REGISTRY_PUBLICATION_REQUIRED_BEFORE_STAGING_ROLLBACK, RPO/RTO = DECISION_REQUIRED. Sẵn sàng cho Stage 19F (Final Operational Verification, Operability Reconciliation & Stage 19 Memory Checkpoint).
+- Stage 19E Rollback Readiness Report: `reports/ROADMAP_STAGE_19E_ROLLBACK_READINESS.md`
+- Rollback Operations Runbook: `reports/runbooks/ROLLBACK_OPERATIONS.md`
+- Deployment Checkpoint Template: `reports/templates/DEPLOYMENT_CHECKPOINT_TEMPLATE.md`
 - Stage 19D Restore Rehearsal Report: `reports/ROADMAP_STAGE_19D_RESTORE_REHEARSAL.md`
 - Restore Operations Runbook: `reports/runbooks/RESTORE_OPERATIONS.md`
 - Stage 19C Backup Foundation Report: `reports/ROADMAP_STAGE_19C_BACKUP_FOUNDATION.md`
