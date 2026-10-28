@@ -12,6 +12,8 @@
 - Stage 20A Project Overview & Run Guide: `reports/WORKSPHERE_PROJECT_OVERVIEW_AND_RUN_GUIDE.md`
 - Stage 20B Advanced Programming Report: `reports/stage20/advanced-programming/BAO_CAO_KY_NANG_LAP_TRINH_NANG_CAO_WORKSPHERE.docx`
 - Stage 20B Verification Report: `reports/ROADMAP_STAGE_20B_ADVANCED_PROGRAMMING_REPORT.md`
+- Stage 20B Document Quality Audit: `reports/ROADMAP_STAGE_20B_DOCUMENT_QUALITY_AUDIT.md`
+- Stage 20B Rendered PDF (60 pages): `reports/stage20/advanced-programming/BAO_CAO_KY_NANG_LAP_TRINH_NANG_CAO_WORKSPHERE.pdf`
 - Stage 19 Memory Checkpoint: `reports/ROADMAP_STAGE_19_MEMORY_CHECKPOINT.md`
 - Stage 19F Final Operability Report: `reports/ROADMAP_STAGE_19F_FINAL_OPERABILITY.md`
 - Stage 19E Rollback Readiness Report: `reports/ROADMAP_STAGE_19E_ROLLBACK_READINESS.md`

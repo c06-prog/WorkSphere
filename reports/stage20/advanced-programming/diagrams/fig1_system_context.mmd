@@ -1,0 +1,37 @@
+flowchart TD
+    subgraph ClientTier["Client Tier (Mobile & Web)"]
+        Mobile["WorkSphere Mobile\n(React Native 0.88.0, TypeScript)\n- In-Memory Access Token\n- Secure Storage Keychain"]
+    end
+
+    subgraph EdgeTier["Security & Boundary Edge"]
+        RCF["RequestCorrelationFilter\n(OncePerRequestFilter)\n- Extracts / generates X-Request-ID\n- Sets MDC requestId\n- Sets response header"]
+        JAF["JwtAuthenticationFilter\n(OncePerRequestFilter)\n- Validates Bearer JWT HMAC-SHA256\n- Sets SecurityContextHolder"]
+    end
+
+    subgraph BackendTier["WorkSphere Backend (Modular Monolith - Spring Boot 4.1.1, Java 21)"]
+        subgraph CoreModules["Modular Business Domains"]
+            Identity["identity\n(IAM & Token Lifecycle)"]
+            Org["organization\n(Departments & Hierarchy)"]
+            Project["project\n(Projects & Milestones)"]
+            Task["task\n(State Machine & Locking)"]
+            SR["service_request\n(Approvals & Workflows)"]
+            Asset["asset\n(Hardware & Invariants)"]
+            Notification["notification\n(Idempotent Alerts)"]
+            FileMod["file\n(Metadata & Uploads)"]
+            Dashboard["dashboard\n(Aggregated Metrics)"]
+            Shared["shared\n(ApiResponse, Exceptions, Filters)"]
+        end
+        Actuator["Spring Boot Actuator\n(/actuator/health, /info, /prometheus)"]
+    end
+
+    subgraph DataTier["Data & Storage Tier"]
+        DB[(PostgreSQL 15-alpine\n17 Flyway Migrations V001-V017\nPort 5432/5433)]
+        Storage[(Named Volume: worksphere-uploads\nUser Documents & Attachments)]
+    end
+
+    Mobile -->|"HTTPS / REST (JSON)\nHeader: X-Request-ID\nAuthorization: Bearer <JWT>"| RCF
+    RCF --> JAF
+    JAF --> CoreModules
+    CoreModules -->|"Spring Data JPA / HikariCP Pool"| DB
+    FileMod -->|"Filesystem I/O"| Storage
+    Actuator -.->|"Prometheus Scrape (Internal Only)"| Mobile

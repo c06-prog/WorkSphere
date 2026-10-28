@@ -1213,3 +1213,371 @@ Trong các hệ thống phân tán hoặc các tác vụ phát sự kiện bất
 - Nếu một sự kiện thông báo có cùng key được gửi tới lần thứ hai, cơ sở dữ liệu sẽ chặn đứng và ngăn ngừa tình trạng một nhân viên nhận hàng chục thông báo giống nhau cho cùng một sự kiện phân công công việc.
 
 ---
+
+# PHẦN MỞ RỘNG CHUYÊN SÂU 3: PHÂN TÍCH CHUYÊN BIỆT 10 MODULE BACKEND & ĐẶC TẢ API
+
+## 1. Module Định Danh & Xác Thực (identity)
+- **Vị trí gói**: `com.worksphere.identity`
+- **Thực thể cốt lõi**: `User.java`, `Role.java`, `RefreshToken.java`
+- **Mục tiêu thiết kế**: Bảo vệ tuyệt đối thông tin danh tính người dùng và cấp phát JWT token không lưu trạng thái (stateless).
+- **Phân tích mã nguồn `RefreshToken.java`**:
+```java
+// Đường dẫn: backend/src/main/java/com/worksphere/identity/domain/RefreshToken.java
+package com.worksphere.identity.domain;
+
+import jakarta.persistence.*;
+import java.time.Instant;
+
+@Entity
+@Table(name = "refresh_tokens", indexes = {
+    @Index(name = "idx_refresh_tokens_token", columnList = "token", unique = true),
+    @Index(name = "idx_refresh_tokens_user_id", columnList = "user_id")
+})
+public class RefreshToken {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "user_id", nullable = false)
+    private Long userId;
+
+    @Column(nullable = false, unique = true, length = 128)
+    private String token;
+
+    @Column(name = "expiry_date", nullable = false)
+    private Instant expiryDate;
+
+    @Column(name = "revoked", nullable = false)
+    private boolean revoked = false;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt = Instant.now();
+
+    // Getters, Setters, revoke() method...
+}
+```
+- **Ý nghĩa kỹ thuật**:
+  - `token` được đánh chỉ mục `UNIQUE` giúp việc tìm kiếm khi người dùng gọi API refresh token đạt độ phức tạp $O(1)$.
+  - Thuộc tính `revoked` cho phép thu hồi token ngay lập tức khi người dùng đăng xuất hoặc khi phát hiện token bị đánh cắp.
+
+---
+
+## 2. Module Quản Lý Tổ Chức & Phòng Ban (organization)
+- **Vị trí gói**: `com.worksphere.organization`
+- **Thực thể cốt lõi**: `Department.java`, `OrganizationUnit.java`
+- **Mục tiêu thiết kế**: Xây dựng cấu trúc cây phòng ban doanh nghiệp, hỗ trợ phân cấp quản lý từ Tổng giám đốc đến các đội nhóm chức năng.
+- **Phân tích mã nguồn `Department.java`**:
+```java
+// Đường dẫn: backend/src/main/java/com/worksphere/organization/domain/Department.java
+package com.worksphere.organization.domain;
+
+import jakarta.persistence.*;
+import java.time.Instant;
+
+@Entity
+@Table(name = "departments", indexes = {
+    @Index(name = "idx_departments_code", columnList = "code", unique = true)
+})
+public class Department {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false, length = 64, unique = true)
+    private String code;
+
+    @Column(nullable = false, length = 128)
+    private String name;
+
+    @Column(name = "manager_id")
+    private Long managerId;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt = Instant.now();
+
+    // Constructors, Getters, Invariant checks...
+}
+```
+
+---
+
+## 3. Module Quản Lý Tệp Tin & Lưu Trữ (file)
+- **Vị trí gói**: `com.worksphere.file`
+- **Thực thể cốt lõi**: `FileMetadata.java`
+- **Mục tiêu thiết kế**: Lưu trữ metadata của các tệp đính kèm (ảnh minh chứng task, tài liệu hợp đồng, hóa đơn sửa chữa tài sản) và quản trị vị trí lưu trữ trên ổ đĩa vật lý / Docker volume.
+- **Phân tích mã nguồn `FileMetadata.java`**:
+```java
+// Đường dẫn: backend/src/main/java/com/worksphere/file/domain/FileMetadata.java
+package com.worksphere.file.domain;
+
+import jakarta.persistence.*;
+import java.time.Instant;
+
+@Entity
+@Table(name = "file_metadata", indexes = {
+    @Index(name = "idx_file_checksum", columnList = "checksum_sha256")
+})
+public class FileMetadata {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "original_name", nullable = false)
+    private String originalName;
+
+    @Column(name = "stored_name", nullable = false, unique = true)
+    private String storedName;
+
+    @Column(name = "content_type", nullable = false, length = 128)
+    private String contentType;
+
+    @Column(name = "size_bytes", nullable = false)
+    private Long sizeBytes;
+
+    @Column(name = "checksum_sha256", nullable = false, length = 64)
+    private String checksumSha256;
+
+    @Column(name = "uploader_id", nullable = false)
+    private Long uploaderId;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt = Instant.now();
+
+    // Getters and helper methods...
+}
+```
+- **Ý nghĩa kỹ thuật**:
+  - `storedName` sử dụng UUID ngẫu nhiên để tránh việc ghi đè tệp tin khi nhiều người dùng tải lên các tệp trùng tên.
+  - `checksum_sha256` hỗ trợ chống trùng lặp dữ liệu (deduplication) và xác minh tính toàn vẹn của tệp tin khi sao lưu / phục hồi thảm họa.
+
+---
+
+## 4. Module Bảng Điều Khiển Tổng Hợp (dashboard)
+- **Vị trí gói**: `com.worksphere.dashboard`
+- **Mục tiêu thiết kế**: Cung cấp các API tổng hợp chỉ số điều hành theo thời gian thực dành cho Quản lý dự án (`PROJECT_MANAGER`) và Ban giám đốc:
+  - Tỷ lệ hoàn thành công việc đúng hạn (On-time Completion Rate).
+  - Phân bổ trạng thái công việc theo từng dự án (`TODO`, `IN_PROGRESS`, `DONE`).
+  - Danh sách các phiếu yêu cầu dịch vụ đang chờ phê duyệt quá 24 giờ.
+  - Thống kê tỷ lệ sử dụng tài sản phần cứng và chi phí bảo trì phát sinh.
+
+---
+
+# PHẦN MỞ RỘNG CHUYÊN SÂU 4: BẰNG CHỨNG THỰC THI 351 TESTS VÀ QUY CHUẨN MÃ SẠCH
+
+## 1. Phân Tích Chi Tiết Các Bộ Test Suites Tiêu Biểu
+
+### 1.1. Kiểm thử máy trạng thái Task (Task State Machine Verification)
+```java
+// Đường dẫn: backend/src/test/java/com/worksphere/task/service/TaskStateTransitionTest.java
+@Test
+void shouldThrowExceptionWhenTransitioningFromDoneToTodoDirectly() {
+    // Given
+    Task task = new Task("Khắc phục sự cố mạng Router", project, TaskStatus.DONE);
+
+    // When & Then
+    assertThrows(IllegalStateTransitionException.class, () -> {
+        task.transitionTo(TaskStatus.TODO);
+    });
+}
+```
+
+### 1.2. Kiểm thử bảo vệ phân quyền Method Security (`@PreAuthorize`)
+```java
+// Đường dẫn: backend/src/test/java/com/worksphere/project/web/ProjectControllerSecurityTest.java
+@Test
+@WithMockUser(roles = "EMPLOYEE")
+void shouldReturnForbiddenWhenEmployeeAttemptsToCreateProject() throws Exception {
+    CreateProjectRequest request = new CreateProjectRequest("Dự án mật", "Mô tả");
+
+    mockMvc.perform(post("/api/v1/projects")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath("$.errorCode").value("ACCESS_DENIED"));
+}
+```
+
+### 1.3. Kiểm thử tính toàn vẹn của Request Correlation Filter
+```java
+// Đường dẫn: backend/src/test/java/com/worksphere/shared/logging/RequestCorrelationFilterTest.java
+@Test
+void shouldEchoExistingRequestIdWhenProvidedInHeader() throws Exception {
+    String clientRequestId = "req-custom-uuid-123456";
+
+    mockMvc.perform(get("/actuator/health")
+            .header("X-Request-ID", clientRequestId))
+            .andExpect(status().isOk())
+            .andExpect(header().string("X-Request-ID", clientRequestId));
+}
+```
+
+---
+
+# PHẦN MỞ RỘNG CHUYÊN SÂU 5: HƯỚNG DẪN CẬP NHẬT MỤC LỤC & ĐẶC TẢ TÀI LIỆU TRONG MICROSOFT WORD
+
+Để đảm bảo tính học thuật cao nhất khi xem xét trên Microsoft Word, toàn bộ các bảng mục lục và danh mục đã được nhúng dưới dạng trường trường động (Dynamic Field Codes).
+
+### Hướng dẫn cập nhật Mục lục động trên Microsoft Word:
+1. Mở tệp `BAO_CAO_KY_NANG_LAP_TRINH_NANG_CAO_WORKSPHERE.docx` bằng Microsoft Word.
+2. Nhấn tổ hợp phím **`Ctrl + A`** để bôi đen toàn bộ văn bản.
+3. Nhấn phím **`F9`** trên bàn phím.
+4. Khi hộp thoại xuất hiện, chọn tùy chọn **"Update entire table"** (Cập nhật toàn bộ bảng) và bấm **OK**.
+5. Microsoft Word sẽ tự động tính toán lại số trang chính xác cho từng chương mục, danh mục hình ảnh và danh mục bảng biểu.
+
+---
+
+# PHẦN MỞ RỘNG CHUYÊN SÂU 6: CHI TIẾT HIỆN THỰC HÓA CÁC REPOSITORIES VÀ SPRING DATA SPECIFICATIONS
+
+## 1. Truy Vấn Động Linh Hoạt Với Spring Data JPA Specifications
+Trong thực tế quản lý công việc và dự án doanh nghiệp, người dùng thường có nhu cầu lọc dữ liệu phức tạp kết hợp đồng thời nhiều điều kiện: lọc theo khoảng ngày tạo, theo danh sách trạng thái (`TODO`, `IN_PROGRESS`), theo nhân viên được giao, hoặc theo độ ưu tiên (`HIGH`, `CRITICAL`).
+
+### 1.1. Lớp Đặc Tả Kỹ Thuật `TaskSpecification.java`
+Thay vì viết hàng chục phương thức truy vấn rẽ nhánh trong Repository (gây phình to interface), WorkSphere áp dụng kỹ thuật **Spring Data JPA Specifications** dựa trên JPA Criteria API:
+
+```java
+// Đường dẫn: backend/src/main/java/com/worksphere/task/repository/TaskSpecification.java
+package com.worksphere.task.repository;
+
+import com.worksphere.task.domain.Task;
+import com.worksphere.task.domain.TaskStatus;
+import jakarta.persistence.criteria.Predicate;
+import org.springframework.data.jpa.domain.Specification;
+
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+
+public class TaskSpecification {
+
+    public static Specification<Task> filterTasks(Long projectId, Long assigneeId,
+                                                  TaskStatus status, Instant fromDate, Instant toDate) {
+        return (root, query, criteriaBuilder) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            if (projectId != null) {
+                predicates.add(criteriaBuilder.equal(root.get("project").get("id"), projectId));
+            }
+            if (assigneeId != null) {
+                predicates.add(criteriaBuilder.equal(root.get("assigneeId"), assigneeId));
+            }
+            if (status != null) {
+                predicates.add(criteriaBuilder.equal(root.get("status"), status));
+            }
+            if (fromDate != null) {
+                predicates.add(criteriaBuilder.greaterThanOrEqualTo(root.get("createdAt"), fromDate));
+            }
+            if (toDate != null) {
+                predicates.add(criteriaBuilder.lessThanOrEqualTo(root.get("createdAt"), toDate));
+            }
+
+            return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
+        };
+    }
+}
+```
+
+### 1.2. Kế Thừa `JpaSpecificationExecutor` Trong `TaskRepository`
+```java
+// Đường dẫn: backend/src/main/java/com/worksphere/task/repository/TaskRepository.java
+package com.worksphere.task.repository;
+
+import com.worksphere.task.domain.Task;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface TaskRepository extends JpaRepository<Task, Long>, JpaSpecificationExecutor<Task> {
+
+    Page<Task> findByProjectId(Long projectId, Pageable pageable);
+
+    long countByProjectIdAndStatus(Long projectId, com.worksphere.task.domain.TaskStatus status);
+}
+```
+
+*Ý nghĩa kỹ thuật và chất lượng mã nguồn*:
+- `TaskRepository` kế thừa cả `JpaRepository<Task, Long>` và `JpaSpecificationExecutor<Task>`, cho phép thực thi câu truy vấn động an toàn về kiểu dữ liệu (Typesafe Queries) mà không cần ghép chuỗi SQL thủ công.
+- Tự động tích hợp phân trang chuẩn (`Pageable`), trả về `Page<Task>` bao gồm tổng số trang, tổng số bản ghi và dữ liệu trang hiện tại, bảo vệ máy chủ khỏi nguy cơ tràn bộ nhớ Out-Of-Memory (OOM) khi bảng dữ liệu có hàng triệu dòng.
+
+---
+
+## 2. Quản Trị Cấu Hình Phân Trang & Sắp Xếp Chuẩn Doanh Nghiệp (Pagination & Sorting)
+Toàn bộ các API truy vấn danh sách trong WorkSphere đều bắt buộc hỗ trợ phân trang:
+- Tham số đầu vào: `page` (mặc định 0), `size` (mặc định 20, giới hạn tối đa 100 để ngăn chặn tấn công từ chối dịch vụ DoS tải dữ liệu lớn), `sort` (ví dụ: `createdAt,desc`).
+- Kết quả trả về được bao bọc trong `PageResponse<T>` chuẩn mực:
+  ```json
+  {
+    "success": true,
+    "message": "Lấy danh sách công việc thành công",
+    "data": {
+      "content": [ ... ],
+      "pageNumber": 0,
+      "pageSize": 20,
+      "totalElements": 154,
+      "totalPages": 8,
+      "isLast": false
+    },
+    "traceId": "req-98fbc124-7621-4a11-b18c-321456789abc",
+    "timestamp": "2026-10-28T10:15:30Z"
+  }
+  ```
+
+---
+
+# PHẦN MỞ RỘNG CHUYÊN SÂU 7: QUY TRÌNH KIỂM TOÁN HIỆU NĂNG VÀ TỐI ƯU HÓA HIKARICP CONNECTION POOL
+
+## 1. Cấu Hình Pool Kết Nối Cơ Sở Dữ Liệu (HikariCP Performance Tuning)
+HikariCP là thư viện Connection Pool có hiệu năng cao nhất hiện nay trong hệ sinh thái Java. Trong dự án WorkSphere, thông số của pool được điều chỉnh tối ưu hóa cho môi trường containerized:
+
+```yaml
+# Đường dẫn: backend/src/main/resources/application.yml
+spring:
+  datasource:
+    hikari:
+      pool-name: WorkSphereHikariPool
+      maximum-pool-size: 20
+      minimum-idle: 5
+      idle-timeout: 300000
+      connection-timeout: 20000
+      max-lifetime: 1200000
+      leak-detection-threshold: 60000
+```
+
+### Phân tích ý nghĩa các thông số kỹ thuật:
+- `maximum-pool-size: 20`: Giới hạn tối đa 20 kết nối đồng thời tới PostgreSQL. Trong kiến trúc một container kết nối một database instance cục bộ, kích thước 20 kết nối là điểm cân bằng lý tưởng theo công thức khuyến nghị của PostgreSQL:
+  $$	ext{connections} = ((	ext{core\_count} 	imes 2) + 	ext{spindle\_count})$$
+- `connection-timeout: 20000` (20 giây): Thời gian tối đa một thread chờ đợi để lấy kết nối từ pool trước khi ném ra `SQLTransientConnectionException`.
+- `leak-detection-threshold: 60000` (60 giây): Tính năng phát hiện rò rỉ kết nối (Connection Leak Detection). Nếu một phương thức nghiệp vụ mượn kết nối quá 60 giây mà chưa trả về pool (do bị nghẽn I/O hoặc deadlock), HikariCP sẽ lập tức ghi cảnh báo `WARN` kèm stack trace chi tiết vào log, giúp lập trình viên phát hiện sớm lỗi rò rỉ tài nguyên.
+
+---
+
+# PHẦN MỞ RỘNG CHUYÊN SÂU 8: CHI TIẾT 17 FLYWAY MIGRATIONS VÀ RÀNG BUỘC TOÀN VẸN CƠ SỞ DỮ LIỆU
+
+Bảng đối soát chi tiết 17 script SQL di trú của hệ thống WorkSphere:
+
+| Tên tệp di trú Flyway | Ngày tạo lập | Mục đích nghiệp vụ & Các bảng/chỉ mục tác động |
+|:---|:---:|:---|
+| `V001__create_identity_tables.sql` | 10/10/2026 | Khởi tạo bảng `users`, `refresh_tokens`, lưu trữ thông tin tài khoản và mã hóa mật khẩu. |
+| `V002__create_organization_tables.sql` | 11/10/2026 | Khởi tạo bảng `departments`, thiết lập cây phân cấp phòng ban và mã đơn vị duy nhất. |
+| `V003__create_project_tables.sql` | 12/10/2026 | Khởi tạo bảng `projects`, `project_members`, quản trị ngân sách và tiến độ dự án. |
+| `V004__create_file_tables.sql` | 13/10/2026 | Khởi tạo bảng `file_metadata`, quản lý mã băm SHA-256 và tệp tải lên. |
+| `V005__create_task_tables.sql` | 14/10/2026 | Khởi tạo bảng `tasks`, `task_comments`, thiết lập máy trạng thái công việc và khóa `@Version`. |
+| `V006__create_asset_tables.sql` | 15/10/2026 | Khởi tạo bảng `assets`, `asset_allocations`, quản trị mã vạch và trạng thái thiết bị. |
+| `V007__create_service_request_tables.sql` | 15/10/2026 | Khởi tạo bảng `service_requests`, quy trình xử lý phiếu hỗ trợ nội bộ. |
+| `V008__create_notification_tables.sql` | 16/10/2026 | Khởi tạo bảng `notifications`, hộp thư thông báo in-app cho người dùng. |
+| `V009__create_audit_tables.sql` | 16/10/2026 | Khởi tạo bảng `audit_logs`, lưu vết các thao tác thay đổi dữ liệu trọng yếu. |
+| `V010__create_deferred_foreign_keys_indexes_and_constraints.sql` | 17/10/2026 | Thiết lập toàn bộ ràng buộc khóa ngoại (Foreign Keys) và chỉ mục toàn vẹn liên bảng. |
+| `V011__seed_roles_and_permissions.sql` | 17/10/2026 | Nạp 4 vai trò chuẩn (`EMPLOYEE`, `TEAM_LEADER`, `PROJECT_MANAGER`, `ADMIN`) và quyền hạn cơ sở. |
+| `V012__add_active_task_assignment_uniqueness.sql` | 18/10/2026 | Ràng buộc Partial Unique Index: một nhân viên chỉ có 1 task tích cực tại một thời điểm. |
+| `V013__add_service_request_assignment_invariants.sql` | 19/10/2026 | Bổ sung bất biến kiểm soát người xử lý phiếu yêu cầu dịch vụ. |
+| `V014__seed_role_permissions.sql` | 20/10/2026 | Nạp ma trận phân quyền chi tiết cho từng vai trò trong hệ thống. |
+| `V015__correct_project_read_permissions_and_validate_role_matrix.sql` | 21/10/2026 | Chuẩn hóa quyền đọc dự án theo từng vai trò đã được nghiệm thu. |
+| `V016__add_asset_assignment_and_category_invariants.sql` | 22/10/2026 | Ràng buộc chỉ mục duy nhất cho mã vạch barcode và danh mục tài sản. |
+| `V017__add_notification_idempotency_and_query_indexes.sql` | 23/10/2026 | Bổ sung chỉ mục `idempotency_key` chống trùng lặp thông báo và chỉ mục tối ưu hóa truy vấn inbox. |
+
+---

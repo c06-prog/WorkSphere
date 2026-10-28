@@ -1,0 +1,31 @@
+sequenceDiagram
+    autonumber
+    actor Client as Mobile Client (Axios)
+    participant RCF as RequestCorrelationFilter
+    participant JAF as JwtAuthenticationFilter
+    participant DS as DispatcherServlet
+    participant Controller as TaskController
+    participant Service as TaskService (Proxy)
+    participant Repo as TaskRepository
+    participant DB as PostgreSQL 15
+
+    Client->>RCF: HTTP POST /api/v1/tasks (Header: X-Request-ID, Bearer token)
+    Note over RCF: Trích xuất / cấp phát X-Request-ID<br/>Gán MDC("requestId", requestId)
+    RCF->>JAF: doFilterInternal(request, response)
+    Note over JAF: Giải mã JWT HMAC-SHA256<br/>Thiết lập SecurityContextHolder
+    JAF->>DS: doFilterInternal()
+    DS->>Controller: createTask(@Valid @RequestBody CreateTaskRequest dto)
+    Note over Controller: Xác thực Bean Validation DTO<br/>Gọi tầng Service
+    Controller->>Service: createTask(dto)
+    Note over Service: Transaction Proxy interceptor<br/>Mở connection, setAutoCommit(false)
+    Service->>Repo: save(taskEntity)
+    Repo->>DB: INSERT INTO tasks (...) VALUES (...)
+    DB-->>Repo: 1 row affected (ID generated)
+    Repo-->>Service: Task (Entity persisted)
+    Note over Service: Commit transaction, giải phóng connection
+    Service-->>Controller: TaskResponse DTO
+    Controller-->>DS: ResponseEntity<ApiResponse<TaskResponse>>
+    DS-->>JAF: Response JSON (chứa traceId)
+    JAF-->>RCF: Response
+    Note over RCF: response.setHeader("X-Request-ID", requestId)<br/>MDC.remove("requestId")
+    RCF-->>Client: HTTP 201 Created (Header: X-Request-ID)

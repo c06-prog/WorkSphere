@@ -1,0 +1,22 @@
+flowchart TD
+    subgraph Layer1["1. Tầng Adapter Ngoài Cùng (Inbound & Outbound Adapters)"]
+        direction LR
+        WebAdapters["Inbound Adapters (REST Controllers)\n- TaskController, ProjectController\n- ApiResponse envelope, @Valid DTOs"]
+        PersistenceAdapters["Outbound Adapters (Spring Data JPA Repositories)\n- TaskRepository, ProjectRepository\n- PostgreSQL Hibernate dialect"]
+        OpsAdapters["Operations Adapters\n- Actuator endpoints (/health, /prometheus)\n- RequestCorrelationFilter, MDC logging"]
+    end
+
+    subgraph Layer2["2. Tầng Ứng Dụng (Application Service Layer - Use Cases)"]
+        direction TB
+        AppServices["Application Services (@Transactional Use Cases)\n- TaskService, ProjectService, AuthService\n- Optimistic locking coordination\n- Domain event publishers"]
+    end
+
+    subgraph Layer3["3. Tầng Lõi Miền Nghiệp Vụ (Domain Core - Entities & Enums)"]
+        direction TB
+        DomainEntities["Domain Entities & Invariants\n- Task, Project, Role, Asset, ServiceRequest\n- Enums (Role, TaskStatus, Priority)\n- Domain validation rules"]
+    end
+
+    WebAdapters -->|"gọi use cases DTO"| AppServices
+    AppServices -->|"điều phối nghiệp vụ"| DomainEntities
+    PersistenceAdapters -->|"ánh xạ ORM"| DomainEntities
+    AppServices -->|"thao tác qua interface"| PersistenceAdapters

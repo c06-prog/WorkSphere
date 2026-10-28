@@ -1,0 +1,9 @@
+flowchart TD
+    subgraph TestingPyramid["Kim Tự Tháp Kiểm Thử Tự Động Backend (351 Tests)"]
+        Top["TẦNG 3: Integration Tests (Testcontainers PostgreSQL 15)\n- Khởi chạy container PostgreSQL thực tế trong bộ nhớ\n- Kiểm tra 17 Flyway migrations, toàn vẹn khóa ngoại & giao dịch\n- Tốc độ: Chậm nhất nhưng độ tin cậy thực tế 100%"]
+        Middle["TẦNG 2: Service & Web Slice Tests (Mockito & @WebMvcTest)\n- Kiểm tra logic rẽ nhánh, validation DTO, phân quyền bảo mật\n- Cô lập Repository bằng Mockito mock objects\n- Tốc độ: Trung bình (vài giây)"]
+        Bottom["TẦNG 1: Unit Tests (Domain Entities & Pure Java Logic)\n- Kiểm tra bất biến nghiệp vụ, hàm tiện ích, Enum transitions\n- Không nạp Spring context, thời gian chạy mili-giây\n- Tốc độ: Siêu nhanh, chạy liên tục khi biên dịch"]
+    end
+
+    Top --> Middle
+    Middle --> Bottom
