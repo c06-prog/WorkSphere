@@ -3,6 +3,7 @@
 > **Trạng thái tài liệu**: `CONTENT_CONTRACT_FROZEN` (Khóa hợp đồng nội dung và ánh xạ mã nguồn minh chứng Stage 20A)
 > **Chính sách học liệu**: `LOCAL_ONLY_REFERENCE` (Học liệu bài giảng lưu trữ tham chiếu cục bộ, không commit vào Git)
 > **Tiêu chuẩn ranh giới**: `LOCAL_OPERABILITY_READY` (Chưa triển khai Staging/Production/Registry/UAT Sign-off)
+> **Tài liệu tham chiếu chung**: [WORKSPHERE_PROJECT_OVERVIEW_AND_RUN_GUIDE.md](file:///d:/WorkSphere/reports/WORKSPHERE_PROJECT_OVERVIEW_AND_RUN_GUIDE.md) (Hướng dẫn tổng quan & vận hành dự án)
 
 ---
 

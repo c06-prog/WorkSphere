@@ -27,6 +27,7 @@
 - Stage 20A Content Contract Report: `reports/ROADMAP_STAGE_20A_CONTENT_CONTRACT.md`
 - Stage 20 Course-to-Code Evidence Map: `reports/STAGE_20_COURSE_CODE_EVIDENCE_MAP.md`
 - Stage 20 Team Study & Defense Guide: `reports/STAGE_20_TEAM_STUDY_AND_DEFENSE_GUIDE.md`
+- Stage 20A Project Overview & Run Guide: `reports/WORKSPHERE_PROJECT_OVERVIEW_AND_RUN_GUIDE.md`
 - Current Status: ROADMAP STAGE 20A (Course-to-Code Evidence Map, Team Study Guide & Content Contract Freeze) CHÍNH THỨC HOÀN TẤT. Trạng thái: ROADMAP_STAGE_20A_CONTENT_CONTRACT_COMPLETE_READY_FOR_20B. Đã ánh xạ toàn diện 4 môn học sang mã nguồn thật; thiết lập cẩm nang tự học và chiến lược bảo vệ cho 6 thành viên; phân công giữ nhãn PROPOSED_ASSIGNMENT_PENDING_USER_APPROVAL; 4 thư mục học liệu gốc được giữ nguyên vẹn và KHÔNG commit vào Git; sẵn sàng cho Stage 20B.
 - Stage 19 Memory Checkpoint: `reports/ROADMAP_STAGE_19_MEMORY_CHECKPOINT.md`
 - Stage 19F Final Operability Report: `reports/ROADMAP_STAGE_19F_FINAL_OPERABILITY.md`

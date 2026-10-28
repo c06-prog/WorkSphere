@@ -3,6 +3,7 @@
 **Trạng thái đề xuất phân công:** PROPOSED_ASSIGNMENT_PENDING_USER_APPROVAL
 **Giai đoạn lộ trình:** Stage 20A — Course-to-Code Evidence Map & Team Study Guide
 **Mục đích:** Tài liệu hướng dẫn tự học, nắm vững kiến trúc, đối thoại phản biện và bảo vệ dự án WorkSphere dành cho cả 6 thành viên trong nhóm đối với 4 môn học chuyên ngành.
+> **Tài liệu tham chiếu chung**: [WORKSPHERE_PROJECT_OVERVIEW_AND_RUN_GUIDE.md](file:///d:/WorkSphere/reports/WORKSPHERE_PROJECT_OVERVIEW_AND_RUN_GUIDE.md) (Hướng dẫn tổng quan & vận hành dự án)
 
 ---
 

@@ -22,7 +22,9 @@ Roadmap Stage 20A đã thiết lập nguồn chân lý vững chắc bằng Mark
    - Cẩm nang ôn tập theo 4 môn học với chuẩn đầu ra, hướng dẫn demo trực tiếp code, và bộ câu hỏi phản biện kèm đáp án mẫu.
    - Cẩm nang cá nhân hóa cho từng thành viên (Nguyễn Minh Hiếu, Nguyễn Văn Cường, Hoàng Bảo Long, Vũ Thị Thu Hướng, Nguyễn Đức Khiêm, Lê Anh Tú) với vai trò, module trọng tâm, bài thuyết trình 5-7 phút và Top 5 câu hỏi trọng tâm.
    - Chiến lược diễn tập nhóm 3 vòng và ma trận phân vai trả lời câu hỏi.
-3. `reports/ROADMAP_STAGE_20A_CONTENT_CONTRACT.md` (Tài liệu này): Biên bản hoàn tất Stage 20A.
+3. `reports/WORKSPHERE_PROJECT_OVERVIEW_AND_RUN_GUIDE.md`:
+   - Cẩm nang tổng quan dự án dễ hiểu và hướng dẫn cài đặt, cấu hình, chạy, kiểm thử, giám sát và xử lý sự cố.
+4. `reports/ROADMAP_STAGE_20A_CONTENT_CONTRACT.md` (Tài liệu này): Biên bản hoàn tất Stage 20A.
 
 ---
 
