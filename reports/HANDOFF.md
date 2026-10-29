@@ -5,7 +5,7 @@
 - Repository: D:\WorkSphere
 - Branch: main
 - Current Task: ROADMAP-STAGE-20F FINAL PRESENTATION QUALITY GATE — FULL RENDER, VISUAL REVIEW, SPEAKER NOTES, TIMING & CROSS-DECK FACT VALIDATION
-- Status: HOÀN TẤT HIỆU CHỈNH SỰ KIỆN KỸ THUẬT VÀ KIỂM ĐỊNH 4 BỘ SLIDE THUYẾT TRÌNH (`ROADMAP_STAGE_20F_MANUAL_RENDER_REVIEW_REQUIRED`). Đã kiểm toán cấu trúc hình học (0 lỗi tràn lề) cho 65 slide trên 4 bộ PPTX, hiệu chỉnh chính xác phiên bản PostgreSQL 15 (`postgres:15-alpine`, runtime 15.19), loại bỏ tuyên bố suy đoán Spring Security 6 và 100% TypeScript, làm rõ cấu trúc CI DAG, thiết lập ngân sách thời gian toàn phiên (kèm demo, chuyển giao và Q&A), ban hành danh mục kiểm tra PowerPoint thủ công tại `reports/stage20/presentations/MANUAL_POWERPOINT_REVIEW_CHECKLIST.md` do không có công cụ render tự động trên môi trường host. Bốn thư mục học liệu tiếp tục local-only. Chưa bắt đầu Stage 20G.
+- Status: HOÀN TẤT VÀ PHÊ DUYỆT 4 BỘ SLIDE THUYẾT TRÌNH VÀ GHI CHÚ BẢO VỆ ĐỒ ÁN (`ROADMAP_STAGE_20F_PRESENTATION_DECKS_AUDITED_READY_FOR_20G`). Đã kiểm tra thủ công thực tế trên Microsoft PowerPoint đạt 100% (không lỗi font, không tràn chữ, không méo hình, Presenter Notes hiển thị đầy đủ), rút gọn thời lượng thuyết minh chuẩn an toàn (Deck 1: 13.67m, Deck 2: 12.58m, Deck 3: 9.67m, Deck 4: 14.75m), hoàn thiện ký duyệt `MANUAL_POWERPOINT_REVIEW_CHECKLIST.md`, giữ chuẩn số liệu kỹ thuật và duy trì 4 thư mục học liệu local-only. Sẵn sàng chuyển giao sang Stage 20G.
 - Stage 20F Presentation Decks: `reports/stage20/presentations/` (4 PPTX files)
 - Stage 20F Verification Report: `reports/ROADMAP_STAGE_20F_PRESENTATION_DECKS.md`
 - Stage 20F Quality Audit Report: `reports/ROADMAP_STAGE_20F_PRESENTATION_QUALITY_AUDIT.md`

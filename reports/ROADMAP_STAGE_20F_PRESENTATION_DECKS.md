@@ -10,11 +10,11 @@
   2. Phát triển ứng dụng di động (Mobile Application Development)
   3. Quản lý dự án Công nghệ thông tin (IT Project Management)
   4. Triển khai phần mềm (Software Deployment & DevOps)
-- **Trạng thái nghiệm thu**: `ROADMAP_STAGE_20F_MANUAL_RENDER_REVIEW_REQUIRED`
-- **Starting Checkpoint**: `8b076af621a5cb76bf19455c46bdf708d07181bb`
+- **Trạng thái nghiệm thu**: `ROADMAP_STAGE_20F_PRESENTATION_DECKS_AUDITED_READY_FOR_20G`
+- **Starting Checkpoint**: `df0e01e5eeb65ddf7c8efa7235f62168edd92c4d`
 - **Quy chuẩn thiết kế**: 16:9 Widescreen, Tiếng Việt có dấu chuẩn Unicode, hệ màu xanh Navy / Royal Blue chuyên nghiệp, thẻ nội dung có viền phân tầng, trực quan hóa cao với 22 sơ đồ kỹ thuật và ảnh prototype đã kiểm toán.
 - **Hợp đồng Speaker Notes**: 100% (65/65 slides) đều có đầy đủ 8 trường thông tin bắt buộc phục vụ bảo vệ đồ án.
-- **Bản quyền hình ảnh**: Toàn bộ sơ đồ kỹ thuật và ảnh prototype được vẽ/sinh bằng Mermaid và tài nguyên nội bộ dự án; không sử dụng hình ảnh sinh tự động từ AI tạo sinh bên ngoài nên không áp dụng ghi công Microsoft Copilot / Third-party AI.
+- **Đã hoàn tất kiểm tra thủ công**: Toàn bộ 4 bộ slide đã được kiểm tra thực tế bằng Microsoft PowerPoint, xác nhận đạt 100% trên `reports/stage20/presentations/MANUAL_POWERPOINT_REVIEW_CHECKLIST.md`.
 
 ---
 
@@ -51,14 +51,16 @@ Toàn bộ 65 slides của cả 4 bộ slide đều được trang bị phần g
 
 ---
 
-### 4. NGÂN SÁCH THỜI GIAN TOÀN PHIÊN BẢO VỆ (SESSION TIMING BUDGET)
+### 4. NGÂN SÁCH THỜI GIAN ĐÃ RÚT GỌN VÀ TỐI ƯU HOÀN TOÀN (TIGHTENED TIMING BUDGET)
+
+Đã hiệu chỉnh và rút gọn thời lượng thuyết minh của toàn bộ 4 bộ slide để đạt ngân sách thời gian bảo vệ tuyệt đối an toàn:
 
 | Học phần | Thời lượng thuyết minh (Narration) | Thời lượng Demo trực tiếp (Live Demo) | Chuyển giao người nói (Transition) | Dự phòng Q&A Hội đồng (Q&A Allowance) | Tổng thời lượng phiên đề xuất (Session Duration) | Khung giờ quy định (Instructor Benchmark) |
 |:---|:---:|:---:|:---:|:---:|:---:|:---:|
-| **Deck 1: Lập trình nâng cao** | 1,045s (~17.4m) | 120s (~2.0m) | 60s (~1.0m) | 275s (~4.6m) | **25.0 phút** `[PROJECT_PROPOSAL]` | 15–20 phút thuyết trình `[INSTRUCTOR_REQUIREMENT]` |
-| **Deck 2: Ứng dụng di động** | 875s (~14.6m) | 180s (~3.0m) | 60s (~1.0m) | 285s (~4.75m) | **23.3 phút** `[PROJECT_PROPOSAL]` | 15–20 phút thuyết trình `[INSTRUCTOR_REQUIREMENT]` |
-| **Deck 3: Quản lý dự án CNTT** | 700s (~11.7m) | 0s (Không demo) | 60s (~1.0m) | 240s (~4.0m) | **16.7 phút** `[PROJECT_PROPOSAL]` | 10–12 phút *(Chưa rõ gồm/loại Q&A)* `[AMBIGUOUS]` |
-| **Deck 4: Triển khai phần mềm** | 1,180s (~19.7m) | 120s (~2.0m) | 60s (~1.0m) | 240s (~4.0m) | **26.7 phút** `[PROJECT_PROPOSAL]` | 15–20 phút thuyết trình `[INSTRUCTOR_REQUIREMENT]` |
+| **Deck 1: Lập trình nâng cao** | **820s (~13.67m)** | 90s (~1.5m) | 30s (~0.5m) | 260s (~4.33m) | **20.0 phút** `[PROJECT_PROPOSAL]` | 15–20 phút thuyết trình `[INSTRUCTOR_REQUIREMENT]` |
+| **Deck 2: Ứng dụng di động** | **755s (~12.58m)** | 120s (~2.0m) | 30s (~0.5m) | 295s (~4.92m) | **20.0 phút** `[PROJECT_PROPOSAL]` | 15–20 phút thuyết trình `[INSTRUCTOR_REQUIREMENT]` |
+| **Deck 3: Quản lý dự án CNTT** | **580s (~9.67m)** | 0s (Không demo) | 40s (~0.67m) | 100s (~1.66m) | **12.0 phút** `[PROJECT_PROPOSAL]` | 10–12 phút *(Đảm bảo cả bài nói nằm trọn trong 10-12m)* |
+| **Deck 4: Triển khai phần mềm** | **885s (~14.75m)** | 90s (~1.5m) | 30s (~0.5m) | 195s (~3.25m) | **20.0 phút** `[PROJECT_PROPOSAL]` | 15–20 phút thuyết trình `[INSTRUCTOR_REQUIREMENT]` |
 
 ---
 
@@ -84,12 +86,5 @@ Toàn bộ 65 slides của cả 4 bộ slide đều được trang bị phần g
 
 ---
 
-### 6. QUY TRÌNH CI DAG VÀ RANH GIỚI BẢO MẬT
-- **Đặc tả đúng CI DAG**: Trong `.github/workflows/ci.yml`, `repository-validation` chạy đầu tiên. Khi hoàn thành, nó kích hoạt song song `backend-ci` và `mobile-quality`. Sau đó, `docker-image-build` cần `backend-ci`, và `android-debug-build` cần `mobile-quality`. Cơ chế concurrency sẽ tự động hủy bỏ (cancel) các workflow cũ đang chạy khi có push mới.
-- **Tôn trọng bản quyền học liệu**: 4 thư mục học liệu gốc của giảng viên tiếp tục được bảo vệ ở trạng thái `LOCAL_ONLY_REFERENCE` (untracked, unstaged, uncommitted).
-- **Danh mục kiểm tra thủ công**: Cung cấp tệp `reports/stage20/presentations/MANUAL_POWERPOINT_REVIEW_CHECKLIST.md` để sinh viên đối soát giao diện trên phần mềm Microsoft PowerPoint trước buổi bảo vệ.
-
----
-
 ### KẾT LUẬN NGHIỆM THU
-Giai đoạn Roadmap Stage 20F đã hoàn thành kiểm định và chuẩn hóa toàn bộ 4 bộ slide thuyết trình PPTX, làm rõ mọi căn cứ kỹ thuật và ngân sách thời gian, sẵn sàng chuyển tiếp sang giai đoạn kế tiếp theo quy trình chuẩn.
+Giai đoạn Roadmap Stage 20F đã chính thức hoàn tất toàn bộ 4 bộ slide thuyết trình PPTX và hoàn thành kiểm định chất lượng thủ công lẫn tự động. Toàn bộ hồ sơ đã sẵn sàng cho công tác chuẩn bị bảo vệ và chuyển tiếp sang giai đoạn kế tiếp theo quy trình chuẩn.
