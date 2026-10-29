@@ -97,7 +97,7 @@ def build_deck():
              items=[
                  "Java 21 LTS: Hưởng lợi từ Virtual Threads, Pattern Matching và Records hiện đại.",
                  "Spring Boot 4.1.1: Hệ sinh thái enterprise vững chắc, cấu hình tự động thông minh.",
-                 "Spring Security 6: Cơ chế lọc stateless, phân quyền RBAC dựa trên Method Security.",
+                 "Spring Security: Cơ chế lọc stateless, phân quyền RBAC dựa trên Method Security.",
                  "Maven Wrapper (mvnw): Bảo đảm tính xác định khi biên dịch trên mọi môi trường."
              ])
 
@@ -406,7 +406,7 @@ def build_deck():
              ])
 
     set_speaker_notes(s11, {
-        "objective": "Trình bày kiến trúc bảo mật phân tầng hiện đại dựa trên Spring Security 6.",
+        "objective": "Trình bày kiến trúc bảo mật phân tầng hiện đại dựa trên Spring Security.",
         "narration": "Hệ thống bảo mật của WorkSphere hoạt động hoàn toàn ở chế độ Stateless Session. Khi người dùng gửi request, JwtAuthenticationFilter sẽ trích xuất token, thẩm định chữ ký HMAC-SHA256 và nạp thông tin quyền hạn vào SecurityContextHolder.",
         "duration": "1.5 phút",
         "speaker": "Hoàng Bảo Long (BIT240142)",

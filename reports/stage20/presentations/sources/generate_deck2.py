@@ -157,7 +157,7 @@ def build_deck():
 
     set_speaker_notes(s4, {
         "objective": "Khẳng định nền tảng công nghệ mobile tiên tiến, đồng bộ và tuân thủ chuẩn công nghiệp.",
-        "narration": "WorkSphere Mobile được xây dựng trên React Native 0.88 và React 19 mới nhất, kết hợp 100% TypeScript. Nhóm sử dụng React Navigation 7 để điều phối màn hình và phân định rạch ròi cơ chế lưu trữ bảo mật bằng Keychain cho token nhạy cảm.",
+        "narration": "WorkSphere Mobile được xây dựng trên React Native 0.88 và React 19 mới nhất, kết hợp TypeScript (mobile/src). Nhóm sử dụng React Navigation 7 để điều phối màn hình và phân định rạch ròi cơ chế lưu trữ bảo mật bằng Keychain cho token nhạy cảm.",
         "duration": "1.5 phút",
         "speaker": "Nguyễn Văn Cường (BIT240048)",
         "evidence": "mobile/package.json, mobile/android/build.gradle",
