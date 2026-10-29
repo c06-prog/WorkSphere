@@ -10,11 +10,11 @@
   2. Phát triển ứng dụng di động (Mobile Application Development)
   3. Quản lý dự án Công nghệ thông tin (IT Project Management)
   4. Triển khai phần mềm (Software Deployment & DevOps)
-- **Trạng thái nghiệm thu**: `ROADMAP_STAGE_20F_PRESENTATION_DECKS_AUDITED_READY_FOR_20G`
+- **Trạng thái nghiệm thu**: `ROADMAP_STAGE_20F_MANUAL_RENDER_REVIEW_REQUIRED`
 - **Starting Checkpoint**: `df0e01e5eeb65ddf7c8efa7235f62168edd92c4d`
-- **Quy chuẩn thiết kế**: 16:9 Widescreen, Tiếng Việt có dấu chuẩn Unicode, hệ màu xanh Navy / Royal Blue chuyên nghiệp, thẻ nội dung có viền phân tầng, trực quan hóa cao với 22 sơ đồ kỹ thuật và ảnh prototype đã kiểm toán.
+- **Quy chuẩn thiết kế**: 16:9 Widescreen, Tiếng Việt có dấu chuẩn Unicode, hệ màu xanh Navy / Royal Blue chuyên nghiệp, thẻ nội dung có viền phân tầng, trực quan hóa cao với 22 sơ đồ kỹ thuật và ảnh prototype đã kiểm toán cấu trúc.
 - **Hợp đồng Speaker Notes**: 100% (65/65 slides) đều có đầy đủ 8 trường thông tin bắt buộc phục vụ bảo vệ đồ án.
-- **Đã hoàn tất kiểm tra thủ công**: Toàn bộ 4 bộ slide đã được kiểm tra thực tế bằng Microsoft PowerPoint, xác nhận đạt 100% trên `reports/stage20/presentations/MANUAL_POWERPOINT_REVIEW_CHECKLIST.md`.
+- **Trạng thái kiểm tra trực quan (Visual Review Status)**: Do môi trường tự động không cài đặt Microsoft PowerPoint hoặc LibreOffice, việc đối soát trực quan thực tế (mở slide, kiểm tra font, chạy F5, kiểm tra Presenter View) đang ở trạng thái `USER_REVIEW_REQUIRED` và chờ Người dùng thực hiện theo `reports/stage20/presentations/MANUAL_POWERPOINT_REVIEW_CHECKLIST.md`. Stage 20F chưa đóng và không bắt đầu Stage 20G.
 
 ---
 
@@ -30,7 +30,7 @@
 ---
 
 ### 2. KẾ HOẠCH NGUỒN TÀI NGUYÊN HÌNH ẢNH (VISUAL ASSET PLAN)
-Toàn bộ sơ đồ và hình ảnh sử dụng trên các slide đều có nguồn gốc và nhãn phân loại minh bạch, được định nghĩa trong tệp `reports/stage20/presentations/sources/visual_manifest.py`:
+Toàn bộ 22 sơ đồ và hình ảnh sử dụng trên các slide đều có nguồn gốc và nhãn phân loại minh bạch, được định nghĩa trong tệp `reports/stage20/presentations/sources/visual_manifest.py`:
 - **Deck 1 (4 sơ đồ)**: Tái sử dụng 4 sơ đồ kiến trúc từ Stage 20B (`fig1_system_context.png`, `fig2_request_lifecycle.png`, `fig3_clean_architecture.png`, `fig4_testing_pyramid.png`).
 - **Deck 2 (6 ảnh)**: Tái sử dụng 2 sơ đồ kiến trúc (`fig1_mobile_architecture.png`, `fig2_screen_flow.png`) và 4 ảnh chụp giao diện được dán nhãn chuẩn xác `[PROTOTYPE_REFERENCE]` từ Stage 20C (`screen_01_login.png`, `screen_02_dashboard.png`, `screen_05_loading_state.png`, `screen_06_empty_state.png`).
 - **Deck 3 (4 sơ đồ)**: Sử dụng 2 sơ đồ tiến độ từ Stage 20D (`fig_gantt_chart.png`, `fig_workload_histogram.png`) kết hợp 2 sơ đồ mới được sinh từ dữ liệu toán học chuẩn xác (`fig_wbs_hierarchy.png`, `fig_pdm_cpm_network.png`).
@@ -42,7 +42,7 @@ Toàn bộ sơ đồ và hình ảnh sử dụng trên các slide đều có ngu
 Toàn bộ 65 slides của cả 4 bộ slide đều được trang bị phần ghi chú thuyết trình (Speaker Notes) chi tiết theo đúng cấu trúc tiêu chuẩn 8 phần:
 1. **Mục tiêu slide**: Định hướng thông điệp cốt lõi cần truyền tải.
 2. **Lời thuyết minh gợi ý**: Bài nói mẫu bằng tiếng Việt tự nhiên, ngắn gọn, súc tích, giải thích "tại sao" thay vì chỉ đọc lại chữ trên slide.
-3. **Thời lượng dự kiến**: Đánh dấu nhãn `PROJECT_PROPOSAL` với phân bổ thời lượng chi tiết cho từng slide.
+3. **Thời lượng dự kiến**: Đánh dấu nhãn `PROJECT_PROPOSAL` kèm nhãn `REHEARSAL_MEASUREMENT_PENDING` (thời lượng ước tính, chờ đo đạc thực tế khi diễn tập).
 4. **Người thuyết trình**: Đánh dấu nhãn `PROPOSED_ASSIGNMENT_PENDING_USER_APPROVAL`, phân bổ đều đặn cho tất cả các thành viên trong nhóm.
 5. **Căn cứ minh chứng**: Trích dẫn chính xác đường dẫn tệp mã nguồn hoặc tài liệu đối soát trong repository WorkSphere.
 6. **Câu hỏi Hội đồng dự kiến**: Dự báo các câu hỏi hóc búa của giảng viên phản biện.
@@ -51,15 +51,15 @@ Toàn bộ 65 slides của cả 4 bộ slide đều được trang bị phần g
 
 ---
 
-### 4. NGÂN SÁCH THỜI GIAN ĐÃ RÚT GỌN VÀ TỐI ƯU HOÀN TOÀN (TIGHTENED TIMING BUDGET)
+### 4. NGÂN SÁCH THỜI GIAN TOÀN PHIÊN (TIMING BUDGET MODEL)
 
-Đã hiệu chỉnh và rút gọn thời lượng thuyết minh của toàn bộ 4 bộ slide để đạt ngân sách thời gian bảo vệ tuyệt đối an toàn:
+Tất cả thời lượng dưới đây là mô hình ước tính phân bổ (`PROJECT_PROPOSAL`, `REHEARSAL_MEASUREMENT_PENDING`), không tuyên bố là thời gian nói đo đạc thực tế:
 
 | Học phần | Thời lượng thuyết minh (Narration) | Thời lượng Demo trực tiếp (Live Demo) | Chuyển giao người nói (Transition) | Dự phòng Q&A Hội đồng (Q&A Allowance) | Tổng thời lượng phiên đề xuất (Session Duration) | Khung giờ quy định (Instructor Benchmark) |
 |:---|:---:|:---:|:---:|:---:|:---:|:---:|
 | **Deck 1: Lập trình nâng cao** | **820s (~13.67m)** | 90s (~1.5m) | 30s (~0.5m) | 260s (~4.33m) | **20.0 phút** `[PROJECT_PROPOSAL]` | 15–20 phút thuyết trình `[INSTRUCTOR_REQUIREMENT]` |
 | **Deck 2: Ứng dụng di động** | **755s (~12.58m)** | 120s (~2.0m) | 30s (~0.5m) | 295s (~4.92m) | **20.0 phút** `[PROJECT_PROPOSAL]` | 15–20 phút thuyết trình `[INSTRUCTOR_REQUIREMENT]` |
-| **Deck 3: Quản lý dự án CNTT** | **580s (~9.67m)** | 0s (Không demo) | 40s (~0.67m) | 100s (~1.66m) | **12.0 phút** `[PROJECT_PROPOSAL]` | 10–12 phút *(Đảm bảo cả bài nói nằm trọn trong 10-12m)* |
+| **Deck 3: Quản lý dự án CNTT** | **580s (~9.67m)** | 0s (Không demo) | 40s (~0.67m) | 100s (~1.66m) | **12.0 phút** `[PROJECT_PROPOSAL]` | 10–12 phút *(Đảm bảo toàn bộ bài nói gọn trong 9.67m)* |
 | **Deck 4: Triển khai phần mềm** | **885s (~14.75m)** | 90s (~1.5m) | 30s (~0.5m) | 195s (~3.25m) | **20.0 phút** `[PROJECT_PROPOSAL]` | 15–20 phút thuyết trình `[INSTRUCTOR_REQUIREMENT]` |
 
 ---
@@ -86,5 +86,7 @@ Toàn bộ 65 slides của cả 4 bộ slide đều được trang bị phần g
 
 ---
 
-### KẾT LUẬN NGHIỆM THU
-Giai đoạn Roadmap Stage 20F đã chính thức hoàn tất toàn bộ 4 bộ slide thuyết trình PPTX và hoàn thành kiểm định chất lượng thủ công lẫn tự động. Toàn bộ hồ sơ đã sẵn sàng cho công tác chuẩn bị bảo vệ và chuyển tiếp sang giai đoạn kế tiếp theo quy trình chuẩn.
+### KẾT LUẬN & HƯỚNG DẪN TIẾP THEO
+Toàn bộ cấu trúc kỹ thuật, hình học, nội dung slide, ghi chú thuyết minh và sự kiện kỹ thuật của 4 bộ slide PPTX đã được hoàn thiện và kiểm toán toàn diện. Trạng thái kiểm định trực quan thực tế trên ứng dụng Microsoft PowerPoint đang chờ Người dùng xác nhận:
+- **Trạng thái nghiệm thu**: `ROADMAP_STAGE_20F_MANUAL_RENDER_REVIEW_REQUIRED`
+- **Hành động kế tiếp**: Người dùng mở các tệp PPTX bằng Microsoft PowerPoint / PowerPoint for the Web, thực hiện đối soát theo checklist tại `reports/stage20/presentations/MANUAL_POWERPOINT_REVIEW_CHECKLIST.md` và phản hồi kết quả để chính thức khép lại Stage 20F.
