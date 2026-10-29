@@ -63,12 +63,13 @@ backups/**/*.dump
 .DS_Store
 Thumbs.db
 
-# Temporary files
+# Temporary files and local launcher runtime
 *.tmp
 *.temp
 *.swp
 *.swo
 ~$*
+.local-run/
 
 # External resources, quarantined artifacts, and local caches (never commit third-party artifacts)
 .external/*

@@ -4,8 +4,10 @@
 
 - Repository: D:\WorkSphere
 - Branch: main
-- Current Task: ROADMAP-STAGE-20F FINAL PRESENTATION QUALITY GATE — FULL RENDER, VISUAL REVIEW, SPEAKER NOTES, TIMING & CROSS-DECK FACT VALIDATION
-- Status: HOÀN TẤT VÀ XÁC THỰC TOÀN DIỆN 4 BỘ SLIDE THUYẾT TRÌNH VÀ GHI CHÚ BẢO VỆ ĐỒ ÁN (`ROADMAP_STAGE_20F_PRESENTATION_DECKS_AUDITED_READY_FOR_20G`). Thành viên nhóm dự án (Nguyễn Văn Cường) đã hoàn thành kiểm tra thủ công thực tế trên Microsoft PowerPoint (ngày 2026-10-29, xác nhận PASS 100% trên cả 4 decks, không lỗi font, không tràn text, không méo hình, Slide Show chạy hoàn chỉnh, đầy đủ nhãn kỹ thuật và không lộ secret). Cập nhật hoàn tất `MANUAL_POWERPOINT_REVIEW_CHECKLIST.md`. Bốn thư mục học liệu tiếp tục local-only. Sẵn sàng chuyển tiếp sang Stage 20G.
+- Current Task: ROADMAP-STAGE-20 WINDOWS LAUNCHER — ONE-CLICK RUNNER IMPLEMENTATION & VERIFICATION
+- Status: HOÀN TẤT VÀ XÁC THỰC TOÀN DIỆN WINDOWS LAUNCHER (`WORKSPHERE_WINDOWS_LAUNCHER_COMPLETE`). Đã tạo tệp kịch bản `run-worksphere.bat` tại gốc repository với đầy đủ các tính năng: tự động phát hiện CLI tools (Docker, Java/JBR, Node, npm, adb, emulator), cơ chế khởi động tuần tự idempotent kiểm tra cổng (PostgreSQL 5432, Backend 8080 & `/actuator/health`, Metro 8081, Android Emulator & package APK). Hỗ trợ cả tương tác menu CLI lẫn tham số CLI direct non-interactive. Đã cập nhật tài liệu `WORKSPHERE_PROJECT_OVERVIEW_AND_RUN_GUIDE.md` và tạo báo cáo `ROADMAP_STAGE_20_WINDOWS_LAUNCHER.md`. Bốn thư mục học liệu tiếp tục local-only. Sẵn sàng chuyển tiếp sang Stage 20G.
+- Windows Launcher Script: `run-worksphere.bat`
+- Windows Launcher Report: `reports/ROADMAP_STAGE_20_WINDOWS_LAUNCHER.md`
 - Stage 20F Presentation Decks: `reports/stage20/presentations/` (4 PPTX files)
 - Stage 20F Verification Report: `reports/ROADMAP_STAGE_20F_PRESENTATION_DECKS.md`
 - Stage 20F Quality Audit Report: `reports/ROADMAP_STAGE_20F_PRESENTATION_QUALITY_AUDIT.md`

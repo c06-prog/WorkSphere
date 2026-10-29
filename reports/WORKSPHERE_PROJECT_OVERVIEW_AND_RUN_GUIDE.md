@@ -489,6 +489,54 @@ npm run android
 ```
 - Lệnh này sẽ kết nối với emulator đang chạy (`emulator-5554`), build gói debug APK và tự động cài đặt, mở ứng dụng WorkSphere.
 
+## 20.1 One-click Windows Launcher (`run-worksphere.bat`)
+
+Để thuận tiện tối đa cho các thành viên trong nhóm, giảng viên chấm thi hoặc người dùng Windows khởi chạy toàn bộ hệ thống WorkSphere mà không cần ghi nhớ từng lệnh CLI riêng rẽ, dự án cung cấp script khởi chạy tự động:
+
+**Đường dẫn**: `D:\WorkSphere\run-worksphere.bat`
+
+### Cách sử dụng tương tác (Menu CLI):
+Chỉ cần nhấp đúp (double-click) vào `run-worksphere.bat` trong Windows File Explorer hoặc mở cmd/PowerShell:
+`cmd
+cd D:\WorkSphere
+run-worksphere.bat
+`
+
+Script sẽ hiển thị menu tương tác trực quan:
+`	ext
+===============================================
+       WORKSPHERE LOCAL DEVELOPMENT LAUNCHER
+===============================================
+  1. Khoi dong PostgreSQL (Docker Container)
+  2. Khoi dong Backend Service (Port 8080)
+  3. Khoi dong Metro Bundler (Port 8081)
+  4. Khoi dong Android Emulator (emulator-5554)
+  5. Cai dat & Khoi chay WorkSphere Mobile App
+  6. Kiem tra trang thai toan bo he thong (Status)
+  7. Khoi dong TOAN BO he thong (All-in-one)
+  8. Huong dan dung he thong an toan (Safe Stop)
+  9. Mo tai lieu huong dan & demo accounts
+  0. Thoat
+===============================================
+`
+
+### Chế độ dòng lệnh trực tiếp (Non-interactive CLI Arguments):
+Script hỗ trợ các tham số dòng lệnh tiện ích khi tích hợp script hoặc kiểm tra nhanh:
+- `run-worksphere.bat status`: Kiểm tra toàn diện công cụ CLI, trạng thái PostgreSQL container/port, Backend port 8080 & `/actuator/health`, Metro bundler port 8081, Android Emulator & package APK.
+- `run-worksphere.bat postgres`: Kiểm tra và khởi chạy PostgreSQL container `worksphere-dev-pg`.
+- `run-worksphere.bat backend`: Khởi chạy WorkSphere Backend JAR trong cửa sổ cmd riêng.
+- `run-worksphere.bat metro`: Khởi chạy React Native Metro Bundler trong cửa sổ riêng.
+- `run-worksphere.bat android`: Khởi động Android Emulator & cài đặt/mở app Mobile.
+- `run-worksphere.bat all`: Khởi chạy tuần tự và an toàn toàn bộ hệ sinh thái WorkSphere theo thứ tự chuẩn.
+- `run-worksphere.bat stop`: Hiển thị hướng dẫn dừng an toàn các tiến trình background mà không làm mất dữ liệu.
+- `run-worksphere.bat docs`: Mở tài liệu dự án và thông tin hướng dẫn trong trình duyệt mặc định.
+
+### Các nguyên tắc an toàn được tích hợp trong Launcher:
+1. **Tự động tìm kiếm công cụ**: Tự tìm kiếm Docker Desktop CLI tại các đường dẫn tiêu chuẩn (bao gồm `%LOCALAPPDATA%\Programs\DockerDesktop\resources\bin\docker.exe`), tìm kiếm Java từ `JAVA_HOME` hoặc Android Studio JBR (`D:\Android\jbr`), Node/npm, và Android SDK/Emulator.
+2. **Khởi động an toàn & Lũy tiến (Idempotent)**: Tự động kiểm tra port và tiến trình trước khi khởi động; nếu PostgreSQL hoặc Backend đã UP sẽ không tạo tiến trình thừa gây xung đột.
+3. **Không ghi đè dữ liệu**: Tuyệt đối không xóa volume database hoặc chạy `docker compose down -v`.
+4. **Bảo mật tuyệt đối**: Không nhúng mật khẩu, API token hay JWT secret vào mã script BAT.
+
 ## 21. Thực thi kiểm thử (Running Tests)
 
 ### Kiểm thử Backend (Maven):
